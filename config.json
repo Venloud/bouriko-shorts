@@ -1,0 +1,32 @@
+{
+  "channel_name": "Bouriko",
+  "target_seconds": [61, 68],
+  "script_words": [140, 152],
+  "pillar_rotation": ["hidden", "explainer", "tip", "hidden", "fun_fact", "gaming", "hidden", "finds"],
+  "pillars_enabled_later": ["comparison", "news"],
+  "news_max_age_hours": 48,
+  "pillar_rules": {
+    "hidden": "Bouriko thinks an everyday object is magic or has a person inside; Rock Phone reveals the hidden tech.",
+    "explainer": "Bouriko has a wrong theory about how something works; Rock Phone explains the real mechanism.",
+    "fun_fact": "Rock Phone tells a surprising true tech fact; Bouriko reacts and takes it too far.",
+    "gaming": "Bouriko is playing a game and has a wrong theory about what's happening inside the machine.",
+    "tip": "ROLES FLIP: Bouriko proudly teaches the viewer a real, verified setting or trick ('Rock Phone taught me this. Now I teach you.'). Rock Phone confirms details and requirements (device/OS versions).",
+    "finds": "Bouriko shows off a cool gadget or app he found; Rock Phone adds the facts; end with a 'rocks out of 10' rating.",
+    "comparison": "Two products side by side; Rock Phone gives verified specs; Bouriko picks a winner in rocks.",
+    "news": "Rock Phone reports one fresh verified tech story; Bouriko reacts with a hot take."
+  },
+  "voices": { "bouriko": "am_fenrir", "rock_phone": "af_nicole", "lang": "a", "speed": 1.05 },
+  "voice_note": "Placeholder voice ids - pick real ones after voice_samples.yml",
+  "llm_models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"],
+  "groq_models": ["openai/gpt-oss-120b"],
+  "style": {
+    "background": "#F4EFE4",
+    "ink": "#1B1B1B",
+    "tech_glow": "#2EA8FF",
+    "fonts": ["Patrick Hand", "Permanent Marker", "Caveat"],
+    "size": [1080, 1920]
+  },
+  "qa_max_visual_share": 0.2,
+  "qa_min_visuals": 8,
+  "post_times_new_york": ["12:10", "19:10"]
+}

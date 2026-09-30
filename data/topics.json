@@ -1,0 +1,62 @@
+{
+  "hidden": [
+    "Traffic light vehicle sensors (inductive loops, cameras, radar)",
+    "Automatic doors (motion and presence sensors)",
+    "Self-checkout scales (weight verification)",
+    "Elevator buttons and how elevators decide where to go",
+    "Automatic toilet flush sensors (infrared)",
+    "Automatic faucet sensors (infrared proximity)",
+    "Phone face unlock (depth sensing)",
+    "Car keyless entry (radio between key and car)",
+    "Wireless phone charging (electromagnetic induction)",
+    "Induction stovetops (magnetic fields heating the pan)",
+    "Garage-door remotes (rolling codes)",
+    "TV remote controls (infrared light pulses)",
+    "Automatic streetlights (photosensors)",
+    "Crosswalk buttons (what they actually do)",
+    "Parking-garage gates (vehicle detection)",
+    "Vending machines (coin/bill validation, drop sensors)",
+    "Card readers: chip vs tap vs swipe",
+    "Smoke detectors (optical vs ionization)",
+    "Tire-pressure warning lights (TPMS)",
+    "Smart thermostats",
+    "Fridge door alarms",
+    "Barcodes and how scanners read them",
+    "Touchscreens (capacitive: why gloves don't work)",
+    "Noise-cancelling headphones"
+  ],
+  "explainer": [
+    "How WiFi works",
+    "How GPS knows where you are",
+    "How Bluetooth pairing works",
+    "How a phone camera takes night photos",
+    "How the cloud stores your photos",
+    "How QR codes work",
+    "How 5G is different from 4G",
+    "How a battery charges and why it wears out",
+    "How ChatGPT-style AI writes text",
+    "How passwords are stored (hashing)"
+  ],
+  "fun_fact": [
+    "The first webcam watched a coffee pot (Trojan Room coffee pot, Cambridge)",
+    "The first computer bug was a real moth",
+    "Why the QWERTY keyboard layout exists",
+    "The first text message said 'Merry Christmas'",
+    "Why the power button symbol looks like that"
+  ],
+  "gaming": [
+    "How a GPU works",
+    "What causes lag (ping vs frame rate)",
+    "How controller vibration works",
+    "What frames per second actually means",
+    "How game saves work"
+  ],
+  "tip": [
+    "iPhone Back Tap (Settings > Accessibility > Touch > Back Tap; iPhone 8+ / iOS 14+)",
+    "Android Quick Settings customization",
+    "Copy text from a photo (Live Text / Google Lens)",
+    "Find a lost phone (Find My / Find My Device)",
+    "Keyboard trackpad trick (long-press space bar on iPhone)"
+  ],
+  "finds": []
+}

@@ -1,0 +1,32 @@
+You write a 61-68 second vertical short for the channel starring BOURIKO, a caveman who woke up in 2026,
+and his ROCK PHONE, a talking stone slab with a calm, dry, deadpan AI-assistant voice.
+
+PILLAR: {pillar}
+TOPIC: {topic}
+FACT LEDGER (the ONLY facts you may state; cite by id):
+{ledger}
+
+FORMAT
+1. Line 1 = BOURIKO's wrong theory: confident, absurd, clearly wrong, under 15 words.
+   Never start with "I have discovered".
+2. ROCK PHONE corrects him in a short deadpan line.
+3. The real explanation in plain words, plus ONE surprising extra fact viewers don't expect.
+4. Ending: BOURIKO gets it, then takes it one step too far with a new wrong idea.
+   ROCK PHONE gets the dry last word.
+{pillar_rule}
+
+RULES
+- 8-10 lines total, {words_lo}-{words_hi} words total.
+- BOURIKO speaks in full, correct sentences. His IDEAS are wrong, never his grammar.
+  Never use "me" instead of "I", never "caveman discover", no grunting.
+- No filler lines like "Correct.", "Exactly.", "So...?". Every line adds a fact or a joke.
+- Every factual claim must come from the ledger. If the ledger doesn't support it, don't say it.
+- Real product names are fine in words. Never ask for logos or brand marks in visuals.
+- Every line gets a VISUAL note: what the hand-drawn sketch shows (Bouriko pose from the pose list,
+  diagram, labels). Modern tech glows electric blue; everything else is ink and earth tones.
+
+POSES AVAILABLE: {poses}
+
+Return JSON only:
+{"title": "Bouriko vs. ...", "lines": [{"speaker": "BOURIKO|ROCK_PHONE", "text": "...",
+"visual": "...", "pose": "...", "facts": ["f1"]}], "caption": "...", "hashtags": ["..."]}
