@@ -1,10 +1,13 @@
 # Character image prompts (ChatGPT / Gemini)
 
+The final master is the current sheets in assets/reference (warm tan skin, blue stripe on both cheeks).
+Use these prompts only for new poses or mouth shapes, with those sheets attached.
+
 ## Prompt 1: master sheet (attach the latest sheet as reference)
 Using the attached image as the character reference, create an original 2D cartoon character sheet, hand-drawn iPad sketch style, black ink linework on a clean white background, flat colors.
 
 Character: BOURIKO, a lean caveman.
-- Skin: light, fair skin tone with a slight warm peach undertone, consistent in every view (not tan, not orange).
+- Skin: warm tan, consistent in every view (match the reference sheet; not orange).
 - Oversized head, short messy dark-brown hair, light stubble, curious and thoughtful face (not dumb-looking).
 - One electric-blue stripe on EACH cheek, matching and symmetrical, in every view.
 - Stone-bead necklace with one curved saber-tooth fang in the center.
@@ -21,7 +24,7 @@ Rules: any modern tech glows electric blue; everything else is ink and earth ton
 ## Prompt 2: pose sheet (attach the new master sheet)
 Using the attached character sheet as the exact reference, create a pose sheet of BOURIKO in the same hand-drawn iPad sketch style, black ink linework, flat colors, plain white background.
 
-Keep identical in every pose: light fair skin with a warm peach undertone, messy dark-brown hair, stubble, one electric-blue stripe on EACH cheek, fang necklace, tan-orange saber-tooth pelt with bold dark-brown stripes (no spots), rope belt, bare feet, and the same flat rock phone.
+Keep identical in every pose: warm tan skin, messy dark-brown hair, stubble, one electric-blue stripe on EACH cheek, fang necklace, tan-orange saber-tooth pelt with bold dark-brown stripes (no spots), rope belt, bare feet, and the same flat rock phone.
 
 Poses (each one separate, full body):
 - Walking with club on shoulder; walking while looking at rock phone

@@ -1,11 +1,12 @@
 # Setup
 
 ## 1. Assets (owner)
-Put the final sheets in `assets/reference/`:
-- `bouriko_master.png`: front/side/back + expressions + props (light skin, blue stripe on both cheeks,
+Done: the current sheets in `assets/reference/` are the final master (warm tan skin, blue stripe on both cheeks).
+Original reference notes:
+- `bouriko_master.png`: front/side/back + expressions + props (warm tan skin, blue stripe on both cheeks,
   striped saber-tooth pelt, fang necklace)
 - `bouriko_poses.png`: the pose sheet made from the master
-The `draft_*.png` files there are the earlier tan-skin drafts; delete them once the finals are in.
+The files are named `draft_master_and_poses.png` and `draft_poses.png`; despite the names, they ARE the final master. Keep them.
 
 ## 2. GitHub secrets (Settings > Secrets and variables > Actions)
 Use SEPARATE free keys from Night Files where possible, so the two channels don't share daily limits.

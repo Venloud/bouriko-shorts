@@ -12,4 +12,5 @@ fact-checked explanation, drawn as a hand-sketched diagram that draws itself.
 - Notes for ChatGPT (reviewer): [CHATGPT.md](CHATGPT.md)
 - Character image prompts: [CHARACTER_PROMPTS.md](CHARACTER_PROMPTS.md)
 
-Status: parked until the Night Files cutout render passes its test. $0 budget, free tiers only.
+Status: standalone (starts from a snapshot copy of horror-shorts, never imports from it). Waiting on the owner's
+go before the pipeline build starts. $0 budget, free tiers only.

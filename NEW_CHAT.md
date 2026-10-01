@@ -39,12 +39,14 @@ Paste or attach this file as the first message of a new chat. It's everything th
   about that topic (hooded figures OK). Never depict real victims' bodies. Adults only. Real people: normal
   faces matching public facts, consistent across shots. No copying others' characters/IP.
 
-## Project 2: Bouriko (new, parked until Night Files' cutout test passes)
-- New repo from the starter zip (**bouriko-shorts**): CLAUDE.md = full spec, FIRST_TASK.md = the build prompt
-  for Claude Code (don't send until unparked).
+## Project 2: Bouriko (new, standalone)
+- Repo **Venloud/bouriko-shorts**: CLAUDE.md = full spec, FIRST_TASK.md = the build prompt for Claude Code
+  (don't send until I say go).
+- Standalone: does NOT wait for the Night Files cutout test. Starts from a snapshot copy of horror-shorts,
+  never imports from it; the two repos evolve independently.
 - Faceless tech shorts. **Bouriko** (boo-REE-ko; Kreyol "bourik" = donkey): an original cartoon caveman who
   woke up in 2026. Brand line: "A prehistoric mind trying to understand the modern world."
-- Look: lean, oversized head, messy dark-brown hair, stubble, **light fair skin**, **electric-blue stripe on
+- Look: lean, oversized head, messy dark-brown hair, stubble, **warm tan skin**, **electric-blue stripe on
   both cheeks**, stone necklace with a saber-tooth fang, one-shoulder **striped saber-tooth pelt (no spots)**,
   club used as a pointer, bare feet. Hand-drawn iPad sketch style, black ink, flat colors.
 - **Rock Phone**: his talking stone slab (calm, dry, deadpan). It's the explainer; no second character.
@@ -57,8 +59,11 @@ Paste or attach this file as the first message of a new chat. It's everything th
 - Pillars: hidden tech (strongest), explainers, fun facts, gaming tech, tips (Bouriko teaches), tech finds
   (rocks out of 10), comparisons, tech news (fresh, 24-48 h expiry).
 - Facts: official docs -> gov/university -> reputable tech press -> Wikipedia; fact ledger + citations.
-- Pending for me: regenerate the light-skin master + pose sheets (prompts in CHARACTER_PROMPTS.md), handle
-  claimed = @bourikoh (TikTok personal + YouTube, same handle; plain @bouriko is not ours), make separate free API keys so it doesn't share Night Files' quotas.
+- Final master = the current sheets in assets/reference (warm tan skin, blue stripe on both cheeks).
+- Handle claimed = @bourikoh (TikTok personal + YouTube, same handle; plain @bouriko is not ours).
+- Pending for me: separate free API keys (Gemini, Groq, HF) as this repo's secrets; YouTube OAuth + TikTok app
+  for @bourikoh.
+- Next step after that: wait. Don't start FIRST_TASK.md until I say go.
 
 ## Parked ideas
 - **Cashman**: finance channel, original brick-toy-style Black superhero (money-green suit, visor with

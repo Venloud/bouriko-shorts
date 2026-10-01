@@ -13,7 +13,8 @@ Starts with tech; can later expand to space, science, money, history and inventi
 
 Sister project: **Night Files** (repo Venloud/horror-shorts). Reuse its proven architecture and code where it
 fits (build -> buffer release -> publisher, Kokoro TTS, word-level captions, QA gate, retry/quota handling,
-YouTube Data API upload, TikTok drafts, ntfy notifications). Copy code in; do NOT import across repos.
+YouTube Data API upload, TikTok drafts, ntfy notifications). Bouriko is standalone: it starts from a snapshot
+copy of horror-shorts and never imports from it or pushes to it; the two repos evolve independently.
 Its experimental **cutout render mode** (pose set + rembg + compositor) is the base for Bouriko's renderer.
 
 ## Owner rules (hard constraints)
@@ -32,8 +33,7 @@ Its experimental **cutout render mode** (pose set + rembg + compositor) is the b
 ## The character (locked)
 - Name: **Bouriko** (boo-REE-ko). Kreyol inside joke: *bourik* = donkey.
 - Lean build, oversized head, short messy dark-brown hair, light stubble.
-- Skin: **light, fair with a warm peach undertone** (the draft sheets in assets/reference are still tan;
-  the owner is regenerating the final master).
+- Skin: **warm tan**, as on the final master sheets in assets/reference.
 - **One electric-blue stripe on EACH cheek**, symmetrical, in every pose.
 - Stone-bead necklace with one curved **saber-tooth fang** in the center.
 - One-shoulder **saber-tooth cat pelt**: tan-orange fur, 5 bold dark-brown stripes, stitched edges, rope belt.
@@ -108,5 +108,5 @@ HF ZeroGPU Spaces (optional), GitHub Actions + Releases (buffer), YouTube Data A
 API (drafts), ntfy (alerts). Optional: Chatterbox TTS (MIT).
 
 ## Status
-Parked behind Night Files: build the Bouriko pipeline only after Night Files' cutout test passes.
-First task when unparked: see FIRST_TASK.md.
+Standalone; does NOT wait for Night Files' cutout test. Character master is final (assets/reference).
+Waiting on the owner's go: don't start FIRST_TASK.md until the owner says so.
