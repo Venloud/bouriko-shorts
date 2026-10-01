@@ -57,8 +57,8 @@ Paste or attach this file as the first message of a new chat. It's everything th
 - Pillars: hidden tech (strongest), explainers, fun facts, gaming tech, tips (Bouriko teaches), tech finds
   (rocks out of 10), comparisons, tech news (fresh, 24-48 h expiry).
 - Facts: official docs -> gov/university -> reputable tech press -> Wikipedia; fact ledger + citations.
-- Pending for me: regenerate the light-skin master + pose sheets (prompts in CHARACTER_PROMPTS.md), check
-  "Bouriko" handles, make separate free API keys so it doesn't share Night Files' quotas.
+- Pending for me: regenerate the light-skin master + pose sheets (prompts in CHARACTER_PROMPTS.md), handle
+  claimed = @bourikoh (TikTok personal + YouTube, same handle; plain @bouriko is not ours), make separate free API keys so it doesn't share Night Files' quotas.
 
 ## Parked ideas
 - **Cashman**: finance channel, original brick-toy-style Black superhero (money-green suit, visor with
