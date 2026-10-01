@@ -22,6 +22,6 @@ Use SEPARATE free keys from Night Files where possible, so the two channels don'
 Never paste keys into chat. Secrets only.
 
 ## 3. Accounts (owner)
-- Search "Bouriko" on YouTube, TikTok, Instagram before claiming. Backups: @askbouriko, @bourikofiguresitout.
+- Handle: **@bourikoh** (trailing "h"), the same on TikTok and YouTube. Claimed; plain @bouriko is not ours.
 - TikTok: Personal account (not Business).
-- YouTube: new channel (or brand account) named Bouriko.
+- YouTube: new channel (or brand account) named Bouriko, handle @bourikoh.

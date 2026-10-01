@@ -6,7 +6,8 @@ ChatGPT reviews and researches; the owner relays. End every change with an **UPD
 
 ## What this is
 A fully automated, faceless TikTok + YouTube Shorts channel starring **Bouriko**, an original cartoon caveman
-who wakes up in 2026 and tries to understand the modern world. Brand line:
+who wakes up in 2026 and tries to understand the modern world. Handle: **@bourikoh** (TikTok + YouTube;
+not @bouriko). Brand line:
 **"A prehistoric mind trying to understand the modern world."**
 Starts with tech; can later expand to space, science, money, history and inventions without a rebrand.
 
