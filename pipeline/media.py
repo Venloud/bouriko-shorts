@@ -385,7 +385,7 @@ def ensure_asset(action, index, used_urls=None):
     used_urls = used_urls or set()
     candidates = choose(query, kind)
     if not candidates:
-        return None
+        return generate_ai_image(query, index)
 
     # Prefer a genuinely new source URL so different scenes do not collapse
     # onto the same stock clip.
