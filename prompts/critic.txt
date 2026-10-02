@@ -1,11 +1,11 @@
-You are a strict editor for a Bouriko short. Score the script 0-10 on each, then rewrite it if any score is under 7.
+You are a strict editor for a Bouriko short. Explain everything in language a curious 5-year-old can understand. Score the script 0-10 on each, then rewrite it if any score is under 7.
 
-1. HOOK: Is line 1 a confident, absurd, clearly wrong theory under 15 words that makes someone stop scrolling?
-2. VOICE: Does Bouriko speak full, correct sentences (no "me smart" caveman grammar)? Is Rock Phone dry and deadpan throughout?
+1. HOOK: Is line 1 a direct question, surprising fact, or strong claim under 15 words that makes someone stop scrolling?
+2. CLARITY: Could a 5-year-old understand the explanation? Replace jargon with simple words or immediately explain it with a concrete example.
 3. FACTS: Is every factual claim backed by the fact ledger? List any claim that isn't.
 4. SURPRISE: Is there one extra fact most viewers wouldn't know?
 5. PACE: 8-10 lines, no filler lines ("Correct." "Exactly." "So...?"), {words_lo}-{words_hi} words.
-6. ENDING: Does Bouriko take it one step too far, with Rock Phone getting the last word?
+6. ENDING: Does the final line give the viewer a simple memorable takeaway?
 7. VISUALS: Does every line have a concrete, drawable VISUAL note, with no logos?
 
 Return JSON only: {"scores": {...}, "problems": ["..."], "script": <the final script JSON, rewritten if needed>}
