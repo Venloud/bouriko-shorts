@@ -67,84 +67,65 @@ def parse_inbox_script(path):
             continue
         speaker, text = raw.split(":", 1)
         speaker = speaker.strip().upper()
-        if speaker in {"BOURIKO", "ROCK PHONE"}:
-            lines.append({
-                "speaker": "BOURIKO" if speaker == "BOURIKO" else "ROCK PHONE",
-                "text": text.strip(),
-            })
+        if speaker in {"BOURIKO", "ROCK PHONE", "NARRATOR"}:
+            lines.append({"speaker": "NARRATOR", "text": text.strip()})
     return lines
+
+
+def media_action_for(text, index):
+    t = text.lower()
+    # Alternate real video and still images so the edit does not feel like a slideshow.
+    if "traffic light" in t or "intersection" in t:
+        return {"type": "media", "kind": "video", "query": "traffic light intersection street"}
+    if "road" in t or "pavement" in t or "loop" in t:
+        return {"type": "media", "kind": "video" if index % 2 == 0 else "image", "query": "road traffic sensor pavement intersection"}
+    if "car" in t or "vehicle" in t:
+        return {"type": "media", "kind": "video", "query": "car waiting at traffic light intersection"}
+    if "camera" in t or "radar" in t:
+        return {"type": "media", "kind": "video" if index % 2 == 0 else "image", "query": "traffic camera intersection street"}
+    if "bicycle" in t or "bike" in t:
+        return {"type": "media", "kind": "video", "query": "bicycle traffic light intersection"}
+    return {"type": "media", "kind": "image", "query": text[:90]}
+
 
 def visuals_for(text, speaker):
     t = text.lower()
     if "traffic light" in t:
         return "traffic signal"
-    if "buried in the road" in t or "wire loop" in t or "pavement" in t:
+    if "road" in t or "pavement" in t or "loop" in t:
         return "road sensor"
-    if "car stops" in t or "metal in your car" in t or "field" in t:
-        return "car over induction loop"
-    if "controller" in t or "tells the signal" in t:
+    if "car" in t or "vehicle" in t:
+        return "car detection"
+    if "controller" in t:
         return "detection controller"
     if "camera" in t or "radar" in t:
         return "camera and radar"
-    if "bicycle" in t:
+    if "bicycle" in t or "bike" in t:
         return "bicycle detection"
-    return "Bouriko reaction" if speaker == "BOURIKO" else "Rock Phone explanation"
+    return "illustration"
 
 
-def visual_actions_for(text, speaker):
+def visual_actions_for(text, speaker, index):
+    actions = [media_action_for(text, index)]
     t = text.lower()
-    if "traffic lights actually know" in t:
-        return [
-            {"type": "environment", "asset": "intersection"},
-            {"type": "draw", "shape": "traffic_light", "target": "signal"},
-        ]
-    if "sensor buried in the road" in t or "buried in the road" in t:
-        return [
-            {"type": "environment", "asset": "intersection"},
-            {"type": "zoom", "target": "road_stop_line"},
-            {"type": "draw", "shape": "loop", "target": "pavement"},
-            {"type": "highlight", "target": "loop", "color": "#2EA8FF"},
-        ]
-    if "wire loop" in t or "magnetic field" in t:
-        return [
-            {"type": "diagram", "name": "induction_loop"},
-            {"type": "draw", "shape": "field", "target": "loop", "color": "#2EA8FF"},
-            {"type": "label", "text": "INDUCTION LOOP"},
-        ]
-    if "metal in your car" in t or "controller detects" in t:
-        return [
-            {"type": "diagram", "name": "detection_flow"},
-            {"type": "arrow", "from": "car", "to": "loop"},
-            {"type": "arrow", "from": "loop", "to": "controller"},
-            {"type": "arrow", "from": "controller", "to": "traffic_light"},
-        ]
-    if "cameras or radar" in t or "timer" in t:
-        return [
-            {"type": "draw", "shape": "camera", "target": "intersection"},
-            {"type": "label", "text": "CAMERA / RADAR / TIMER"},
-        ]
-    if "bicycle" in t:
-        return [
-            {"type": "environment", "asset": "bike_stop_line"},
-            {"type": "draw", "shape": "detection_zone", "target": "pavement"},
-            {"type": "highlight", "target": "bike_zone", "color": "#2EA8FF"},
-        ]
-    if "rectangular cut" in t or "detection marking" in t:
-        return [
-            {"type": "zoom", "target": "road_stop_line"},
-            {"type": "highlight", "target": "pavement_marking", "color": "#2EA8FF"},
-            {"type": "label", "text": "DETECTION AREA"},
-        ]
-    return [{"type": "reaction", "speaker": speaker}]
+    if "traffic light" in t:
+        actions.append({"type": "draw", "shape": "traffic_light"})
+    if "loop" in t or "pavement" in t:
+        actions.append({"type": "draw", "shape": "induction_loop"})
+    if "camera" in t or "radar" in t:
+        actions.append({"type": "draw", "shape": "camera"})
+    return actions
 
 
 def exact_story(path):
-    lines = parse_inbox_script(path)
-    if not lines:
-        raise RuntimeError(f"No speaker lines found in {path}")
-    for line in lines:
-        line["visual"] = visuals_for(line["text"], line["speaker"])
-        line["visual_actions"] = visual_actions_for(line["text"], line["speaker"])
+    raw_lines = parse_inbox_script(path)
+    if not raw_lines:
+        raise RuntimeError(f"No narration lines found in {path}")
+    lines = []
+    for i, line in enumerate(raw_lines):
+        line["visual"] = visuals_for(line["text"], "NARRATOR")
+        line["visual_actions"] = visual_actions_for(line["text"], "NARRATOR", i)
+        lines.append(line)
     return {
         "title": "How Traffic Lights Know You Are There",
         "pillar": "hidden",
@@ -152,7 +133,7 @@ def exact_story(path):
         "lines": lines,
         "sources": [TRAFFIC_SOURCE],
         "caption": "How traffic lights detect vehicles waiting at an intersection.",
-        "hashtags": ["#Bouriko", "#TechExplained", "#HowItWorks"],
+        "hashtags": ["#TechExplained", "#HowItWorks", "#Bouriko"],
     }
 
 def write(pillar, topic, sources):
