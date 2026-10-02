@@ -64,6 +64,55 @@ def _download(url, path, attempts=4):
         raise last_error
     raise RuntimeError(f"Failed to download {url}")
 
+def mixkit(query, kind):
+    """Discover a small set of Mixkit stock-video candidates without an API key."""
+    if kind != "video":
+        return []
+
+    slug = re.sub(r"[^a-z0-9]+", "-", query.lower()).strip("-")
+    if not slug:
+        return []
+
+    url = f"https://mixkit.co/free-stock-video/{slug}/"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+    }
+
+    try:
+        r = requests.get(url, timeout=30, headers=headers)
+        if not r.ok:
+            return []
+        html = r.text
+    except requests.RequestException:
+        return []
+
+    # Mixkit pages expose downloadable MP4 URLs in the page source.
+    raw_urls = re.findall(r"https://assets\\.mixkit\\.co/videos[^\\s\\\"']+?\\.mp4", html)
+    urls = []
+    for raw in raw_urls:
+        clean = raw.replace("\\u0026", "&").replace("\\/", "/")
+        # Prefer the 720p asset when the page exposes the 360p variant.
+        if "-360.mp4" in clean:
+            clean = clean.replace("-360.mp4", "-720.mp4")
+        if clean not in urls:
+            urls.append(clean)
+
+    out = []
+    for media_url in urls[:8]:
+        out.append({
+            "provider": "mixkit",
+            "kind": "video",
+            "url": media_url,
+            "source_url": url,
+            "creator": None,
+            "title": query,
+            "license": "Mixkit Stock Video Free License (verify per clip)",
+            "license_url": "https://mixkit.co/license/",
+        })
+    return out
+
+
 def pixabay(query, kind):
     key = os.getenv("PIXABAY_API_KEY")
     if not key:
@@ -189,7 +238,7 @@ def commons(query, kind):
 def choose(query, kind):
     candidates = []
     # Prefer configured stock providers, then Commons.
-    for fn in (pixabay, pexels):
+    for fn in (pixabay, pexels, mixkit):
         try:
             candidates += fn(query, kind)
         except Exception:
