@@ -4,6 +4,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 from common import ROOT, CONFIG, run
+from broll import load_action, resolve_source, prepare_vertical
 
 W, H, FPS = 1080, 1920, 30
 BG = CONFIG.get("style", {}).get("background", "#F4EFE4")
@@ -122,6 +123,60 @@ def make_card(line, pose_path, index):
     draw.ellipse((940, 70, 970, 100), fill=BLUE)
     return im.convert("RGB")
 
+def make_real_clip(line, pose_path, index, dur, out_dir):
+    """Compose permitted real footage with Bouriko/phone overlays and captions."""
+    action = load_action(line)
+    if not action:
+        return None
+    source = resolve_source(action.get("source"), ROOT / "output/broll")
+    raw = out_dir / f"{index:02}_real_source.mp4"
+    prepare_vertical(source, raw, dur)
+
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    odraw = ImageDraw.Draw(overlay)
+    speaker = str(line.get("speaker", "")).upper()
+    if pose_path.exists():
+        pose = Image.open(pose_path).convert("RGBA")
+        if speaker == "ROCK PHONE":
+            pose.thumbnail((360, 640))
+            overlay.alpha_composite(pose, (55, 1010))
+        else:
+            pose.thumbnail((500, 860))
+            overlay.alpha_composite(pose, (530, 650))
+
+    phone_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    phone_draw = ImageDraw.Draw(phone_layer)
+    draw_rock_phone(phone_draw, speaker == "ROCK PHONE")
+    overlay = Image.alpha_composite(overlay, phone_layer)
+
+    label = str(action.get("label") or line.get("visual") or "REAL WORLD").upper()
+    bbox = odraw.textbbox((0, 0), label, font=font(30, True))
+    odraw.rounded_rectangle((55, 55, 55 + bbox[2] - bbox[0] + 36, 113), 18, fill=(244,239,228,235), outline=INK, width=3)
+    odraw.text((73, 66), label, font=font(30, True), fill=INK)
+
+    text = str(line.get("text", ""))
+    cf = font(46, True)
+    lines = wrap(odraw, text, cf, 900)
+    line_h = 60
+    panel_h = len(lines) * line_h + 54
+    top = H - panel_h - 70
+    odraw.rounded_rectangle((45, top, 1035, H - 70), 28, fill=(255,255,255,235), outline=INK, width=4)
+    for j, ln in enumerate(lines):
+        tw = odraw.textbbox((0, 0), ln, font=cf)[2]
+        odraw.text(((W - tw) // 2, top + 27 + j * line_h), ln, font=cf, fill=INK)
+
+    overlay_png = out_dir / f"{index:02}_real_overlay.png"
+    overlay.save(overlay_png)
+    out = out_dir / f"{index:02}.mp4"
+    run([
+        "ffmpeg", "-y", "-loglevel", "error",
+        "-i", str(raw), "-loop", "1", "-i", str(overlay_png),
+        "-t", f"{float(dur):.3f}",
+        "-filter_complex", "[0:v][1:v]overlay=0:0:format=auto,format=yuv420p[v]",
+        "-map", "[v]", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out),
+    ])
+    return out
+
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     audio_dir = ROOT / "output/audio"
@@ -144,7 +199,12 @@ def main():
     clips = []
     for i, (line, dur) in enumerate(segments):
         pose = poses[i % len(poses)]
-        card = make_card(line, ROOT / pose["file"], i)
+        pose_path = ROOT / pose["file"]
+        real_out = make_real_clip(line, pose_path, i, dur, od)
+        if real_out:
+            clips.append(real_out)
+            continue
+        card = make_card(line, pose_path, i)
         png = od / f"{i:02}.png"
         card.save(png)
         out = od / f"{i:02}.mp4"
