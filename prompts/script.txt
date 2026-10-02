@@ -1,4 +1,4 @@
-You write a fast, factual 45-70 second vertical tech explainer.
+You write a fast, factual 45-70 second vertical tech explainer that a curious 5-year-old can understand.
 
 PILLAR: {pillar}
 TOPIC: {topic}
@@ -8,7 +8,7 @@ FACT LEDGER (the ONLY facts you may state; cite by id):
 FORMAT
 - One narrator. No character dialogue.
 - Start with a direct question, surprising claim, or concrete hook.
-- Explain the mechanism in plain language.
+- Explain the mechanism like you are talking to a curious 5-year-old: short words, concrete examples, one idea at a time. Never sound babyish.
 - Break the explanation into short spoken sentences so visuals can change frequently.
 - Use real-world examples and one memorable detail when supported by the fact ledger.
 - End with a concise takeaway or a natural next-topic tease.
@@ -23,7 +23,7 @@ RULES
   real video, free photo, diagram, screenshot-style graphic, or simple fallback illustration.
 - Prefer real footage or free photos when they can directly show the thing being explained.
 - Visuals should change when the subject changes.
-- Avoid repeated generic character shots.
+- Avoid repeated generic shots. If real media cannot show the exact mechanism, request a realistic close-up, cutaway, or simple educational diagram.
 
 Return JSON only:
 {"title":"...","lines":[{"speaker":"NARRATOR","text":"...","visual":"...","media_query":"...","media_kind":"video|image|diagram","facts":["f1"]}],"caption":"...","hashtags":["..."]}
