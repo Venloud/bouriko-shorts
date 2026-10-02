@@ -78,7 +78,7 @@ const Caption = ({ text }: { text: string }) => {
 };
 
 const Scene = ({ line }: { line: Line }) => {
-  const asset = line.media_asset?.replace(/^output\\//, "");
+  const asset = line.media_asset?.replace(/^output\//, "");
   const kind = (line.media_kind || "").toLowerCase();
 
   let visual: React.ReactNode;
@@ -152,7 +152,7 @@ export const BourikoShort = ({
     {sfxEvents.map((event, index) => (
       <Sequence key={`sfx-${index}`} from={Math.round(event.time * 30)}>
         <Audio
-          src={staticFile(event.file.replace(/^output\\//, ""))}
+          src={staticFile(event.file.replace(/^output\//, ""))}
           volume={event.volume ?? 0.12}
         />
       </Sequence>
