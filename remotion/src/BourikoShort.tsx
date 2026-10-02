@@ -31,12 +31,13 @@ export type BourikoProps = {
   sfxEvents?: Sfx[];
 };
 
-const Caption = ({ text, visual }: { text: string; visual?: string }) => {
+const Caption = ({ text, visual, duration }: { text: string; visual?: string; duration: number }) => {
   const frame = useCurrentFrame();
   const words = text.trim().split(/\s+/);
+  const elapsed = frame / 30;
   const wordIndex = Math.min(
     words.length - 1,
-    Math.floor((frame / 30) / Math.max(0.12, (words.length ? 1 : 1))),
+    Math.floor((elapsed / Math.max(0.5, duration)) * words.length),
   );
   const chunkSize = words.length > 11 ? 5 : 4;
   const chunkIndex = Math.floor(wordIndex / chunkSize);
@@ -156,7 +157,7 @@ const Scene = ({ line }: { line: Line }) => {
   return (
     <AbsoluteFill>
       {visual}
-      <Caption text={line.text} visual={line.visual} />
+      <Caption text={line.text} visual={line.visual} duration={line.duration} />
     </AbsoluteFill>
   );
 };
