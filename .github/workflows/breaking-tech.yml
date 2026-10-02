@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng
-      - run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
+      - run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow "rembg[cpu]"
       - name: Check major tech news
         id: news
         env:
@@ -29,7 +29,7 @@ jobs:
         run: python pipeline/breaking_script.py
       - name: Voice
         if: steps.news.outputs.breaking == 'true'
-        run: python pipeline/voice.py
+        run: python pipeline/pose_library.py && python pipeline/voice.py
       - name: Render
         if: steps.news.outputs.breaking == 'true'
         run: python pipeline/render.py
