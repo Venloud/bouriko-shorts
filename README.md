@@ -14,3 +14,14 @@ fact-checked explanation, drawn as a hand-sketched diagram that draws itself.
 
 Status: standalone (starts from a snapshot copy of horror-shorts, never imports from it). Waiting on the owner's
 go before the pipeline build starts. $0 budget, free tiers only.
+
+
+## Current video format
+
+Bouriko is channel branding; the Shorts are narrator-led. The production path uses free/permissioned real media, centered captions, real stock SFX, and a Remotion/React renderer. The old mascot/Rock Phone presenter format is no longer the default.
+
+## Test
+
+Open GitHub Actions -> Bouriko Build -> Run workflow -> enable the traffic-light test. Download the **bouriko-remotion-test** artifact and review the MP4 before expanding the renderer.
+
+See CLAUDE_BOURIKO_NEXT_PASS.md for the current implementation handoff.
