@@ -168,6 +168,10 @@ def write(pillar, topic, sources):
             pass
     story["pillar"] = pillar
     story["sources"] = [s["url"] for s in sources if s.get("url")]
+    for i, line in enumerate(story.get("lines", [])):
+        line["speaker"] = "NARRATOR"
+        line["visual"] = visuals_for(line.get("text", ""), "NARRATOR")
+        line["visual_actions"] = visual_actions_for(line.get("text", ""), "NARRATOR", i)
     return story
 
 def main():
