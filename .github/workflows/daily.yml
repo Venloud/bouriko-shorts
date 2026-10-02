@@ -1,43 +1,42 @@
-name: Bouriko Daily Publisher
+name: Bouriko Daily
 on:
   schedule:
-    - cron: "10 16 * * *"
-    - cron: "10 23 * * *"
+    - cron: "0 15 * * *"
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
-      - run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
-      - name: Build
+      - uses: actions/setup-node@v4
+        with: {node-version: "20"}
+      - name: System packages
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
+      - name: Python packages
+        run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
+      - name: Build narrator story
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           COVERR_API_KEY: ${{ secrets.COVERR_API_KEY }}
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
-        run: python pipeline/script.py && python pipeline/media.py && python pipeline/voice.py && python pipeline/sfx.py && python pipeline/render.py && python pipeline/qa.py
-      - name: Publish
-        env:
-          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
-          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
-          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
-          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
-          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
-          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
-        run: VIDEO=output/bouriko.mp4 python pipeline/publish.py
+        run: python pipeline/script.py && python pipeline/media.py && python pipeline/voice.py && python pipeline/sfx.py && python pipeline/remotion_prepare.py
+      - name: Render with Remotion
+        working-directory: remotion
+        run: npm install --no-audit --no-fund && npm run render
+      - name: QA
+        run: python pipeline/qa.py
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ always() }}
         with:
-          name: bouriko-published
+          name: bouriko-daily
           path: |
             output/bouriko.mp4
             output/story.json
-            output/word_timings.json
+            output/media_manifest.json
