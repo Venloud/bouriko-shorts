@@ -1,0 +1,57 @@
+name: Bouriko Breaking Tech Watch
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  breaking:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng
+      - run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
+      - name: Check major tech news
+        id: news
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python pipeline/news_watch.py
+          if [ -f output/breaking_news.json ]; then echo "breaking=true" >> "$GITHUB_OUTPUT"; else echo "breaking=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Write breaking story
+        if: steps.news.outputs.breaking == 'true'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python pipeline/breaking_script.py
+      - name: Voice
+        if: steps.news.outputs.breaking == 'true'
+        run: python pipeline/voice.py
+      - name: Render
+        if: steps.news.outputs.breaking == 'true'
+        run: python pipeline/render.py
+      - name: QA
+        if: steps.news.outputs.breaking == 'true'
+        run: python pipeline/qa.py
+      - name: Publish immediately
+        if: steps.news.outputs.breaking == 'true'
+        env:
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          VIDEO: output/bouriko.mp4
+        run: python pipeline/publish.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: breaking-tech
+          path: |
+            output/bouriko.mp4
+            output/breaking_news.json
+            output/story.json
