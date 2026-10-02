@@ -34,13 +34,12 @@
     "news": "Rock Phone reports one fresh verified tech story; Bouriko reacts with a hot take."
   },
   "voices": {
-    "bouriko": "am_fenrir",
-    "rock_phone": "bf_emma",
+    "narrator": "am_liam",
     "lang": "a",
-    "speed": 0.9,
-    "line_pause": 0.0
+    "speed": 0.98,
+    "line_pause": 0
   },
-  "voice_note": "Rock Phone: bf_emma — British female, calm/professional assistant-style voice. Bouriko: am_fenrir. Dialogue pacing tuned for 61–68s shorts: 0.9 speed + 0.42s inter-line beats.",
+  "voice_note": "One consistent narrator voice. NIGHTFILES_VOICE can override the configured Kokoro voice; current fallback is am_liam until the exact Night Files voice ID is wired in.",
   "llm_models": [
     "gemini-3.8-flash",
     "gemini-3.5-flash-lite"
@@ -67,5 +66,18 @@
   "post_times_new_york": [
     "12:10",
     "19:10"
-  ]
+  ],
+  "video_style": {
+    "mascot_in_video": false,
+    "phone_in_video": false,
+    "captions": "center",
+    "media_mix": [
+      "video",
+      "image",
+      "diagram"
+    ],
+    "camera_motion": false,
+    "pose_motion": false,
+    "transitions": "crossfade"
+  }
 }
