@@ -21,11 +21,21 @@ def tone(freq, dur, amp=0.35, decay=7.0, freq2=None):
     phase = 2 * np.pi * np.cumsum(f) / RATE
     return amp * np.sin(phase) * np.exp(-decay * t)
 
+def layer(*parts):
+    """Mix sounds of different lengths without numpy broadcasting errors."""
+    size = max(len(x) for x in parts)
+    out = np.zeros(size, dtype=np.float64)
+    for part in parts:
+        out[:len(part)] += part
+    return out
+
 def click():
-    return tone(1450, 0.075, 0.28, 45) + tone(3100, 0.035, 0.12, 70)
+    return layer(tone(1450, 0.075, 0.28, 45),
+                 tone(3100, 0.035, 0.12, 70))
 
 def beep():
-    return tone(880, 0.18, 0.18, 10) + tone(1320, 0.12, 0.10, 14)
+    return layer(tone(880, 0.18, 0.18, 10),
+                 tone(1320, 0.12, 0.10, 14))
 
 def ping():
     return tone(900, 0.22, 0.16, 8, 1550)
@@ -33,13 +43,13 @@ def ping():
 def camera():
     n = int(RATE * 0.16); rng = np.random.default_rng(7)
     noise = rng.normal(0, 1, n); env = np.exp(-28 * np.arange(n) / RATE)
-    return 0.20 * noise * env + tone(1700, 0.08, 0.10, 35)
+    return layer(0.20 * noise * env, tone(1700, 0.08, 0.10, 35))
 
 def whoosh():
     n = int(RATE * 0.32); rng = np.random.default_rng(11)
     noise = rng.normal(0, 1, n); t = np.arange(n) / RATE
     env = np.sin(np.pi * np.clip(t / 0.32, 0, 1)) ** 1.7
-    return 0.10 * noise * env + tone(500, 0.32, 0.07, 3, 110)
+    return layer(0.10 * noise * env, tone(500, 0.32, 0.07, 3, 110))
 
 def main():
     SFX_DIR.mkdir(parents=True, exist_ok=True)
