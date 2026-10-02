@@ -14,12 +14,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng
-      - run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow "rembg[cpu]"
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
+      - run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
       - name: Build
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python pipeline/script.py && python pipeline/pose_library.py && python pipeline/voice.py && python pipeline/render.py && python pipeline/qa.py
+        run: python pipeline/script.py && python pipeline/media.py && python pipeline/voice.py && python pipeline/render.py && python pipeline/qa.py
       - name: Publish
         env:
           TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
