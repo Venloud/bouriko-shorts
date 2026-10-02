@@ -1,9 +1,10 @@
-"""Download curated free stock SFX for Bouriko.
+"""Download real SFX from the Night Files library first, then Mixkit.
 
-No procedural/generated tones. Every effect is downloaded from a named source
-and reused across builds. Source/license metadata is kept in SFX_SOURCES.md.
+No procedural/generated tones. Night Files is the primary reusable library;
+Mixkit is the secondary fallback/source. Files are fetched at build time.
 """
 import json
+import wave
 from pathlib import Path
 
 import requests
@@ -11,10 +12,20 @@ import requests
 from common import ROOT
 
 SFX_DIR = ROOT / "output/sfx"
+NIGHT_FILES_BASE = "https://raw.githubusercontent.com/Venloud/horror-shorts/main"
 
-# Mixkit Free License assets. The files are downloaded at build time rather
-# than generated locally, so the project uses real recorded sound effects.
-SFX = {
+NIGHT_FILES_SFX = {
+    "whoosh": "assets/sfx/whoosh.mp3",
+    "sweep": "assets/sfx/whoosh.mp3",
+    "click": "assets/sfx/ui_click.mp3",
+    "camera": "assets/sfx/camera_shutter.mp3",
+    "interface": "assets/sfx/ui_click.mp3",
+    "beep": "assets/sfx/phone_notification.mp3",
+    "impact": "assets/stings/default_impact.mp3",
+    "glitch": "assets/sfx/radio_static.mp3",
+}
+
+MIXKIT_SFX = {
     "whoosh": "https://assets.mixkit.co/active_storage/sfx/1490/1490-preview.mp3",
     "sweep": "https://assets.mixkit.co/active_storage/sfx/166/166-preview.mp3",
     "click": "https://assets.mixkit.co/active_storage/sfx/1133/1133-preview.mp3",
@@ -25,22 +36,40 @@ SFX = {
     "glitch": "https://assets.mixkit.co/active_storage/sfx/2595/2595-preview.mp3",
 }
 
+def fetch(url: str, path: Path) -> bool:
+    try:
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        if len(response.content) <= 1000:
+            raise RuntimeError("downloaded file is unexpectedly small")
+        path.write_bytes(response.content)
+        return True
+    except Exception as exc:
+        print(f"SFX source failed: {url} ({exc})")
+        return False
 
 def download_assets():
     SFX_DIR.mkdir(parents=True, exist_ok=True)
-    for name, url in SFX.items():
+    sources = {}
+    for name in NIGHT_FILES_SFX:
         path = SFX_DIR / f"{name}.mp3"
         if path.exists() and path.stat().st_size > 1000:
+            sources[name] = "Night Files (cached)"
             continue
-        response = requests.get(url, timeout=30)
-        response.raise_for_status()
-        path.write_bytes(response.content)
-        print(f"Downloaded {name}: {len(response.content):,} bytes")
-
+        night_url = f"{NIGHT_FILES_BASE}/{NIGHT_FILES_SFX[name]}"
+        if fetch(night_url, path):
+            sources[name] = f"Night Files: {NIGHT_FILES_SFX[name]}"
+            print(f"Downloaded {name} from Night Files")
+            continue
+        if fetch(MIXKIT_SFX[name], path):
+            sources[name] = f"Mixkit: {MIXKIT_SFX[name]}"
+            print(f"Downloaded {name} from Mixkit fallback")
+        else:
+            print(f"No usable source for {name}")
+    return sources
 
 def main():
-    download_assets()
-
+    sources = download_assets()
     story = json.loads((ROOT / "output/story.json").read_text())
     starts = []
     t = 0.0
@@ -48,7 +77,6 @@ def main():
         wav = ROOT / "output/audio" / f"{i:02}.wav"
         if not wav.exists():
             continue
-        import wave
         with wave.open(str(wav), "rb") as w:
             dur = w.getnframes() / w.getframerate()
         starts.append((i, t, line.get("text", "")))
@@ -59,7 +87,6 @@ def main():
         lower = text.lower()
         effect = None
         volume = 0.14
-
         if i == 0:
             effect, volume = "whoosh", 0.13
         elif "pavement" in lower or "rectangle" in lower:
@@ -74,18 +101,18 @@ def main():
             effect, volume = "click", 0.09
         elif "green light" in lower:
             effect, volume = "sweep", 0.10
-
-        if effect:
+        if effect and (SFX_DIR / f"{effect}.mp3").exists():
             events.append({
                 "time": round(start + 0.08, 3),
                 "file": f"output/sfx/{effect}.mp3",
                 "volume": volume,
                 "type": effect,
+                "source": sources.get(effect, "unknown"),
             })
 
     (ROOT / "output/sfx_events.json").write_text(json.dumps(events, indent=2))
-    print(f"SFX library ready: {len(SFX)} downloaded assets, {len(events)} events")
-
+    (ROOT / "output/sfx_sources.json").write_text(json.dumps(sources, indent=2))
+    print(f"SFX library ready: {len(sources)} usable assets, {len(events)} events")
 
 if __name__ == "__main__":
     main()
