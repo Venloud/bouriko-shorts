@@ -39,6 +39,13 @@ def render_lines(story):
         words = synthesize(line["text"], voice, wav)
         import soundfile as sf
         frames, sr = sf.read(str(wav), always_2d=False)
+        # Add a short natural dialogue beat between lines so the finished short
+        # has room to breathe without adding dead air after the final line.
+        if i < len(story["lines"]) - 1:
+            gap_s = float(CONFIG.get("voices", {}).get("line_pause", 0.42))
+            gap = np.zeros(int(sr * gap_s), dtype=frames.dtype)
+            frames = np.concatenate([frames, gap])
+            sf.write(str(wav), frames, sr)
         for w in words:
             w.update(line=i, start=round(w["start"] + offset, 3), end=round(w["end"] + offset, 3))
             all_words.append(w)
