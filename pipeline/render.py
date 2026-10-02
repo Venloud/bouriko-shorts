@@ -133,7 +133,6 @@ def make_real_clip(line, pose_path, index, dur, out_dir):
     prepare_vertical(source, raw, dur)
 
     overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    odraw = ImageDraw.Draw(overlay)
     speaker = str(line.get("speaker", "")).upper()
     if pose_path.exists():
         pose = Image.open(pose_path).convert("RGBA")
@@ -148,6 +147,7 @@ def make_real_clip(line, pose_path, index, dur, out_dir):
     phone_draw = ImageDraw.Draw(phone_layer)
     draw_rock_phone(phone_draw, speaker == "ROCK PHONE")
     overlay = Image.alpha_composite(overlay, phone_layer)
+    odraw = ImageDraw.Draw(overlay)
 
     label = str(action.get("label") or line.get("visual") or "REAL WORLD").upper()
     bbox = odraw.textbbox((0, 0), label, font=font(30, True))
