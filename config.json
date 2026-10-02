@@ -78,6 +78,6 @@
     ],
     "camera_motion": false,
     "pose_motion": false,
-    "transitions": "crossfade"
+    "transitions": "hard_cut"
   }
 }
