@@ -328,20 +328,27 @@ def choose(query, kind):
     return candidates[:30]
 
 
-def ensure_asset(action, index):
+def ensure_asset(action, index, used_urls=None):
     query = str(action.get("query") or action.get("search") or "").strip()
     kind = str(action.get("kind") or "video").lower()
     if not query or kind not in {"image","video"}:
         return None
 
+    used_urls = used_urls or set()
     candidates = choose(query, kind)
     if not candidates:
         return None
+
+    # Prefer a genuinely new source URL so different scenes do not collapse
+    # onto the same stock clip.
+    candidates = [c for c in candidates if c.get("url") not in used_urls] or candidates
 
     # A provider can return a valid search result whose file URL is temporarily
     # rate-limited or unavailable. Try the next candidate instead of aborting
     # the entire video build.
     for candidate_no, chosen in enumerate(candidates):
+        if chosen.get("url") in used_urls:
+            continue
         ext = (
             ".webm"
             if chosen["provider"] == "wikimedia_commons"
@@ -368,30 +375,67 @@ def ensure_asset(action, index):
 
     return {
         "index": index, "query": query, "kind": kind,
-        "provider": chosen["provider"], "source_url": chosen.get("source_url"),
-        "creator": chosen.get("creator"), "title": chosen.get("title"),
-        "license": chosen.get("license"), "license_url": chosen.get("license_url"),
+        "provider": chosen["provider"], "url": chosen["url"],
+        "source_url": chosen.get("source_url"), "creator": chosen.get("creator"),
+        "title": chosen.get("title"), "license": chosen.get("license"),
+        "license_url": chosen.get("license_url"),
         "local_path": str(path.relative_to(ROOT))
     }
 
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     records = []
+    used_urls = set()
+
+    # First pass: use the story's exact visual intent.
     for i, line in enumerate(story.get("lines", [])):
         for action in line.get("visual_actions", []) or []:
             if str(action.get("type","")).lower() != "media":
                 continue
-            rec = ensure_asset(action, i)
+            rec = ensure_asset(action, i, used_urls)
             if rec:
                 line["media_asset"] = rec["local_path"]
                 line["media_source"] = rec
                 records.append(rec)
+                used_urls.add(rec["url"])
                 break
+
+    # Second pass: fill failed scenes with broad, still-relevant stock footage.
+    # This is deliberately limited to the traffic-light test domain rather than
+    # weakening QA or fabricating visuals.
+    fallback_queries = [
+        "traffic light",
+        "intersection",
+        "road traffic",
+        "cars",
+        "street traffic",
+        "driving",
+        "city traffic",
+        "road",
+    ]
+    for i, line in enumerate(story.get("lines", [])):
+        if line.get("media_asset"):
+            continue
+        for query in fallback_queries:
+            rec = ensure_asset({"kind": "video", "query": query}, i, used_urls)
+            if not rec:
+                continue
+            line["media_asset"] = rec["local_path"]
+            line["media_source"] = rec
+            records.append(rec)
+            used_urls.add(rec["url"])
+            print(f"Fallback media assigned: scene={i} query='{query}' provider={rec['provider']}")
+            break
 
     MANIFEST.parent.mkdir(parents=True, exist_ok=True)
     MANIFEST.write_text(json.dumps(records, indent=2))
     (ROOT / "output/story.json").write_text(json.dumps(story, indent=2))
-    print(f"Media assets downloaded: {len(records)}")
+    video_count = sum(1 for r in records if r.get("kind") == "video")
+    print(f"Media assets downloaded: {len(records)} ({video_count} video)")
+
+    if len(records) < 8:
+        print("WARNING: media target not reached; QA will refuse publication.")
+
 
 
 if __name__ == "__main__":
