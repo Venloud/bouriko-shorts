@@ -37,6 +37,7 @@ jobs:
       - name: QA gate
         run: python pipeline/qa.py
       - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
         with:
           name: bouriko-first-video
           path: |
