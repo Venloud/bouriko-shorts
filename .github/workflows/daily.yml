@@ -17,8 +17,9 @@ jobs:
         with: {node-version: "20"}
       - name: System packages
         run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
-      - name: Python packages
+      - name: Syntax check all pipeline Python
         run: python -m compileall -q pipeline
+      - name: Python packages
         run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
       - name: Build narrator story
         env:
