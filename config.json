@@ -1,9 +1,27 @@
 {
   "channel_name": "Bouriko",
-  "target_seconds": [61, 68],
-  "script_words": [140, 152],
-  "pillar_rotation": ["hidden", "explainer", "tip", "hidden", "fun_fact", "gaming", "hidden", "finds"],
-  "pillars_enabled_later": ["comparison", "news"],
+  "target_seconds": [
+    61,
+    68
+  ],
+  "script_words": [
+    140,
+    152
+  ],
+  "pillar_rotation": [
+    "hidden",
+    "explainer",
+    "tip",
+    "hidden",
+    "fun_fact",
+    "gaming",
+    "hidden",
+    "finds"
+  ],
+  "pillars_enabled_later": [
+    "comparison",
+    "news"
+  ],
   "news_max_age_hours": 48,
   "pillar_rules": {
     "hidden": "Bouriko thinks an everyday object is magic or has a person inside; Rock Phone reveals the hidden tech.",
@@ -19,19 +37,35 @@
     "bouriko": "am_fenrir",
     "rock_phone": "bf_emma",
     "lang": "a",
-    "speed": 1.05
+    "speed": 0.9,
+    "line_pause": 0.42
   },
-  "voice_note": "Rock Phone: bf_emma — British female, calm/professional assistant-style voice. Bouriko: am_fenrir.",
-  "llm_models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"],
-  "groq_models": ["openai/gpt-oss-120b"],
+  "voice_note": "Rock Phone: bf_emma — British female, calm/professional assistant-style voice. Bouriko: am_fenrir. Dialogue pacing tuned for 61–68s shorts: 0.9 speed + 0.42s inter-line beats.",
+  "llm_models": [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite"
+  ],
+  "groq_models": [
+    "openai/gpt-oss-120b"
+  ],
   "style": {
     "background": "#F4EFE4",
     "ink": "#1B1B1B",
     "tech_glow": "#2EA8FF",
-    "fonts": ["Patrick Hand", "Permanent Marker", "Caveat"],
-    "size": [1080, 1920]
+    "fonts": [
+      "Patrick Hand",
+      "Permanent Marker",
+      "Caveat"
+    ],
+    "size": [
+      1080,
+      1920
+    ]
   },
   "qa_max_visual_share": 0.2,
   "qa_min_visuals": 8,
-  "post_times_new_york": ["12:10", "19:10"]
+  "post_times_new_york": [
+    "12:10",
+    "19:10"
+  ]
 }
