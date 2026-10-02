@@ -358,3 +358,503 @@ This is the first Remotion integration pass. If the test render exposes timing, 
 4. MuMuAINovel = optional story-planning inspiration.
 5. Ruflo = optional orchestration layer.
 6. PersonaLive = optional research module only; not part of the default narrator format.
+
+
+# CURRENT MASTER HANDOFF — OCTOBER 2, 2026 — LATEST LOG
+
+This section supersedes older sections where they conflict. It is the current implementation state and the exact next-pass target.
+
+## 1. Product direction — LOCKED
+
+Bouriko is the channel/page brand. **Bouriko is NOT the on-video mascot by default anymore.**
+
+The Shorts are:
+- narrator-led
+- factual and fast
+- built around real-world footage, free/permissioned photos and videos, screenshots, diagrams, and simple explanatory graphics
+- centered captions
+- one consistent narrator voice
+- real sound effects
+- scene changes driven by the subject, not by sentence-card templates
+
+Do NOT return to:
+- Bouriko pose cards
+- character movement systems
+- Rock Phone presenter dialogue
+- Rock Phone overlays by default
+- Ken Burns / zoompan
+- mascot animation as the core video format
+- fade-to-black between every sentence
+- static PowerPoint/card presentation
+- formal/bookish presentation styling
+
+The intended visual rhythm is:
+
+**HOOK → relevant footage → cut → relevant footage → diagram/graphic when needed → SFX → new visual → occasional 1–2 second reaction/meme beat → continue**
+
+The video should feel like a modern TikTok/Shorts explainer, not a narrated slideshow.
+
+## 2. First-publish goal
+
+The explicit project goal is:
+
+**Do not stop until the first video is rendered, QA-passed, and ready for publishing.**
+
+The traffic-light story is the current test case.
+
+Do not add OmniVoice, Gstack, AutoClip, ComfyUI, PersonaLive, Ruflo, or other optional systems to the production path before the first publishable video exists.
+
+Current shortest production path:
+
+**story → free/permissioned media → Kokoro narrator → real SFX → Remotion → QA → publish**
+
+## 3. Current implementation
+
+### Renderer
+
+Remotion/React is the production renderer.
+
+Current path:
+- `remotion/src/BourikoShort.tsx`
+- `remotion/src/Root.tsx`
+- `remotion/src/index.ts`
+- `remotion/render.mts`
+- `pipeline/remotion_prepare.py`
+
+Target:
+- 1080x1920
+- 30 fps
+- H.264
+- narration audio
+- real SFX
+- hard visual cuts
+- centered captions
+- full-screen media
+- fallback graphic only when media genuinely cannot be obtained
+
+The Remotion integration has already rendered a ~61.7 second MP4 successfully in an earlier run. Therefore the current blocker is media retrieval, not basic Remotion rendering.
+
+### Narration
+
+Current narrator pipeline is `pipeline/voice.py` using Kokoro.
+
+Current config:
+- narrator: `am_liam`
+- speed: `0.98`
+- `NIGHTFILES_VOICE` can override the voice through GitHub Variables.
+
+Important:
+- keep one narrator voice
+- do not restore two-voice Bouriko/Rock Phone dialogue
+- user wants the voice direction to be close to the Night Files voice if that can be verified
+- do not claim a specific Night Files voice ID unless it is actually verified
+
+The latest successful run showed Kokoro generating narration; its Hugging Face unauthenticated-rate warning is informational, not the current blocker.
+
+### SFX
+
+The real SFX system is working.
+
+The latest successful log showed:
+
+- whoosh downloaded from Night Files
+- sweep downloaded from Night Files
+- click downloaded from Night Files
+- camera downloaded from Night Files
+- interface downloaded from Night Files
+- beep downloaded from Night Files
+- impact downloaded from Night Files
+- glitch downloaded from Night Files
+- 8 usable SFX assets
+- 10 SFX events
+
+Current intended priority:
+
+**Night Files SFX → Mixkit fallback → no effect**
+
+Night Files source:
+`https://github.com/Venloud/horror-shorts`
+
+Mixkit source:
+`https://mixkit.co/free-sound-effects/`
+
+Do not replace the working Night Files SFX path unless necessary.
+
+### Media
+
+`pipeline/media.py` is responsible for free/permissioned media discovery and downloading.
+
+Configured providers, when secrets exist:
+- Pixabay
+- Pexels
+- Coverr
+
+No-key fallback:
+- Wikimedia Commons
+- Mixkit stock video
+
+Required optional secrets:
+- `PIXABAY_API_KEY`
+- `PEXELS_API_KEY`
+- `COVERR_API_KEY`
+
+The build must remain usable without those keys.
+
+Every downloaded asset must be recorded in:
+`output/media_manifest.json`
+
+Each record should preserve:
+- provider
+- source URL
+- creator when available
+- title
+- license
+- license URL
+- local path
+
+Do not silently substitute generated cards for failed media and call that a successful visual build. QA exists specifically to prevent this.
+
+## 4. LATEST LOG — OCTOBER 2, 2026
+
+Latest uploaded run checked out:
+
+`62251cf75dd370a747d8ec8e6ba26e7c2271a6bc`
+
+The run used repository:
+`Venloud/bouriko-shorts`
+
+Runner:
+- Ubuntu 24.04.5
+- Python 3.11.16
+- Node 20.20.2
+
+### Actual failure
+
+The workflow reached:
+
+`python pipeline/media.py`
+
+and failed immediately with a Python syntax error:
+
+```
+File "/home/runner/work/bouriko-shorts/bouriko-shorts/pipeline/media.py", line 91
+raw_urls = re.findall(r"https://assets\.mixkit\.co/videos[^\s\\"\']+?\.mp4", html)
+SyntaxError: unexpected character after line continuation character
+```
+
+So the Mixkit implementation was **not actually tested successfully in this run**.
+
+This is the immediate blocker.
+
+### Consequence
+
+Because `pipeline/media.py` crashed, the workflow did not proceed through the normal media → voice → SFX → Remotion → QA chain in this latest run.
+
+Do not report this run as a successful media test.
+
+The previous run had already demonstrated:
+- Remotion rendered successfully
+- duration was 61.72 seconds
+- QA correctly blocked publication because media count was 0
+
+That previous QA result was:
+
+```
+DURATION DATA: 61.72s (target 61-68s)
+MEDIA DATA: 0 downloaded assets (0 video)
+AssertionError: not enough real media; refusing to publish a slideshow
+```
+
+That QA failure was correct.
+
+## 5. Immediate next implementation
+
+### FIX #1 — repair the Mixkit regex
+
+The current `pipeline/media.py` on `main` contains an invalid Python raw-string regex.
+
+Replace the malformed expression with valid Python syntax, for example:
+
+```python
+raw_urls = re.findall(
+    r'https://assets\.mixkit\.co/videos[^\s"\']+?\.mp4',
+    html,
+)
+```
+
+The exact implementation can use an equivalent safe parser, but it must first pass `python -m py_compile pipeline/media.py`.
+
+### FIX #2 — do not rely only on exact natural-language Mixkit slugs
+
+The current Mixkit function constructs:
+
+`https://mixkit.co/free-stock-video/<entire-query-slug>/`
+
+Many story queries are long phrases such as:
+- traffic light changing at busy intersection
+- cars driving through intersection road traffic
+- induction loop detector road pavement traffic
+
+Those exact slugs may not exist.
+
+After fixing the syntax, Mixkit discovery should try:
+1. exact query slug
+2. shorter keyword/category slugs
+3. deduplicate MP4 URLs
+4. return a small candidate set
+5. let `ensure_asset()` try candidates until one downloads successfully
+
+For the traffic-light test, useful fallback keywords include:
+- traffic-light
+- traffic
+- intersection
+- road
+- bicycle
+- traffic-camera
+- street
+- car
+
+Do not scrape huge catalogs. Keep retrieval modest and respect provider terms.
+
+### FIX #3 — test the actual download path
+
+The next workflow must prove all of these:
+
+```
+Media assets downloaded: >= 8
+Video assets: >= 4
+```
+
+The QA gate currently expects at least 8 real assets and at least 4 videos to prevent slideshow-style publishing.
+
+Do not weaken those checks merely to make the build green.
+
+### FIX #4 — verify the produced media manifest
+
+The successful test should produce a non-empty:
+
+`output/media_manifest.json`
+
+and each story line that receives media should have a usable local `media_asset`.
+
+The artifact should contain:
+- `output/bouriko.mp4`
+- `output/story.json`
+- `output/word_timings.json`
+- `output/media_manifest.json`
+
+## 6. Traffic-light test story
+
+Current test concept:
+
+**How does a traffic light actually know you're there?**
+
+Core factual points:
+1. Many intersections use vehicle detection.
+2. A common method is an induction loop in/under the pavement.
+3. The loop contains wire and creates a magnetic field.
+4. A vehicle's metal changes the loop's electrical/magnetic characteristics.
+5. The controller detects the change and knows a vehicle is waiting.
+6. Not every signal uses induction loops.
+7. Some use cameras, radar, other sensors, timers, or programmed schedules.
+8. Bicycle detection can require different treatment because a bicycle has much less metal than a car.
+
+The test should show those ideas rather than repeat generic traffic footage for every sentence.
+
+### Suggested visual sequence
+
+- opening: real intersection / traffic light
+- hook: red light with cars waiting
+- road/pavement close-up
+- rectangular induction-loop cuts
+- simple under-road loop diagram
+- car sitting over loop
+- magnetic-field / detection diagram
+- controller / traffic-signal equipment
+- signal changing
+- bicycle at intersection
+- camera/radar detection
+- programmed timer/schedule
+- closing pavement shot
+- optional short reaction/meme beat where it genuinely helps
+
+Visuals should change because the explanation changes.
+
+## 7. Current script/media mismatch to fix
+
+The existing traffic-light media actions are still too repetitive in concept.
+
+Examples currently include generic queries like:
+- `traffic light changing at busy intersection`
+- `cars driving through intersection road traffic`
+- `induction loop detector road pavement traffic`
+- `traffic signal controller vehicle detection intersection`
+- `traffic camera mounted signal intersection`
+
+The media system should preserve the story's intended subject but should not force every line into generic traffic footage.
+
+For explanatory concepts that stock footage cannot show clearly:
+- use a simple diagram
+- use a screenshot/graphic
+- use a permitted image
+- use a short reaction insert
+- do not invent fake footage of an invisible mechanism
+
+## 8. Visual-quality requirements
+
+The user specifically rejected the prior result as looking like a PowerPoint.
+
+Required:
+- no black frame between every visual
+- no fade-to-black sentence transitions
+- no one-image-per-sentence slideshow feeling
+- no formal/bookish font
+- no giant static card with a sentence
+- no unnecessary visual effects
+- no mascot poses
+- no repeated traffic intersection clip for unrelated concepts
+
+Required instead:
+- real footage whenever it genuinely explains the subject
+- free photos when they are better than video
+- diagrams for invisible mechanisms
+- screenshots/graphics for interfaces or factual references
+- hard cuts
+- centered readable captions
+- sound effects at meaningful moments
+- occasional very short reaction/meme insert
+- visual changes tied to the story
+
+## 9. Copyright/media rule
+
+Use media the channel is permitted to use.
+
+The automated pipeline should prefer:
+1. licensed/free stock providers
+2. public-domain or clearly reusable media
+3. generated/simple graphics where stock footage is not appropriate
+
+Do not build the system around automatically scraping random copyrighted TikTok/YouTube/movie clips.
+
+A short clip is not automatically legal merely because it is 1–2 seconds long.
+
+If reaction/meme inserts are later added, make the source/licensing path explicit and keep the mechanism replaceable.
+
+## 10. QA gate
+
+QA should continue to enforce:
+- final video exists
+- duration is reported
+- audio exists
+- enough narration lines
+- all story lines have text
+- visual coverage exists
+- media manifest exists
+- >= 8 real downloaded media assets
+- >= 4 downloaded video assets
+- refuse slideshow-style builds
+
+Duration target remains 61–68 seconds for production, but during this visual-development phase duration should be treated as measurement data rather than a reason to block creative review if the implementation needs a shorter test.
+
+## 11. Workflow notes
+
+Current build workflow:
+- checkout
+- Python 3.11
+- Node 20
+- install ffmpeg/espeak-ng
+- install Python dependencies
+- generate story
+- download media
+- generate narrator
+- generate SFX
+- prepare Remotion
+- npm install
+- render
+- QA
+- upload artifact even on failure
+
+Important:
+- the `test` workflow input exists, but historically it has been descriptive rather than actually selecting a specific script. Do not assume the checkbox changes the story unless the workflow/script explicitly wires it through.
+- `inbox/traffic_light.txt` is the current test story.
+
+## 12. Research already completed
+
+### OmniVoice
+`https://github.com/k2-fsa/OmniVoice`
+
+Candidate future TTS backend. Not required for first publish.
+
+### Public-API
+`https://github.com/davemachado/public-api`
+
+Useful as an API discovery source. Not required for first publish.
+
+### Gstack
+`https://github.com/garrytan/gstack`
+
+Claude Code engineering workflow/tooling. Not a production runtime dependency.
+
+### Other considered tools
+
+- Remotion → production renderer
+- AutoClip → future clip/highlight selection
+- ComfyUI → optional generated-visual fallback
+- MuMuAINovel → optional story-planning inspiration
+- Ruflo → optional orchestration
+- PersonaLive → optional research/future module
+
+Decision:
+**Do not add optional tooling before first publish.**
+
+## 13. Known source/verification rule
+
+Night Files SFX usage is confirmed by the latest successful SFX log.
+
+Do NOT claim specific Night Files voice IDs or specific SFX file paths were manually verified unless the repository was actually fetched and inspected.
+
+The current SFX runtime log is enough to establish that the configured Night Files SFX downloads succeeded.
+
+## 14. Commit/history relevant to the current blocker
+
+Important recent commits:
+
+- `40bcf0f` — RGBA fallback graphic fix
+- `33ead31` — original automated sound design
+- `0c55cab` — mix SFX into final audio
+- `acd2e8f` — run sound design before render
+- `a46c6d5` — add sound design to daily builds
+- `a9dfd8f` — block slideshow-style builds
+- `8100d7c` — SFX duration fix
+- `f9d4eba` — replace generated SFX with real stock library
+- `f2ce920` — document SFX sources/licensing
+- `fa0f201` — keep narrator voice path stable
+- `965e8c1` — Night Files SFX first, Mixkit fallback
+- `493220c` — document Night Files/Mixkit SFX
+- `8ecb28a` — resilient media downloads/rate limits
+- `aa2f17e` — fix Remotion preparation Python syntax
+- `a3602a9` — fix media path regex in Remotion
+- `bfdc8ea` — add keyless Mixkit stock video fallback
+- `62251cf` — attempted Mixkit MP4 parser fix; latest uploaded log shows the regex is still syntactically invalid, so this commit must be corrected
+
+## 15. Definition of done for the first publish
+
+Do not call the project ready until:
+
+1. `pipeline/media.py` passes Python syntax/compile.
+2. Traffic-light workflow completes media discovery.
+3. At least 8 real media assets are downloaded.
+4. At least 4 are videos.
+5. Narration succeeds.
+6. Night Files SFX or Mixkit fallback succeeds.
+7. Remotion renders the MP4.
+8. QA passes without weakening the media gate.
+9. The artifact MP4 is visually checked.
+10. The video no longer looks like a PowerPoint.
+11. No black/fade-to-black sentence gaps.
+12. Visuals actually match the narration.
+13. Captions are readable and modern.
+14. Audio/SFX are present and balanced.
+15. The final MP4 is suitable for the next publishing step.
+
+**First publish comes before feature expansion.**
