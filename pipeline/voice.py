@@ -6,7 +6,9 @@ def synthesize(text, voice, out):
     import soundfile as sf
     import numpy as np
     from kokoro import KPipeline
-    pipe = KPipeline(lang_code=CONFIG.get("voices", {}).get("lang", "a"))
+    # Kokoro language must match the voice family: "a" = American, "b" = British.
+    lang_code = voice[0] if voice and voice[0] in {"a", "b", "e", "f", "h", "i", "j", "p", "z"} else CONFIG.get("voices", {}).get("lang", "a")
+    pipe = KPipeline(lang_code=lang_code)
     chunks = []
     for _, _, audio in pipe(text, voice=voice, speed=CONFIG.get("voices", {}).get("speed", 1.05)):
         chunks.append(audio)
