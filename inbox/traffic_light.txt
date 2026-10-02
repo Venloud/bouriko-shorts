@@ -1,12 +1,15 @@
 SCRIPT
-BOURIKO: There is a small man inside every traffic light. He decides who goes. He does not like me.
-ROCK PHONE: There is no man. Look down.
-BOURIKO: The road?
-ROCK PHONE: Under many intersections is a loop of wire cut into the pavement. Electricity runs through it and makes a magnetic field.
-ROCK PHONE: When a car stops on top, the metal changes that field. A box on the corner notices the change and tells the light someone is waiting.
-BOURIKO: So the road can feel me.
-ROCK PHONE: In a way. Other intersections use cameras or radar instead. And some lights ignore you completely and just run on a timer.
-BOURIKO: Then why does my friend on his bicycle wait forever?
-ROCK PHONE: Less metal. A bicycle can be too small for the loop to notice. Some roads paint a mark showing where a bike should stop.
-BOURIKO: So I must bring more metal.
-ROCK PHONE: Please do not bring more metal.
+BOURIKO: How do traffic lights actually know when a car is there?
+ROCK PHONE: Many of them use a sensor buried in the road.
+BOURIKO: Buried in the road? How does that tell the light anything?
+ROCK PHONE: A common system uses a wire loop cut into the pavement. Electricity runs through the loop and creates a magnetic field.
+BOURIKO: So when my car stops over it?
+ROCK PHONE: The metal in your car changes that field. A controller detects the change and tells the signal a vehicle is waiting.
+BOURIKO: Do all traffic lights use those?
+ROCK PHONE: No. Some intersections use cameras or radar, and some signals simply run on a timer.
+BOURIKO: What if I'm on a bicycle?
+ROCK PHONE: A bicycle can be harder for an induction loop to detect because it has less metal. Some intersections provide bicycle detection areas or use other sensors.
+BOURIKO: Can I tell which one a light uses?
+ROCK PHONE: Sometimes. Look for a rectangular cut or detection marking in the pavement near the stop line, but you cannot tell for sure from the pavement alone.
+BOURIKO: So I just wait there and hope it sees me.
+ROCK PHONE: That works. And those cameras above the traffic lights? That's the next question.
