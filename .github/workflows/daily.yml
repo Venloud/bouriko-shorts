@@ -23,7 +23,7 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           COVERR_API_KEY: ${{ secrets.COVERR_API_KEY }}
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
-        run: python pipeline/script.py && python pipeline/media.py && python pipeline/voice.py && python pipeline/render.py && python pipeline/qa.py
+        run: python pipeline/script.py && python pipeline/media.py && python pipeline/voice.py && python pipeline/sfx.py && python pipeline/render.py && python pipeline/qa.py
       - name: Publish
         env:
           TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
