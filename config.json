@@ -38,7 +38,7 @@
     "rock_phone": "bf_emma",
     "lang": "a",
     "speed": 0.9,
-    "line_pause": 0.42
+    "line_pause": 0.0
   },
   "voice_note": "Rock Phone: bf_emma — British female, calm/professional assistant-style voice. Bouriko: am_fenrir. Dialogue pacing tuned for 61–68s shorts: 0.9 speed + 0.42s inter-line beats.",
   "llm_models": [
