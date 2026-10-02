@@ -1,14 +1,15 @@
 SCRIPT
-NARRATOR: How does a traffic light actually know you're there?
-NARRATOR: A lot of intersections use sensors buried in the road.
-NARRATOR: Look at the pavement near the stop line. You may see a rectangle cut into the road.
-NARRATOR: That can be an induction loop: wire buried under the pavement with electricity running through it.
-NARRATOR: When a car stops over the loop, the metal changes the loop's magnetic field.
-NARRATOR: A controller detects that change and tells the traffic signal a vehicle is waiting.
-NARRATOR: But not every light uses a loop.
-NARRATOR: Some intersections use cameras or radar. Others simply follow a timer or a programmed schedule.
-NARRATOR: And bicycles can be tricky for induction loops because they contain much less metal than a car.
-NARRATOR: Some intersections have bicycle detection areas or use other sensors instead.
-NARRATOR: So next time you stop at a light, look at the pavement.
-NARRATOR: If you see those rectangular cuts near the stop line, you may be looking at the sensor that is telling the light you're there.
-NARRATOR: And those cameras mounted above the signal? That's a whole different system.
+NARRATOR: How does a traffic light know your car is waiting?
+NARRATOR: It can actually feel your car sitting on the road.
+NARRATOR: Many roads have a hidden sensor under the pavement.
+NARRATOR: Look near the white stop line. You might see a rectangle cut into the road.
+NARRATOR: That rectangle can be a wire loop hiding under the pavement.
+NARRATOR: Electricity runs through the wire, making an invisible magnetic field.
+NARRATOR: When a car stops on top of it, the car changes that field.
+NARRATOR: The sensor notices the change and tells the traffic light, "Hey, a car is here."
+NARRATOR: Then the light can decide when it is time to let that car go.
+NARRATOR: But some traffic lights use cameras or radar instead.
+NARRATOR: And some simply change because a timer says it is time.
+NARRATOR: So next time you stop at a red light, look down at the road.
+NARRATOR: That little rectangle might be the hidden sensor that knows you are there.
+NARRATOR: The traffic light is not guessing. It is getting a signal from the road.
