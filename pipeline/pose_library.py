@@ -7,6 +7,8 @@ from common import ROOT
 
 POSES = ROOT / "assets/poses"
 REFS = ROOT / "assets/reference"
+_REMBG_SESSION = None
+_REMBG_OK = None
 
 def _files():
     return [p for p in REFS.rglob("*") if p.suffix.lower() in {".png", ".jpg", ".jpeg"}]
@@ -27,19 +29,25 @@ def _grid_boxes(im):
     return []
 
 def _cutout(im):
-    try:
-        from rembg import remove, new_session
-        return remove(im, session=new_session("u2netp")).convert("RGBA")
-    except Exception:
-        # Deterministic fallback for the white reference-sheet background.
-        rgba = im.convert("RGBA")
-        px = rgba.load()
-        for y in range(rgba.height):
-            for x in range(rgba.width):
-                r, g, b, a = px[x, y]
-                if r > 245 and g > 245 and b > 245:
-                    px[x, y] = (r, g, b, 0)
-        return rgba
+    global _REMBG_SESSION, _REMBG_OK
+    if _REMBG_OK is not False:
+        try:
+            from rembg import remove, new_session
+            if _REMBG_SESSION is None:
+                _REMBG_SESSION = new_session("u2netp")
+            _REMBG_OK = True
+            return remove(im, session=_REMBG_SESSION).convert("RGBA")
+        except Exception:
+            _REMBG_OK = False
+
+    rgba = im.convert("RGBA")
+    px = rgba.load()
+    for y in range(rgba.height):
+        for x in range(rgba.width):
+            r, g, b, a = px[x, y]
+            if r > 245 and g > 245 and b > 245:
+                px[x, y] = (r, g, b, 0)
+    return rgba
 
 def _trim(im):
     bbox = im.getbbox()
