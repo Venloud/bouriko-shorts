@@ -1,0 +1,22 @@
+name: YouTube Token Check
+on: {workflow_dispatch: {}}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install -q google-auth
+      - name: Refresh token
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          from google.oauth2.credentials import Credentials
+          from google.auth.transport.requests import Request
+          c=Credentials(None,refresh_token=os.environ["YT_REFRESH_TOKEN"],client_id=os.environ["YT_CLIENT_ID"],client_secret=os.environ["YT_CLIENT_SECRET"],token_uri="https://oauth2.googleapis.com/token")
+          c.refresh(Request()); print("YouTube token OK")
+          PY
