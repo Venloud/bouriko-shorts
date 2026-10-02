@@ -27,13 +27,14 @@ jobs:
       - name: Syntax check all pipeline Python
         run: python -m compileall -q pipeline
       - name: Python packages
-        run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
+        run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai
       - name: Write story
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python pipeline/script.py
       - name: Download free photos and videos
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           COVERR_API_KEY: ${{ secrets.COVERR_API_KEY }}
@@ -43,6 +44,8 @@ jobs:
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
         run: python pipeline/voice.py
       - name: Generate real stock SFX
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python pipeline/sfx.py
       - name: Prepare Remotion assets
         run: python pipeline/remotion_prepare.py
