@@ -78,21 +78,65 @@ def visuals_for(text, speaker):
     t = text.lower()
     if "traffic light" in t:
         return "traffic signal"
-    if "small man" in t:
-        return "tiny man inside signal"
-    if "loop of wire" in t or "electricity" in t:
-        return "wire loop under road"
-    if "car stops" in t or "metal changes" in t:
+    if "buried in the road" in t or "wire loop" in t or "pavement" in t:
+        return "road sensor"
+    if "car stops" in t or "metal in your car" in t or "field" in t:
         return "car over induction loop"
-    if "box on the corner" in t:
-        return "signal controller box"
+    if "controller" in t or "tells the signal" in t:
+        return "detection controller"
     if "camera" in t or "radar" in t:
-        return "camera and radar alternatives"
-    if "bicycle" in t or "bike" in t:
-        return "bicycle over loop"
-    if "metal" in t:
-        return "pile of metal"
+        return "camera and radar"
+    if "bicycle" in t:
+        return "bicycle detection"
     return "Bouriko reaction" if speaker == "BOURIKO" else "Rock Phone explanation"
+
+
+def visual_actions_for(text, speaker):
+    t = text.lower()
+    if "traffic lights actually know" in t:
+        return [
+            {"type": "environment", "asset": "intersection"},
+            {"type": "draw", "shape": "traffic_light", "target": "signal"},
+        ]
+    if "sensor buried in the road" in t or "buried in the road" in t:
+        return [
+            {"type": "environment", "asset": "intersection"},
+            {"type": "zoom", "target": "road_stop_line"},
+            {"type": "draw", "shape": "loop", "target": "pavement"},
+            {"type": "highlight", "target": "loop", "color": "#2EA8FF"},
+        ]
+    if "wire loop" in t or "magnetic field" in t:
+        return [
+            {"type": "diagram", "name": "induction_loop"},
+            {"type": "draw", "shape": "field", "target": "loop", "color": "#2EA8FF"},
+            {"type": "label", "text": "INDUCTION LOOP"},
+        ]
+    if "metal in your car" in t or "controller detects" in t:
+        return [
+            {"type": "diagram", "name": "detection_flow"},
+            {"type": "arrow", "from": "car", "to": "loop"},
+            {"type": "arrow", "from": "loop", "to": "controller"},
+            {"type": "arrow", "from": "controller", "to": "traffic_light"},
+        ]
+    if "cameras or radar" in t or "timer" in t:
+        return [
+            {"type": "draw", "shape": "camera", "target": "intersection"},
+            {"type": "label", "text": "CAMERA / RADAR / TIMER"},
+        ]
+    if "bicycle" in t:
+        return [
+            {"type": "environment", "asset": "bike_stop_line"},
+            {"type": "draw", "shape": "detection_zone", "target": "pavement"},
+            {"type": "highlight", "target": "bike_zone", "color": "#2EA8FF"},
+        ]
+    if "rectangular cut" in t or "detection marking" in t:
+        return [
+            {"type": "zoom", "target": "road_stop_line"},
+            {"type": "highlight", "target": "pavement_marking", "color": "#2EA8FF"},
+            {"type": "label", "text": "DETECTION AREA"},
+        ]
+    return [{"type": "reaction", "speaker": speaker}]
+
 
 def exact_story(path):
     lines = parse_inbox_script(path)
@@ -100,6 +144,7 @@ def exact_story(path):
         raise RuntimeError(f"No speaker lines found in {path}")
     for line in lines:
         line["visual"] = visuals_for(line["text"], line["speaker"])
+        line["visual_actions"] = visual_actions_for(line["text"], line["speaker"])
     return {
         "title": "Bouriko vs. Traffic Lights",
         "pillar": "hidden",
