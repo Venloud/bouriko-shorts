@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       fresh:
-        description: "Fresh offline test"
+        description: "Fresh build"
         required: false
         type: boolean
       test:
@@ -15,11 +15,13 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "20"}
       - name: System packages
         run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
       - name: Python packages
@@ -38,16 +40,22 @@ jobs:
         env:
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
         run: python pipeline/voice.py
-      - name: Generate sound design
+      - name: Generate real stock SFX
         run: python pipeline/sfx.py
-      - name: Render media-first explainer
-        run: python pipeline/render.py
+      - name: Prepare Remotion assets
+        run: python pipeline/remotion_prepare.py
+      - name: Install Remotion
+        working-directory: remotion
+        run: npm install --no-audit --no-fund
+      - name: Render media-first Short
+        working-directory: remotion
+        run: npm run render
       - name: QA gate
         run: python pipeline/qa.py
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: bouriko-first-video
+          name: bouriko-remotion-test
           path: |
             output/bouriko.mp4
             output/story.json
