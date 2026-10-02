@@ -15,8 +15,13 @@
     "comparison": "Two products side by side; Rock Phone gives verified specs; Bouriko picks a winner in rocks.",
     "news": "Rock Phone reports one fresh verified tech story; Bouriko reacts with a hot take."
   },
-  "voices": { "bouriko": "am_fenrir", "rock_phone": "af_nicole", "lang": "a", "speed": 1.05 },
-  "voice_note": "Placeholder voice ids - pick real ones after voice_samples.yml",
+  "voices": {
+    "bouriko": "am_fenrir",
+    "rock_phone": "bf_emma",
+    "lang": "a",
+    "speed": 1.05
+  },
+  "voice_note": "Rock Phone: bf_emma — British female, calm/professional assistant-style voice. Bouriko: am_fenrir.",
   "llm_models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"],
   "groq_models": ["openai/gpt-oss-120b"],
   "style": {
