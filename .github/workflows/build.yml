@@ -25,6 +25,7 @@ jobs:
       - name: System packages
         run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
       - name: Python packages
+        run: python -m compileall -q pipeline
         run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
       - name: Write story
         env:
