@@ -1,47 +1,55 @@
-"""Story writer with Gemini -> Groq fallback and deterministic offline test."""
+"""Bouriko writer: pillar rotation, topic dedupe, source ledger, Gemini critic."""
 import json,os,re,requests
-from pathlib import Path
 from common import ROOT,CONFIG,load_history,log
 TOPICS=ROOT/"data/topics.json"; HISTORY=ROOT/"data/history.json"
-def topic_pick():
-    data=json.loads(TOPICS.read_text()); used={x.get("topic") for x in load_history()}
-    for t in data:
-        if isinstance(t,dict): name=t.get("topic") or t.get("title")
-        else: name=t
-        if name and name not in used:return name
-    return data[0].get("topic") if isinstance(data[0],dict) else data[0]
+def _topics():
+    data=json.loads(TOPICS.read_text()); return data
+def pick():
+    data=_topics(); hist={x.get("topic") for x in load_history()}
+    rotation=CONFIG.get("pillar_rotation",[])
+    n=sum(1 for x in load_history() if x.get("pillar"))
+    pillar=rotation[n%len(rotation)] if rotation else "hidden"
+    choices=[x for x in data.get(pillar,[]) if x not in hist]
+    return pillar,(choices[0] if choices else data.get(pillar,[None])[0])
+def source_text(topic):
+    q=requests.utils.quote(topic)
+    r=requests.get("https://en.wikipedia.org/api/rest_v1/page/summary/"+q,timeout=20)
+    if r.ok:
+        d=r.json(); return [{"id":"s1","title":d.get("title"),"url":d.get("content_urls",{}).get("desktop",{}).get("page"),"text":d.get("extract","")}]
+    return []
 def gemini(prompt):
     key=os.getenv("GEMINI_API_KEY")
     if not key:return None
     model=CONFIG.get("llm_models",["gemini-3.8-flash"])[0]
-    url=f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
-    r=requests.post(url,json={"contents":[{"parts":[{"text":prompt}]}],"generationConfig":{"temperature":0.7,"responseMimeType":"application/json"}},timeout=60)
-    if r.ok:
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
-    log(f"Gemini {r.status_code}: fallback")
-def build(topic):
-    prompt=f'''You write Bouriko tech shorts. Topic: {topic}. Create 140-152 words, 61-68 seconds.
-Return JSON only with title,pillar,lines,sources,caption,hashtags. lines are objects with speaker Bouriko or Rock Phone, text, visual.
-Facts must be verifiable; no logos. Bouriko is curious and often wrong; Rock Phone explains.'''
+    u=f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
+    r=requests.post(u,json={"contents":[{"parts":[{"text":prompt}]}],"generationConfig":{"temperature":0.6,"responseMimeType":"application/json"}},timeout=90)
+    if r.ok:return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+    log(f"Gemini {r.status_code}")
+def write(pillar,topic,sources):
+    ledger="\n".join(f'{s["id"]}: {s["title"]} — {s["text"]}' for s in sources)
+    rule=CONFIG.get("pillar_rules",{}).get(pillar,"")
+    prompt=(ROOT/"prompts/script.txt").read_text().format(pillar=pillar,topic=topic,ledger=ledger,poses="talking,pointing,confused,phone,thinking")
     raw=gemini(prompt)
-    if raw:
-        try:return json.loads(raw)
-        except: pass
-    return {"title":"How traffic lights know when cars are waiting","pillar":"hidden","lines":[
-      {"speaker":"Bouriko","text":"Bouriko sees the red light. Bouriko thinks the light is watching the road.","visual":"traffic light sketch"},
-      {"speaker":"Rock Phone","text":"Not magic. Many intersections use sensors to detect vehicles waiting in a lane.","visual":"sensor diagram"},
-      {"speaker":"Bouriko","text":"So tiny machine watches the cars?","visual":"Bouriko pointing"},
-      {"speaker":"Rock Phone","text":"Yes. Some systems use loops buried under the pavement. A car changes the loop's electrical signal.","visual":"road loop diagram"},
-      {"speaker":"Bouriko","text":"Car makes invisible electricity wiggle?","visual":"electric field sketch"},
-      {"speaker":"Rock Phone","text":"Exactly. The controller can use that signal to help decide when to change the light.","visual":"controller diagram"},
-      {"speaker":"Bouriko","text":"Bouriko thought light was just patient. Now Bouriko knows road has ears.","visual":"Bouriko with rock phone"}],
-      "sources":["https://highways.dot.gov/public-roads/spring-2017/inductive-loop-detectors"],"caption":"Traffic lights can use sensors to detect waiting vehicles.","hashtags":["#Bouriko","#Tech","#HowItWorks"]}
+    if not raw: raise RuntimeError("GEMINI_API_KEY unavailable or request failed")
+    story=json.loads(raw); story["pillar"]=pillar; story["sources"]=[s["url"] for s in sources if s.get("url")]
+    critic=(ROOT/"prompts/critic.txt").read_text().format(words_lo=CONFIG["script_words"][0],words_hi=CONFIG["script_words"][1])
+    checked=gemini(critic+"\nSOURCE LEDGER:\n"+ledger+"\nDRAFT:\n"+json.dumps(story))
+    if checked:
+        try:
+            c=json.loads(checked); story=c.get("script",story)
+        except Exception: pass
+    return story
 def main():
-    inbox=list((ROOT/"inbox").glob("*.txt")); topic=None
+    inbox=sorted((ROOT/"inbox").glob("*.txt"))
+    pillar,topic=pick()
     for p in inbox:
-        if p.name.lower()=="traffic_light.txt": topic="traffic light sensors"; break
-    topic=topic or topic_pick(); story=build(topic)
-    out=ROOT/"output/story.json"; out.parent.mkdir(exist_ok=True); out.write_text(json.dumps(story,indent=2))
-    h=load_history(); h.append({"topic":topic,"title":story["title"],"built":True}); HISTORY.parent.mkdir(exist_ok=True); HISTORY.write_text(json.dumps(h,indent=2))
-    return out
-if __name__=="__main__": print(main())
+        first=p.read_text(errors="ignore").splitlines()[0].strip().upper() if p.read_text(errors="ignore").splitlines() else ""
+        if first in {"TOPIC","SCRIPT"}:
+            if first=="TOPIC": topic=p.read_text().splitlines()[1].strip() if len(p.read_text().splitlines())>1 else topic
+            break
+    sources=source_text(topic)
+    if not sources: raise RuntimeError("No source found for topic")
+    story=write(pillar,topic,sources); story["topic"]=topic
+    out=ROOT/"output/story.json";out.parent.mkdir(exist_ok=True);out.write_text(json.dumps(story,indent=2))
+    h=load_history();h.append({"topic":topic,"pillar":pillar,"title":story.get("title",""),"built":True});ROOT.joinpath("data").mkdir(exist_ok=True);HISTORY.write_text(json.dumps(h,indent=2))
+if __name__=="__main__": main()
