@@ -1,0 +1,45 @@
+name: Bouriko Build
+on:
+  workflow_dispatch:
+    inputs:
+      fresh:
+        description: "Fresh offline test"
+        required: false
+        type: boolean
+      test:
+        description: "Run traffic-light test"
+        required: false
+        type: boolean
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: Install
+        run: pip install -q requests google-api-python-client google-auth
+      - name: Write story
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python pipeline/script.py
+      - name: Render
+        run: python pipeline/render.py
+      - name: QA
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          p="output/bouriko.mp4"
+          d=float(subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration","-of","default=nw=1:nk=1",p]))
+          assert d>=61, f"video too short: {d:.2f}s"
+          assert d<=68.5, f"video too long: {d:.2f}s"
+          assert json.load(open("output/story.json"))["sources"], "missing sources"
+          print("QA PASS",d)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bouriko-video
+          path: output/bouriko.mp4
