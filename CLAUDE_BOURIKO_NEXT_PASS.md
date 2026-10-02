@@ -238,3 +238,34 @@ The basic pipeline works. The next phase is creative-system redesign, not basic 
 **Bouriko asks the question. The world/diagram demonstrates the answer. Rock Phone explains it.**
 
 **Do not stretch a conversation to hit 61–68 seconds. Make the video good first; duration is measurement data until the format is locked.**
+
+
+## Real-world footage is now implemented as an optional renderer path
+
+The renderer now supports a `real_clip` visual action. It can take a local permitted clip or a permitted downloadable URL, convert it to the 1080x1920 canvas, and composite the Bouriko cutout, Rock Phone, label, and captions over the footage.
+
+Files:
+- `pipeline/broll.py` resolves local clips or URLs and prepares vertical footage.
+- `pipeline/render.py` detects `real_clip` actions and overlays Bouriko/Rock Phone on the real footage.
+- `.github/workflows/build.yml` installs `yt-dlp` so this optional path can work in CI.
+
+Example story action:
+
+```json
+{
+  "type": "real_clip",
+  "source": "assets/broll/traffic_intersection.mp4",
+  "label": "REAL INTERSECTION"
+}
+```
+
+Use only footage the channel is allowed to use. Real footage is an enhancement, not a required dependency: if a story has no `real_clip` action, the build remains fully local and uses diagrams/environment plates/cutouts.
+
+This means the format can now deliberately mix:
+1. real-world footage
+2. generated/environment plates
+3. hand-drawn explainer graphics
+4. Bouriko cutouts
+5. Rock Phone overlays
+
+The current traffic-light test is still primarily the explainer/diagram test. Future story plans can insert real clips wherever they genuinely clarify the explanation.
