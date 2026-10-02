@@ -88,7 +88,7 @@ def mixkit(query, kind):
         return []
 
     # Mixkit pages expose downloadable MP4 URLs in the page source.
-    raw_urls = re.findall(r"https://assets\.mixkit\.co/videos[^\s\\"\']+?\.mp4", html)
+    raw_urls = re.findall(r'https://assets\.mixkit\.co/videos[^"\s]+?\.mp4', html)
     urls = []
     for raw in raw_urls:
         clean = raw.replace("\\u0026", "&").replace("\\/", "/")
