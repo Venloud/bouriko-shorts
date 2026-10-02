@@ -327,3 +327,34 @@ The test should look like a modern documentary/tutorial Short:
 NARRATION -> real/free footage -> centered caption -> another real/free image/video -> diagram when useful -> centered caption -> next visual.
 
 It should NOT look like a slideshow of mascot pose cards.
+
+
+## CURRENT IMPLEMENTATION — OCTOBER 2, 2026
+
+The media-first narrator direction is now implemented with a Remotion renderer.
+
+### What is live
+- narrator-only format
+- free-media discovery via pipeline/media.py
+- real stock SFX via pipeline/sfx.py
+- timed asset preparation via pipeline/remotion_prepare.py
+- Remotion/React renderer under remotion/
+- 1080x1920 H.264 output
+- centered captions
+- hard scene cuts
+- no mascot presenter, Rock Phone overlay, Ken Burns/zoompan, or fade-to-black slideshow behavior
+- build and daily workflows now route through Remotion
+
+### First test
+Run GitHub Actions -> Bouriko Build -> Run workflow -> enable the traffic-light test input. The artifact is named bouriko-remotion-test.
+
+### Important
+This is the first Remotion integration pass. If the test render exposes timing, media-format, caption, or visual-quality issues, fix those before adding ComfyUI/PersonaLive/AutoClip/Ruflo as runtime dependencies.
+
+### Architecture roadmap
+1. Remotion = production renderer.
+2. AutoClip = future clip/highlight selection logic.
+3. ComfyUI = optional fallback for missing explanatory visuals.
+4. MuMuAINovel = optional story-planning inspiration.
+5. Ruflo = optional orchestration layer.
+6. PersonaLive = optional research module only; not part of the default narrator format.
