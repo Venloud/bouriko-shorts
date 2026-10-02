@@ -235,24 +235,97 @@ def commons(query, kind):
     return out
 
 
+def _query_variants(query, kind):
+    """Turn a natural-language scene description into several stock-search queries."""
+    q = re.sub(r"[^a-z0-9\s-]", " ", str(query).lower())
+    q = re.sub(r"\s+", " ", q).strip()
+    variants = [q]
+
+    keyword_groups = [
+        ("traffic light", "traffic light"),
+        ("traffic signal", "traffic signal"),
+        ("intersection", "intersection"),
+        ("road traffic", "road traffic"),
+        ("traffic", "traffic"),
+        ("car", "cars"),
+        ("bicycle", "bicycle"),
+        ("bike", "bicycle"),
+        ("traffic camera", "traffic camera"),
+        ("camera", "traffic camera"),
+        ("radar", "radar"),
+        ("induction loop", "induction loop"),
+        ("road sensor", "road sensor"),
+        ("road", "road"),
+        ("street", "street"),
+    ]
+    for needle, replacement in keyword_groups:
+        if needle in q:
+            variants.append(replacement)
+
+    words = q.split()
+    if len(words) > 3:
+        variants.append(" ".join(words[:3]))
+        variants.append(" ".join(words[-3:]))
+
+    out = []
+    for item in variants:
+        item = item.strip()
+        if item and item not in out:
+            out.append(item)
+    return out[:6]
+
+
 def choose(query, kind):
     candidates = []
-    # Prefer configured stock providers, then Commons.
-    for fn in (pixabay, pexels, mixkit):
+    seen = set()
+    variants = _query_variants(query, kind)
+
+    print(f"Media search: {kind} | {query} | variants={variants}")
+
+    for variant in variants:
+        for name, fn in (
+            ("pixabay", pixabay),
+            ("pexels", pexels),
+            ("mixkit", mixkit),
+        ):
+            try:
+                found = fn(variant, kind)
+                print(f"  {name}: {len(found)} candidates for '{variant}'")
+                for item in found:
+                    key = (item.get("provider"), item.get("url"))
+                    if key not in seen:
+                        seen.add(key)
+                        candidates.append(item)
+            except Exception as exc:
+                print(f"  {name}: ERROR for '{variant}': {exc}")
+
+        if kind == "video":
+            try:
+                found = coverr(variant)
+                print(f"  coverr: {len(found)} candidates for '{variant}'")
+                for item in found:
+                    key = (item.get("provider"), item.get("url"))
+                    if key not in seen:
+                        seen.add(key)
+                        candidates.append(item)
+            except Exception as exc:
+                print(f"  coverr: ERROR for '{variant}': {exc}")
+
         try:
-            candidates += fn(query, kind)
-        except Exception:
-            pass
-    if kind == "video":
-        try:
-            candidates += coverr(query)
-        except Exception:
-            pass
-    try:
-        candidates += commons(query, kind)
-    except Exception:
-        pass
-    return candidates[:20]
+            found = commons(variant, kind)
+            print(f"  wikimedia_commons: {len(found)} candidates for '{variant}'")
+            for item in found:
+                key = (item.get("provider"), item.get("url"))
+                if key not in seen:
+                    seen.add(key)
+                    candidates.append(item)
+        except Exception as exc:
+            print(f"  wikimedia_commons: ERROR for '{variant}': {exc}")
+
+        if len(candidates) >= 12:
+            break
+
+    return candidates[:30]
 
 
 def ensure_asset(action, index):
