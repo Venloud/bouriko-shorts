@@ -10,6 +10,7 @@ Every downloaded asset records its source and license metadata.
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 import requests
@@ -34,15 +35,34 @@ def _get(url, **kwargs):
     return r
 
 
-def _download(url, path):
+def _download(url, path, attempts=4):
+    """Download with retry/backoff so a rate-limited provider does not kill the build."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with requests.get(url, stream=True, timeout=120, headers={"User-Agent": UA}) as r:
-        r.raise_for_status()
-        with path.open("wb") as f:
-            for chunk in r.iter_content(1024 * 1024):
-                if chunk:
-                    f.write(chunk)
-
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            with requests.get(url, stream=True, timeout=120, headers={"User-Agent": UA, "Accept": "*/*"}) as r:
+                if r.status_code == 429:
+                    retry_after = r.headers.get("Retry-After")
+                    try:
+                        delay = min(30, max(2, int(retry_after))) if retry_after else 2 ** attempt
+                    except ValueError:
+                        delay = 2 ** attempt
+                    time.sleep(delay)
+                    continue
+                r.raise_for_status()
+                with path.open("wb") as f:
+                    for chunk in r.iter_content(1024 * 1024):
+                        if chunk:
+                            f.write(chunk)
+                return
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < attempts - 1:
+                time.sleep(min(15, 2 ** attempt))
+    if last_error:
+        raise last_error
+    raise RuntimeError(f"Failed to download {url}")
 
 def pixabay(query, kind):
     key = os.getenv("PIXABAY_API_KEY")
@@ -195,11 +215,34 @@ def ensure_asset(action, index):
     candidates = choose(query, kind)
     if not candidates:
         return None
-    chosen = candidates[0]
-    ext = ".webm" if chosen["provider"] == "wikimedia_commons" and "webm" in chosen["url"].lower() else (".mp4" if kind == "video" else ".jpg")
-    path = MEDIA_DIR / f"{index:02}_{_slug(query)}{ext}"
-    if not path.exists():
-        _download(chosen["url"], path)
+
+    # A provider can return a valid search result whose file URL is temporarily
+    # rate-limited or unavailable. Try the next candidate instead of aborting
+    # the entire video build.
+    for candidate_no, chosen in enumerate(candidates):
+        ext = (
+            ".webm"
+            if chosen["provider"] == "wikimedia_commons"
+            and "webm" in chosen["url"].lower()
+            else (".mp4" if kind == "video" else ".jpg")
+        )
+        path = MEDIA_DIR / f"{index:02}_{_slug(query)}_{candidate_no}{ext}"
+        if path.exists() and path.stat().st_size > 0:
+            break
+        try:
+            _download(chosen["url"], path)
+            if path.stat().st_size == 0:
+                raise RuntimeError("Downloaded media file is empty")
+            break
+        except Exception as exc:
+            print(f"Media download failed ({chosen.get('provider')}): {chosen.get('url')} -> {exc}")
+            try:
+                path.unlink(missing_ok=True)
+            except Exception:
+                pass
+            path = None
+    else:
+        return None
 
     return {
         "index": index, "query": query, "kind": kind,
@@ -208,7 +251,6 @@ def ensure_asset(action, index):
         "license": chosen.get("license"), "license_url": chosen.get("license_url"),
         "local_path": str(path.relative_to(ROOT))
     }
-
 
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
