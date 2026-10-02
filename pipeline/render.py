@@ -162,10 +162,40 @@ def main():
         str(audio_concat)
     ])
 
+    # Mix subtle original SFX under the narrator.
+    sfx_events_path = ROOT / "output/sfx_events.json"
+    mixed_audio = audio_concat
+    if sfx_events_path.exists():
+        events = json.loads(sfx_events_path.read_text())
+        inputs = ["-i", str(audio_concat)]
+        filters = []
+        valid = 0
+        for event in events:
+            p = ROOT / event["file"]
+            if not p.exists():
+                continue
+            valid += 1
+            idx = valid
+            inputs += ["-i", str(p)]
+            ms = int(float(event.get("time", 0)) * 1000)
+            vol = float(event.get("volume", 0.15))
+            filters.append(f"[{idx}:a]adelay={ms}:all=1,volume={vol:.3f}[s{idx}]")
+        if filters:
+            mix_inputs = "[0:a]" + "".join(f"[s{i}]" for i in range(1, valid + 1))
+            filters.append(
+                f"{mix_inputs}amix=inputs={valid + 1}:duration=first:dropout_transition=0:normalize=0[a]"
+            )
+            mixed_audio = ROOT / "output/audio_mixed.wav"
+            run([
+                "ffmpeg", "-y", "-loglevel", "error", *inputs,
+                "-filter_complex", ";".join(filters),
+                "-map", "[a]", "-ar", "24000", "-ac", "1", str(mixed_audio)
+            ])
+
     final = ROOT / "output/bouriko.mp4"
     run([
         "ffmpeg", "-y", "-loglevel", "error",
-        "-i", str(silent), "-i", str(audio_concat),
+        "-i", str(silent), "-i", str(mixed_audio),
         "-map", "0:v:0", "-map", "1:a:0",
         "-c:v", "copy", "-c:a", "aac", "-shortest", str(final)
     ])
