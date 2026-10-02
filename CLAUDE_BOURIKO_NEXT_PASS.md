@@ -269,3 +269,61 @@ This means the format can now deliberately mix:
 5. Rock Phone overlays
 
 The current traffic-light test is still primarily the explainer/diagram test. Future story plans can insert real clips wherever they genuinely clarify the explanation.
+
+
+# NEW DIRECTION — OCTOBER 2, 2026
+
+The previous mascot-led video format is SCRAPPED.
+
+## Video format now
+- Bouriko remains the face/branding of the page, not the on-screen presenter.
+- Videos are narrator-led.
+- Use centered captions in the middle of the frame.
+- Main visuals are real footage and free photos.
+- Also use screenshots, simple diagrams, and generated/constructed graphics when they explain something better.
+- Change visuals when the subject changes.
+- Use short fades/crossfades between visual sections.
+- NO pose animation.
+- NO character movement system.
+- NO Ken Burns / zoompan camera movement.
+- NO Bouriko cutout in the video by default.
+- NO Rock Phone overlay in the video by default.
+- Do not build runtime around mascot poses.
+
+## Free media system
+Automated media discovery is now in pipeline/media.py.
+
+Primary sources:
+- Pixabay photos + videos
+- Coverr stock video
+- Pexels optional
+
+Selected media is downloaded locally and recorded in output/media_manifest.json.
+
+Required provider secrets, when available:
+- PIXABAY_API_KEY
+- COVERR_API_KEY
+- PEXELS_API_KEY
+
+The build must still work without them by falling back to local/simple graphics.
+
+## Voice
+Use ONE consistent narrator voice for the whole video.
+The voice can be overridden with NIGHTFILES_VOICE.
+The exact Night Files voice ID is not currently recorded in the accessible Night Files GitHub repository, so the current fallback is configurable rather than pretending a specific ID was verified.
+
+Do not create separate Bouriko/phone dialogue voices anymore.
+
+## Phone
+The CSS-looking Rock Phone is no longer required in the video format. Do not spend time improving the old drawn phone unless it is later needed for page branding or a specific visual.
+
+## Writer
+prompts/script.txt now asks for a narrator-led factual explainer with media/search ideas instead of Bouriko/Rock Phone dialogue.
+
+The traffic-light test in inbox/traffic_light.txt is now a narrator script.
+
+## Goal for the next visual test
+The test should look like a modern documentary/tutorial Short:
+NARRATION -> real/free footage -> centered caption -> another real/free image/video -> diagram when useful -> centered caption -> next visual.
+
+It should NOT look like a slideshow of mascot pose cards.
