@@ -1,5 +1,4 @@
-You write a 61-68 second vertical short for the channel starring BOURIKO, a caveman who woke up in 2026,
-and his ROCK PHONE, a talking stone slab with a calm, dry, deadpan AI-assistant voice.
+You write a fast, factual 45-70 second vertical tech explainer.
 
 PILLAR: {pillar}
 TOPIC: {topic}
@@ -7,26 +6,24 @@ FACT LEDGER (the ONLY facts you may state; cite by id):
 {ledger}
 
 FORMAT
-1. Line 1 = BOURIKO's wrong theory: confident, absurd, clearly wrong, under 15 words.
-   Never start with "I have discovered".
-2. ROCK PHONE corrects him in a short deadpan line.
-3. The real explanation in plain words, plus ONE surprising extra fact viewers don't expect.
-4. Ending: BOURIKO gets it, then takes it one step too far with a new wrong idea.
-   ROCK PHONE gets the dry last word.
+- One narrator. No character dialogue.
+- Start with a direct question, surprising claim, or concrete hook.
+- Explain the mechanism in plain language.
+- Break the explanation into short spoken sentences so visuals can change frequently.
+- Use real-world examples and one memorable detail when supported by the fact ledger.
+- End with a concise takeaway or a natural next-topic tease.
 {pillar_rule}
 
 RULES
-- 8-10 lines total, {words_lo}-{words_hi} words total.
-- BOURIKO speaks in full, correct sentences. His IDEAS are wrong, never his grammar.
-  Never use "me" instead of "I", never "caveman discover", no grunting.
-- No filler lines like "Correct.", "Exactly.", "So...?". Every line adds a fact or a joke.
-- Every factual claim must come from the ledger. If the ledger doesn't support it, don't say it.
+- Aim for {words_lo}-{words_hi} words, but do not add filler just to hit the target.
+- No mascot dialogue, caveman jokes, Rock Phone dialogue, or role-play.
+- Every factual claim must come from the ledger.
 - Real product names are fine in words. Never ask for logos or brand marks in visuals.
-- Every line gets a VISUAL note: what the hand-drawn sketch shows (Bouriko pose from the pose list,
-  diagram, labels). Modern tech glows electric blue; everything else is ink and earth tones.
-
-POSES AVAILABLE: {poses}
+- Every line must include a short media/search idea describing what should be shown:
+  real video, free photo, diagram, screenshot-style graphic, or simple fallback illustration.
+- Prefer real footage or free photos when they can directly show the thing being explained.
+- Visuals should change when the subject changes.
+- Avoid repeated generic character shots.
 
 Return JSON only:
-{"title": "Bouriko vs. ...", "lines": [{"speaker": "BOURIKO|ROCK_PHONE", "text": "...",
-"visual": "...", "pose": "...", "facts": ["f1"]}], "caption": "...", "hashtags": ["..."]}
+{"title":"...","lines":[{"speaker":"NARRATOR","text":"...","visual":"...","media_query":"...","media_kind":"video|image|diagram","facts":["f1"]}],"caption":"...","hashtags":["..."]}
