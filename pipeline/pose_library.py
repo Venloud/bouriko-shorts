@@ -1,7 +1,7 @@
 """Build a cut-out pose library from Bouriko reference sheets."""
 import json, math
 from pathlib import Path
-from PIL import Image, ImageOps, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 
 from common import ROOT
 
@@ -21,7 +21,7 @@ def _grid_boxes(im):
             for c in range(cols):
                 b = (c*w//cols, r*h//rows, (c+1)*w//cols, (r+1)*h//rows)
                 cell = im.crop(b).convert("RGB")
-                diff = ImageOps.grayscale(ImageOps.difference(cell, Image.new("RGB", cell.size, "white")))
+                diff = ImageChops.grayscale(ImageChops.difference(cell, Image.new("RGB", cell.size, "white")))
                 if diff.getextrema()[1] > 35:
                     boxes.append(b)
         if len(boxes) >= 4:
