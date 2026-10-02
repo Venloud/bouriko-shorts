@@ -1,23 +1,25 @@
 """Free-media discovery and download for Bouriko.
 
-Primary providers:
-- Pixabay: free API for photos + videos.
-- Coverr: free API for stock video.
-- Pexels: optional if a key is available.
+Providers:
+- Pixabay/Pexels/Coverr when configured.
+- Wikimedia Commons as a no-key fallback.
 
-Every downloaded asset gets a sidecar attribution/source record. The pipeline
-never treats a provider URL as permanently hotlinkable; media is downloaded
-into output/media and rendered locally.
+The renderer should never silently turn a missing-media build into a slideshow.
+Every downloaded asset records its source and license metadata.
 """
-import json, os, re
+import json
+import os
+import re
 from pathlib import Path
-from urllib.parse import quote
+
 import requests
 
-from common import ROOT, run
+from common import ROOT
 
 MEDIA_DIR = ROOT / "output/media"
 MANIFEST = ROOT / "output/media_manifest.json"
+COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+UA = "BourikoShorts/1.0 (automated media retrieval)"
 
 
 def _slug(s):
@@ -25,14 +27,16 @@ def _slug(s):
 
 
 def _get(url, **kwargs):
-    r = requests.get(url, timeout=45, **kwargs)
+    headers = kwargs.pop("headers", {})
+    headers.setdefault("User-Agent", UA)
+    r = requests.get(url, timeout=45, headers=headers, **kwargs)
     r.raise_for_status()
     return r
 
 
 def _download(url, path):
     path.parent.mkdir(parents=True, exist_ok=True)
-    with requests.get(url, stream=True, timeout=90) as r:
+    with requests.get(url, stream=True, timeout=120, headers={"User-Agent": UA}) as r:
         r.raise_for_status()
         with path.open("wb") as f:
             for chunk in r.iter_content(1024 * 1024):
@@ -45,31 +49,23 @@ def pixabay(query, kind):
     if not key:
         return []
     endpoint = "https://pixabay.com/api/videos/" if kind == "video" else "https://pixabay.com/api/"
-    params = {
-        "key": key, "q": query, "safesearch": "true",
-        "per_page": 12, "order": "popular",
-    }
+    params = {"key": key, "q": query, "safesearch": "true", "per_page": 20, "order": "popular"}
     if kind == "image":
-        params.update({"image_type": "photo", "orientation": "vertical"})
+        params["image_type"] = "photo"
     d = _get(endpoint, params=params).json()
     hits = d.get("hits", [])
     out = []
     for h in hits:
         if kind == "video":
             sizes = h.get("videos", {})
-            choice = sizes.get("large") or sizes.get("medium") or {}
+            choice = sizes.get("large") or sizes.get("medium") or sizes.get("small") or {}
             url = choice.get("url")
         else:
             url = h.get("largeImageURL") or h.get("webformatURL")
         if url:
-            out.append({
-                "provider": "pixabay",
-                "kind": kind,
-                "url": url,
-                "source_url": h.get("pageURL"),
-                "creator": h.get("user"),
-                "title": h.get("tags", query),
-            })
+            out.append({"provider":"pixabay","kind":kind,"url":url,
+                        "source_url":h.get("pageURL"),"creator":h.get("user"),
+                        "title":h.get("tags", query), "license":"Pixabay license"})
     return out
 
 
@@ -78,31 +74,22 @@ def pexels(query, kind):
     if not key:
         return []
     endpoint = "https://api.pexels.com/v1/videos/search" if kind == "video" else "https://api.pexels.com/v1/search"
-    headers = {"Authorization": key}
-    params = {"query": query, "per_page": 12}
-    if kind == "video":
-        params.update({"orientation": "portrait", "size": "large"})
-    else:
-        params.update({"orientation": "portrait", "size": "large"})
+    params = {"query": query, "per_page": 20}
+    headers = {"Authorization": key, "User-Agent": UA}
     d = _get(endpoint, headers=headers, params=params).json()
     out = []
     for h in d.get("videos" if kind == "video" else "photos", []):
         if kind == "video":
-            files = sorted(h.get("video_files", []), key=lambda x: (x.get("height", 0), x.get("width", 0)), reverse=True)
+            files = sorted(h.get("video_files", []), key=lambda x: (x.get("width",0), x.get("height",0)), reverse=True)
             url = files[0].get("link") if files else None
             creator = (h.get("user") or {}).get("name")
         else:
             url = (h.get("src") or {}).get("original")
-            creator = (h.get("photographer"))
+            creator = h.get("photographer")
         if url:
-            out.append({
-                "provider": "pexels",
-                "kind": kind,
-                "url": url,
-                "source_url": h.get("url"),
-                "creator": creator,
-                "title": h.get("alt") or query,
-            })
+            out.append({"provider":"pexels","kind":kind,"url":url,
+                        "source_url":h.get("url"),"creator":creator,
+                        "title":h.get("alt") or query,"license":"Pexels license"})
     return out
 
 
@@ -110,71 +97,117 @@ def coverr(query):
     key = os.getenv("COVERR_API_KEY")
     if not key:
         return []
-    d = _get(
-        "https://api.coverr.co/videos/search",
-        headers={"x-api-key": key},
-        params={"query": query, "page_size": 12},
-    ).json()
+    d = _get("https://api.coverr.co/videos/search",
+              headers={"x-api-key":key,"User-Agent":UA},
+              params={"query":query,"page_size":20}).json()
     out = []
     for h in d.get("hits", []):
         files = h.get("urls") or h.get("video_files") or {}
         url = None
         if isinstance(files, dict):
-            for k in ("mp4", "1080p", "hd", "url"):
+            for k in ("mp4","1080p","hd","url"):
                 if isinstance(files.get(k), str):
-                    url = files[k]
-                    break
+                    url = files[k]; break
         if not url and isinstance(h.get("download_url"), str):
             url = h["download_url"]
         if url:
-            out.append({
-                "provider": "coverr",
-                "kind": "video",
-                "url": url,
-                "source_url": h.get("url") or h.get("page_url"),
-                "creator": h.get("author") or h.get("creator"),
-                "title": h.get("title") or query,
-            })
+            out.append({"provider":"coverr","kind":"video","url":url,
+                        "source_url":h.get("url") or h.get("page_url"),
+                        "creator":h.get("author") or h.get("creator"),
+                        "title":h.get("title") or query,"license":"Coverr license"})
+    return out
+
+
+def commons(query, kind):
+    """Search Commons without an API key and return reusable candidates."""
+    # Commons exposes file metadata and direct URLs through its read-only API.
+    d = _get(COMMONS_API, params={
+        "action":"query","format":"json","formatversion":"2",
+        "generator":"search","gsrnamespace":"6","gsrwhat":"text",
+        "gsrlimit":"30","gsrsearch":query,
+        "prop":"imageinfo","iiprop":"url|mime|size|extmetadata",
+        "iiurlwidth":"1800"
+    }).json()
+    out = []
+    for page in d.get("query", {}).get("pages", []):
+        info = (page.get("imageinfo") or [{}])[0]
+        mime = (info.get("mime") or "").lower()
+        title = page.get("title") or ""
+        if kind == "video":
+            if not (mime.startswith("video/") or any(title.lower().endswith(x) for x in (".webm",".mp4",".ogv"))):
+                continue
+        else:
+            if not mime.startswith("image/"):
+                continue
+        meta = info.get("extmetadata") or {}
+        license_name = str((meta.get("LicenseShortName") or {}).get("value") or "")
+        license_url = str((meta.get("LicenseUrl") or {}).get("value") or "")
+        # Avoid non-commercial-only files.
+        if "NC" in license_name.upper() or "NONCOMMERCIAL" in license_name.upper():
+            continue
+        url = info.get("url")
+        if not url:
+            continue
+        artist = str((meta.get("Artist") or {}).get("value") or "")
+        source_url = info.get("descriptionurl") or ("https://commons.wikimedia.org/wiki/" + title.replace(" ", "_"))
+        score = 0
+        qwords = set(re.findall(r"[a-z0-9]+", query.lower()))
+        twords = set(re.findall(r"[a-z0-9]+", title.lower()))
+        score += len(qwords & twords) * 10
+        if kind == "video" and mime.startswith("video/"):
+            score += 20
+        if license_name:
+            score += 3
+        out.append({"provider":"wikimedia_commons","kind":kind,"url":url,
+                    "source_url":source_url,"creator":artist,"title":title,
+                    "license":license_name or "See Commons file page",
+                    "license_url":license_url,"score":score})
+    out.sort(key=lambda x:x.get("score",0), reverse=True)
     return out
 
 
 def choose(query, kind):
     candidates = []
-    # Pixabay first because it supplies both image and video search and is free.
-    candidates += pixabay(query, kind)
-    candidates += pexels(query, kind)
+    # Prefer configured stock providers, then Commons.
+    for fn in (pixabay, pexels):
+        try:
+            candidates += fn(query, kind)
+        except Exception:
+            pass
     if kind == "video":
-        candidates += coverr(query)
-    return candidates[:12]
+        try:
+            candidates += coverr(query)
+        except Exception:
+            pass
+    try:
+        candidates += commons(query, kind)
+    except Exception:
+        pass
+    return candidates[:20]
 
 
 def ensure_asset(action, index):
     query = str(action.get("query") or action.get("search") or "").strip()
     kind = str(action.get("kind") or "video").lower()
-    if not query or kind not in {"image", "video"}:
+    if not query or kind not in {"image","video"}:
         return None
 
     candidates = choose(query, kind)
     if not candidates:
         return None
-
     chosen = candidates[0]
-    ext = ".mp4" if kind == "video" else ".jpg"
+    ext = ".webm" if chosen["provider"] == "wikimedia_commons" and "webm" in chosen["url"].lower() else (".mp4" if kind == "video" else ".jpg")
     path = MEDIA_DIR / f"{index:02}_{_slug(query)}{ext}"
     if not path.exists():
         _download(chosen["url"], path)
 
-    record = {
-        "index": index,
-        "query": query,
-        "kind": kind,
-        "provider": chosen["provider"],
-        "source_url": chosen["source_url"],
-        "creator": chosen.get("creator"),
-        "title": chosen.get("title"),
-        "local_path": str(path.relative_to(ROOT)),
+    return {
+        "index": index, "query": query, "kind": kind,
+        "provider": chosen["provider"], "source_url": chosen.get("source_url"),
+        "creator": chosen.get("creator"), "title": chosen.get("title"),
+        "license": chosen.get("license"), "license_url": chosen.get("license_url"),
+        "local_path": str(path.relative_to(ROOT))
     }
-    return record
 
 
 def main():
@@ -182,7 +215,7 @@ def main():
     records = []
     for i, line in enumerate(story.get("lines", [])):
         for action in line.get("visual_actions", []) or []:
-            if str(action.get("type", "")).lower() != "media":
+            if str(action.get("type","")).lower() != "media":
                 continue
             rec = ensure_asset(action, i)
             if rec:
@@ -190,6 +223,7 @@ def main():
                 line["media_source"] = rec
                 records.append(rec)
                 break
+
     MANIFEST.parent.mkdir(parents=True, exist_ok=True)
     MANIFEST.write_text(json.dumps(records, indent=2))
     (ROOT / "output/story.json").write_text(json.dumps(story, indent=2))
