@@ -74,18 +74,30 @@ def parse_inbox_script(path):
 
 def media_action_for(text, index):
     t = text.lower()
-    # Alternate real video and still images so the edit does not feel like a slideshow.
-    if "traffic light" in t or "intersection" in t:
-        return {"type": "media", "kind": "video", "query": "traffic light intersection street"}
-    if "road" in t or "pavement" in t or "loop" in t:
-        return {"type": "media", "kind": "video" if index % 2 == 0 else "image", "query": "road traffic sensor pavement intersection"}
-    if "car" in t or "vehicle" in t:
-        return {"type": "media", "kind": "video", "query": "car waiting at traffic light intersection"}
-    if "camera" in t or "radar" in t:
-        return {"type": "media", "kind": "video" if index % 2 == 0 else "image", "query": "traffic camera intersection street"}
-    if "bicycle" in t or "bike" in t:
-        return {"type": "media", "kind": "video", "query": "bicycle traffic light intersection"}
-    return {"type": "media", "kind": "image", "query": text[:90]}
+
+    # Search for what the sentence is actually showing. Do not reuse one
+    # generic traffic-intersection query for half the video.
+    if "traffic light" in t or "traffic signal" in t:
+        return {"type":"media","kind":"video","query":"traffic light changing at busy intersection"}
+    if "sensors buried" in t or "buried in the road" in t:
+        return {"type":"media","kind":"video","query":"cars driving through intersection road traffic"}
+    if "pavement" in t or "rectangle cut" in t or "stop line" in t:
+        return {"type":"media","kind":"video","query":"induction loop detector road pavement traffic"}
+    if "induction loop" in t or "wire buried" in t:
+        return {"type":"image","query":"inductive loop road detector cut pavement diagram"}
+    if "magnetic field" in t:
+        return {"type":"video","query":"car stopping over induction loop road sensor"}
+    if "controller" in t or "vehicle is waiting" in t:
+        return {"type":"video","query":"traffic signal controller vehicle detection intersection"}
+    if "camera" in t and "radar" in t:
+        return {"type":"video","query":"traffic camera mounted signal intersection"}
+    if "timer" in t or "programmed schedule" in t:
+        return {"type":"video","query":"traffic light timer signal sequence"}
+    if "bicycles" in t or "bicycle" in t or "bike" in t:
+        return {"type":"video","query":"bicycle waiting traffic light intersection"}
+    if "different system" in t or "cameras mounted" in t:
+        return {"type":"video","query":"close up traffic camera above intersection signal"}
+    return {"type":"video" if index % 3 else "image","query":"technology explained " + text[:70]}
 
 
 def visuals_for(text, speaker):
