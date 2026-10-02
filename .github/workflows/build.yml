@@ -38,6 +38,8 @@ jobs:
         env:
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
         run: python pipeline/voice.py
+      - name: Generate sound design
+        run: python pipeline/sfx.py
       - name: Render media-first explainer
         run: python pipeline/render.py
       - name: QA gate
