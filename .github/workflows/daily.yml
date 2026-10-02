@@ -19,6 +19,10 @@ jobs:
       - name: Build
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          COVERR_API_KEY: ${{ secrets.COVERR_API_KEY }}
+          NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
         run: python pipeline/script.py && python pipeline/media.py && python pipeline/voice.py && python pipeline/render.py && python pipeline/qa.py
       - name: Publish
         env:
