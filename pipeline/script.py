@@ -146,12 +146,12 @@ def exact_story(path):
         line["visual"] = visuals_for(line["text"], line["speaker"])
         line["visual_actions"] = visual_actions_for(line["text"], line["speaker"])
     return {
-        "title": "Bouriko vs. Traffic Lights",
+        "title": "How Traffic Lights Know You Are There",
         "pillar": "hidden",
         "topic": "traffic light sensors",
         "lines": lines,
         "sources": [TRAFFIC_SOURCE],
-        "caption": "How traffic lights can tell when a vehicle is waiting.",
+        "caption": "How traffic lights detect vehicles waiting at an intersection.",
         "hashtags": ["#Bouriko", "#TechExplained", "#HowItWorks"],
     }
 
