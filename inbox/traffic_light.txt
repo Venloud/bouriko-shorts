@@ -1,15 +1,14 @@
 SCRIPT
-BOURIKO: How do traffic lights actually know when a car is there?
-ROCK PHONE: Many of them use a sensor buried in the road.
-BOURIKO: Buried in the road? How does that tell the light anything?
-ROCK PHONE: A common system uses a wire loop cut into the pavement. Electricity runs through the loop and creates a magnetic field.
-BOURIKO: So when my car stops over it?
-ROCK PHONE: The metal in your car changes that field. A controller detects the change and tells the signal a vehicle is waiting.
-BOURIKO: Do all traffic lights use those?
-ROCK PHONE: No. Some intersections use cameras or radar, and some signals simply run on a timer.
-BOURIKO: What if I'm on a bicycle?
-ROCK PHONE: A bicycle can be harder for an induction loop to detect because it has less metal. Some intersections provide bicycle detection areas or use other sensors.
-BOURIKO: Can I tell which one a light uses?
-ROCK PHONE: Sometimes. Look for a rectangular cut or detection marking in the pavement near the stop line, but you cannot tell for sure from the pavement alone.
-BOURIKO: So I just wait there and hope it sees me.
-ROCK PHONE: That works. And those cameras above the traffic lights? That's the next question.
+NARRATOR: How does a traffic light actually know you're there?
+NARRATOR: A lot of intersections use sensors buried in the road.
+NARRATOR: Look at the pavement near the stop line. You may see a rectangle cut into the road.
+NARRATOR: That can be an induction loop: wire buried under the pavement with electricity running through it.
+NARRATOR: When a car stops over the loop, the metal changes the loop's magnetic field.
+NARRATOR: A controller detects that change and tells the traffic signal a vehicle is waiting.
+NARRATOR: But not every light uses a loop.
+NARRATOR: Some intersections use cameras or radar. Others simply follow a timer or a programmed schedule.
+NARRATOR: And bicycles can be tricky for induction loops because they contain much less metal than a car.
+NARRATOR: Some intersections have bicycle detection areas or use other sensors instead.
+NARRATOR: So next time you stop at a light, look at the pavement.
+NARRATOR: If you see those rectangular cuts near the stop line, you may be looking at the sensor that is telling the light you're there.
+NARRATOR: And those cameras mounted above the signal? That's a whole different system.
