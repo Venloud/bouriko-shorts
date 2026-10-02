@@ -7,6 +7,7 @@ Providers:
 The renderer should never silently turn a missing-media build into a slideshow.
 Every downloaded asset records its source and license metadata.
 """
+import base64
 import json
 import os
 import re
@@ -328,6 +329,53 @@ def choose(query, kind):
     return candidates[:30]
 
 
+
+def generate_ai_image(query, index):
+    """Last-resort realistic 9:16 image using the existing Gemini API key."""
+    key = os.getenv("GEMINI_API_KEY")
+    if not key:
+        return None
+    model = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
+    prompt = (
+        "Create a realistic photographic vertical 9:16 image for a modern tech explainer short. "
+        "Show exactly this real-world subject: " + query + ". "
+        "Make it look like authentic documentary/B-roll photography, natural lighting, believable scale, "
+        "sharp details, no cartoon style, no logos, no captions, no UI, no watermark-like text. "
+        "Compose the important subject clearly in the center safe area for a vertical video."
+    )
+    try:
+        from google import genai
+        client = genai.Client(api_key=key)
+        interaction = client.interactions.create(
+            model=model,
+            input=prompt,
+            response_format={"type":"image","aspect_ratio":"9:16","image_size":"1K"},
+        )
+        image = getattr(interaction, "output_image", None)
+        data = getattr(image, "data", None) if image else None
+        if not data:
+            return None
+        path = MEDIA_DIR / f"{index:02}_ai_{_slug(query)}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(base64.b64decode(data))
+        if path.stat().st_size < 5000:
+            path.unlink(missing_ok=True)
+            return None
+        print(f"AI image fallback created: scene={index} query='{query}'")
+        return {
+            "index": index, "query": query, "kind": "image",
+            "provider": "gemini_ai", "url": None,
+            "source_url": "https://ai.google.dev/gemini-api/docs/image-generation",
+            "creator": "Google Gemini",
+            "title": f"AI-generated realistic image: {query}",
+            "license": "AI-generated; subject to Google Gemini API terms",
+            "license_url": "https://ai.google.dev/gemini-api/terms",
+            "local_path": str(path.relative_to(ROOT)),
+        }
+    except Exception as exc:
+        print(f"AI image fallback failed: {exc}")
+        return None
+
 def ensure_asset(action, index, used_urls=None):
     query = str(action.get("query") or action.get("search") or "").strip()
     kind = str(action.get("kind") or "video").lower()
@@ -371,6 +419,9 @@ def ensure_asset(action, index, used_urls=None):
                 pass
             path = None
     else:
+        ai = generate_ai_image(query, index)
+        if ai:
+            return ai
         return None
 
     return {
@@ -434,7 +485,21 @@ def main():
     print(f"Media assets downloaded: {len(records)} ({video_count} video)")
 
     if len(records) < 8:
-        print("WARNING: media target not reached; QA will refuse publication.")
+        print("Stock media target not reached; generating AI stills for missing scenes.")
+        for i, line in enumerate(story.get("lines", [])):
+            if len(records) >= 8:
+                break
+            if line.get("media_asset"):
+                continue
+            ai = generate_ai_image(line.get("visual") or line.get("text", "technology"), i)
+            if ai:
+                line["media_asset"] = ai["local_path"]
+                line["media_source"] = ai
+                line["media_kind"] = "image"
+                records.append(ai)
+        MANIFEST.write_text(json.dumps(records, indent=2))
+        (ROOT / "output/story.json").write_text(json.dumps(story, indent=2))
+        print(f"After AI fallback: {len(records)} assets")
 
 
 
