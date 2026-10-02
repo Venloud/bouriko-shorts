@@ -110,3 +110,26 @@ API (drafts), ntfy (alerts). Optional: Chatterbox TTS (MIT).
 ## Status
 Standalone; does NOT wait for Night Files' cutout test. Character master is final (assets/reference).
 Waiting on the owner's go: don't start FIRST_TASK.md until the owner says so.
+
+
+## AUTHORITATIVE FORMAT OVERRIDE — OCTOBER 2, 2026
+
+This section supersedes earlier mascot-led renderer instructions above.
+
+- Bouriko is page/channel branding only. He is NOT the default on-screen presenter.
+- The video is narrator-led with ONE consistent narrator voice.
+- Primary visuals are real/free footage and free photos found automatically by pipeline/media.py.
+- Use screenshots, diagrams, maps, UI captures, and generated/constructed graphics when they explain the narration better.
+- Change the visual when the subject changes. Do not build sentence-by-sentence static-card slides.
+- Captions stay centered and readable; use a modern short-form treatment, not a formal document font.
+- No Bouriko pose system, no Rock Phone overlay, no Ken Burns/zoompan, and no fade-to-black between scenes.
+- Hard cuts are the default. Motion should come from the source footage or purposeful graphic animation, not fake camera movement.
+- Real stock SFX are downloaded from the curated SFX library in pipeline/sfx.py; do not synthesize placeholder tones.
+- The renderer is now Remotion/React under remotion/. pipeline/remotion_prepare.py prepares timed narration, selected media, and SFX for the composition.
+- The GitHub test workflow installs Node, prepares the assets, renders with Remotion, then runs QA.
+- ComfyUI is an optional future visual-generation fallback for scenes where permitted real/free media and simple graphics are insufficient. It is not required for the first Remotion test.
+- PersonaLive is not part of the default video path because the presenter format was removed.
+- MuMuAINovel concepts may inform story planning, but it is not a runtime dependency.
+- AutoClip concepts may inform clip selection/highlight scoring later; do not add it as a hard runtime dependency yet.
+- Ruflo may orchestrate future agents, but the core build must remain runnable without it.
+- Keep the $0 budget rule and use only media the project is permitted to download/use.
