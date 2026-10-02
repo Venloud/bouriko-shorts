@@ -1,5 +1,6 @@
 """Kokoro TTS for Bouriko."""
 import json, re
+import numpy as np
 from common import ROOT, CONFIG
 
 def synthesize(text, voice, out):
