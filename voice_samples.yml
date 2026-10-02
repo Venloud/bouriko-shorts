@@ -1,0 +1,5 @@
+# Generated/selected voice candidates. Run voice sample workflow after Kokoro is installed.
+voices:
+  bouriko: am_fenrir
+  rock_phone: af_nicole
+speed: 1.05
