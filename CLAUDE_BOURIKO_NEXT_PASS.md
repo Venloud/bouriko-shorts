@@ -858,3 +858,96 @@ Do not call the project ready until:
 15. The final MP4 is suitable for the next publishing step.
 
 **First publish comes before feature expansion.**
+
+## 16. OCTOBER 2, 2026 — FULL PYTHON/YAML SYNTAX AUDIT
+
+The October 2 failure was reviewed as a pipeline-wide syntax problem, not treated as a one-line typo.
+
+### Root cause
+
+`pipeline/media.py` had a malformed raw Python regex string around the Mixkit MP4 URL parser. The previous expression mixed escaped backslashes and quote delimiters inside a raw string, which caused Python to parse the string incorrectly.
+
+Python's documentation confirms that raw strings preserve backslashes, but the Python string delimiter still has to be syntactically valid. Regex patterns should normally use raw strings, with the quote delimiter chosen so the pattern itself remains valid.
+
+### Corrected Mixkit parser expression
+
+```python
+raw_urls = re.findall(
+    r'https://assets\.mixkit\.co/videos[^"\s]+?\.mp4',
+    html,
+)
+```
+
+This deliberately avoids embedding unnecessary escaped quote/backslash combinations in the raw string.
+
+### Pipeline-wide syntax review
+
+The Python files under `pipeline/` were reviewed, including:
+
+- `common.py`
+- `breaking_script.py`
+- `broll.py`
+- `buffer.py`
+- `checkpoint.py`
+- `connect_tiktok.py`
+- `media.py`
+- `news_watch.py`
+- `notify.py`
+- `publish.py`
+- `qa.py`
+- `remotion_prepare.py`
+- `render.py`
+- `rhubarb.py`
+- `script.py`
+- `sfx.py`
+- `voice.py`
+- `youtube.py`
+
+No additional Python parse errors were found during source review.
+
+### Permanent CI syntax gate
+
+The build workflows were also updated so future syntax mistakes are caught before the media/build stages:
+
+```bash
+python -m compileall -q pipeline
+```
+
+Added to:
+- `.github/workflows/build.yml`
+- `.github/workflows/daily.yml`
+- `.github/workflows/breaking-tech.yml`
+
+The syntax gate is intentionally separate from dependency installation and media generation.
+
+### Commits from this repair
+
+- `2d963104` — **Fix Mixkit regex syntax**
+  - Replaced the malformed Mixkit MP4 regex with valid Python raw-string syntax.
+- `a5d22e4` — **Add full pipeline Python syntax gate**
+  - Added the compileall check to the build workflow.
+- `595da09` — **Add full pipeline Python syntax gate**
+  - Added the compileall check to the daily workflow.
+- `e03fa4d` — **Add full pipeline Python syntax gate**
+  - Added the compileall check to the breaking-tech workflow.
+- `aeef294` — **Fix workflow syntax gate step**
+  - Corrected the build workflow so the syntax check is its own YAML step rather than creating duplicate `run:` keys.
+- `3765cd6` — **Fix workflow syntax gate step**
+  - Corrected the same duplicate `run:` issue in the daily workflow.
+
+### Important verification status
+
+The source-level syntax repair is complete, but the Mixkit download path is **not yet proven by a successful full GitHub Actions run after these commits**.
+
+The next run must prove:
+
+1. Python syntax gate passes.
+2. `pipeline/media.py` starts successfully.
+3. Media discovery downloads at least 8 assets.
+4. At least 4 downloaded assets are videos.
+5. Narration succeeds.
+6. SFX succeeds.
+7. Remotion renders.
+8. QA passes.
+
+Do not mark first-publish readiness until that run provides evidence.
