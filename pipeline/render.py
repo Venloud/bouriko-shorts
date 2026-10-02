@@ -135,7 +135,7 @@ def media_clip(asset_path, text, out, dur):
 
 
 def graphic_clip(line, out, dur):
-    graphic = fallback_graphic(line)
+    graphic = fallback_graphic(line).convert("RGBA")
     overlay = caption_overlay(line["text"])
     graphic.alpha_composite(overlay)
     png = out.with_suffix(".png")
