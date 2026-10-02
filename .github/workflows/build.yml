@@ -15,31 +15,33 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - name: Install
-        run: pip install -q requests google-api-python-client google-auth
-      - name: Write story
+      - name: System packages
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng
+      - name: Python packages
+        run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow
+      - name: Write fact-checked story
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python pipeline/script.py
+      - name: Build pose library and review sheet
+        run: python pipeline/pose_library.py
+      - name: Generate Bouriko and Rock Phone voices
+        run: python pipeline/voice.py
       - name: Render
         run: python pipeline/render.py
-      - name: QA
-        run: |
-          python - <<'PY'
-          import json,subprocess
-          p="output/bouriko.mp4"
-          d=float(subprocess.check_output(["ffprobe","-v","error","-show_entries","format=duration","-of","default=nw=1:nk=1",p]))
-          assert d>=61, f"video too short: {d:.2f}s"
-          assert d<=68.5, f"video too long: {d:.2f}s"
-          assert json.load(open("output/story.json"))["sources"], "missing sources"
-          print("QA PASS",d)
-          PY
+      - name: QA gate
+        run: python pipeline/qa.py
       - uses: actions/upload-artifact@v4
         with:
-          name: bouriko-video
-          path: output/bouriko.mp4
+          name: bouriko-test
+          path: |
+            output/bouriko.mp4
+            output/story.json
+            output/word_timings.json
+            output/pose_review.png
+            assets/poses/poses.json
