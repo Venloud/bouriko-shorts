@@ -31,49 +31,78 @@ export type BourikoProps = {
   sfxEvents?: Sfx[];
 };
 
-const Caption = ({ text }: { text: string }) => {
+const Caption = ({ text, visual }: { text: string; visual?: string }) => {
   const frame = useCurrentFrame();
-  const opacity = interpolate(
-    frame,
-    [0, 5, 8],
-    [0, 0.75, 1],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    },
+  const words = text.trim().split(/\s+/);
+  const wordIndex = Math.min(
+    words.length - 1,
+    Math.floor((frame / 30) / Math.max(0.12, (words.length ? 1 : 1))),
   );
+  const chunkSize = words.length > 11 ? 5 : 4;
+  const chunkIndex = Math.floor(wordIndex / chunkSize);
+  const chunk = words.slice(chunkIndex * chunkSize, chunkIndex * chunkSize + chunkSize);
+  const label = (visual || "TECH").toUpperCase();
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: 54,
-        right: 54,
-        top: "42%",
-        transform: "translateY(-50%)",
-        display: "flex",
-        justifyContent: "center",
-        opacity,
-      }}
-    >
+    <AbsoluteFill style={{ pointerEvents: "none" }}>
       <div
         style={{
-          maxWidth: 940,
-          padding: "18px 30px",
-          borderRadius: 22,
-          background: "rgba(0,0,0,.62)",
-          color: "white",
-          fontFamily: "Arial, sans-serif",
-          fontWeight: 800,
-          fontSize: 60,
-          lineHeight: 1.08,
-          textAlign: "center",
-          textShadow: "0 3px 10px rgba(0,0,0,.9)",
+          position: "absolute",
+          top: 150,
+          left: 56,
+          padding: "9px 16px",
+          borderRadius: 999,
+          background: "rgba(20,20,20,.78)",
+          color: "#fff",
+          fontFamily: "Arial Black, Arial, sans-serif",
+          fontSize: 24,
+          fontWeight: 900,
+          letterSpacing: 1.2,
         }}
       >
-        {text}
+        {label}
       </div>
-    </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: 48,
+          right: 48,
+          bottom: 210,
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 980,
+            textAlign: "center",
+            fontFamily: "Arial Black, Arial, sans-serif",
+            fontWeight: 900,
+            fontSize: 72,
+            lineHeight: 0.98,
+            letterSpacing: -1.8,
+            textTransform: "none",
+            WebkitTextStroke: "2px rgba(0,0,0,.85)",
+            textShadow: "0 5px 14px rgba(0,0,0,.75)",
+          }}
+        >
+          {chunk.map((word, i) => (
+            <span
+              key={i}
+              style={{
+                display: "inline-block",
+                marginRight: 16,
+                color: i === wordIndex % chunkSize ? "#FFD23F" : "#FFFFFF",
+                transform: i === wordIndex % chunkSize ? "translateY(-2px)" : "none",
+              }}
+            >
+              {word}
+            </span>
+          ))}
+        </div>
+      </div>
+    </AbsoluteFill>
   );
 };
 
@@ -127,7 +156,7 @@ const Scene = ({ line }: { line: Line }) => {
   return (
     <AbsoluteFill>
       {visual}
-      <Caption text={line.text} />
+      <Caption text={line.text} visual={line.visual} />
     </AbsoluteFill>
   );
 };
