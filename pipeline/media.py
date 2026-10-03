@@ -384,6 +384,112 @@ def choose(query, kind):
 
 
 
+
+def generate_local_diagram(query, index):
+    """Deterministic technical visual fallback when stock/AI media cannot fill a scene.
+
+    Inspired by Lumen's local no-cost fallback philosophy: a missing provider must
+    not turn into a fake slideshow or make the whole production fail. For Bouriko,
+    the fallback is a subject-specific explainer diagram rather than a generic card.
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        return None
+
+    w, h = 1080, 1920
+    bg = (244, 239, 228)
+    ink = (27, 27, 27)
+    blue = (46, 168, 255)
+    red = (230, 57, 70)
+    green = (31, 182, 94)
+    yellow = (255, 210, 63)
+
+    im = Image.new("RGB", (w, h), bg)
+    d = ImageDraw.Draw(im)
+
+    def f(size, bold=False):
+        candidates = [
+            "/usr/share/fonts/truetype/lato/Lato-Black.ttf" if bold else "/usr/share/fonts/truetype/lato/Lato-Regular.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        ]
+        for p in candidates:
+            if Path(p).exists():
+                return ImageFont.truetype(p, size)
+        return ImageFont.load_default()
+
+    q = str(query).lower()
+    title = "HOW THE SENSOR WORKS"
+    if "traffic" in q or "intersection" in q or "road" in q or "loop" in q:
+        title = "HIDDEN ROAD SENSOR"
+
+        # Road
+        d.rounded_rectangle((90, 470, 990, 1450), radius=35, fill=(65, 65, 65))
+        d.line((90, 760, 990, 760), fill=(235, 235, 235), width=8)
+        d.line((90, 1160, 990, 1160), fill=(235, 235, 235), width=8)
+
+        # Induction loop under the car.
+        loop = (260, 900, 820, 1110)
+        d.rounded_rectangle(loop, radius=28, outline=blue, width=18)
+        d.text((110, 300), title, font=f(66, True), fill=ink)
+        d.text((110, 380), "Induction loop detects a vehicle", font=f(38), fill=ink)
+
+        # Car
+        d.rounded_rectangle((360, 780, 720, 930), radius=30, fill=(215, 215, 215), outline=ink, width=6)
+        d.polygon([(420, 780), (485, 710), (610, 710), (670, 780)], fill=(190, 220, 235), outline=ink)
+        d.ellipse((395, 885, 455, 945), fill=ink)
+        d.ellipse((625, 885, 685, 945), fill=ink)
+
+        # Signal + controller.
+        d.rounded_rectangle((770, 260, 930, 500), radius=28, fill=ink)
+        for cy, fill in ((315, red), (380, yellow), (445, green)):
+            d.ellipse((815, cy, 885, cy + 70), fill=fill)
+
+        d.line((810, 500, 810, 620), fill=ink, width=10)
+        d.rounded_rectangle((705, 600, 915, 735), radius=18, fill=(225,225,225), outline=ink, width=5)
+        d.text((730, 635), "CONTROLLER", font=f(25, True), fill=ink)
+
+        # Signal path
+        d.line((540, 1110, 540, 1320), fill=blue, width=14)
+        d.polygon([(540, 1370), (510, 1310), (570, 1310)], fill=blue)
+        d.text((585, 1240), "vehicle changes", font=f(28, True), fill=ink)
+        d.text((585, 1280), "the magnetic field", font=f(28), fill=ink)
+        d.line((705, 665, 585, 665), fill=blue, width=10)
+        d.polygon([(545, 665), (605, 635), (605, 695)], fill=blue)
+
+        d.text((120, 1530), "CAR → LOOP → CONTROLLER → SIGNAL", font=f(42, True), fill=ink)
+    else:
+        title = "TECHNICAL EXPLAINER"
+        d.text((90, 300), title, font=f(66, True), fill=ink)
+        d.text((90, 400), str(query)[:70], font=f(38), fill=ink)
+        d.rounded_rectangle((120, 650, 960, 1250), radius=40, outline=blue, width=14)
+        d.ellipse((220, 820, 380, 980), fill=blue)
+        d.ellipse((700, 820, 860, 980), fill=blue)
+        d.line((380, 900, 700, 900), fill=ink, width=16)
+        d.polygon([(700, 900), (640, 865), (640, 935)], fill=ink)
+        d.text((120, 1400), "LOCAL DIAGRAM FALLBACK", font=f(38, True), fill=ink)
+
+    path = MEDIA_DIR / f"{index:02}_diagram_{_slug(query)}.png"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    im.save(path, "PNG")
+    if path.stat().st_size < 5000:
+        path.unlink(missing_ok=True)
+        return None
+
+    return {
+        "index": index,
+        "query": query,
+        "kind": "image",
+        "provider": "local_diagram",
+        "url": None,
+        "source_url": None,
+        "creator": "Bouriko local renderer",
+        "title": f"Technical explainer diagram: {query}",
+        "license": "Original locally generated Bouriko artwork",
+        "license_url": None,
+        "local_path": str(path.relative_to(ROOT)),
+    }
+
 def generate_ai_image(query, index):
     """Last-resort realistic 9:16 image using the existing Gemini API key."""
     key = os.getenv("GEMINI_API_KEY")
@@ -439,6 +545,9 @@ def ensure_asset(action, index, used_urls=None):
     used_urls = used_urls or set()
     candidates = choose(query, kind)
     if not candidates:
+        diagram = generate_local_diagram(query, index)
+        if diagram:
+            return diagram
         return generate_ai_image(query, index)
 
     # Prefer a genuinely new source URL so different scenes do not collapse
@@ -492,6 +601,9 @@ def ensure_asset(action, index, used_urls=None):
                 pass
             path = None
     else:
+        diagram = generate_local_diagram(query, index)
+        if diagram:
+            return diagram
         ai = generate_ai_image(query, index)
         if ai:
             return ai
@@ -558,7 +670,23 @@ def main():
     print(f"Media assets downloaded: {len(records)} ({video_count} video)")
 
     if len(records) < 8:
-        print("Stock media target not reached; generating AI stills for missing scenes.")
+        print("Media target not reached; using subject-specific local diagrams before AI.")
+        for i, line in enumerate(story.get("lines", [])):
+            if len(records) >= 8:
+                break
+            if line.get("media_asset"):
+                continue
+            diagram = generate_local_diagram(
+                line.get("visual") or line.get("text", "technology"), i
+            )
+            if diagram:
+                line["media_asset"] = diagram["local_path"]
+                line["media_source"] = diagram
+                line["media_kind"] = "image"
+                records.append(diagram)
+
+    if len(records) < 8:
+        print("Local diagram target not reached; generating AI stills for missing scenes.")
         for i, line in enumerate(story.get("lines", [])):
             if len(records) >= 8:
                 break
@@ -570,9 +698,10 @@ def main():
                 line["media_source"] = ai
                 line["media_kind"] = "image"
                 records.append(ai)
-        MANIFEST.write_text(json.dumps(records, indent=2))
-        (ROOT / "output/story.json").write_text(json.dumps(story, indent=2))
-        print(f"After AI fallback: {len(records)} assets")
+
+    MANIFEST.write_text(json.dumps(records, indent=2))
+    (ROOT / "output/story.json").write_text(json.dumps(story, indent=2))
+    print(f"After media fallback: {len(records)} assets")
 
 
 
