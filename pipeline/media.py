@@ -114,6 +114,59 @@ def mixkit(query, kind):
     return out
 
 
+def youtube_cc(query, kind):
+    """Find downloadable YouTube clips whose metadata explicitly says CC BY."""
+    if kind != "video":
+        return []
+    try:
+        import yt_dlp
+    except ImportError:
+        print("  youtube_cc: yt-dlp is not installed")
+        return []
+
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "extract_flat": False,
+        "playlistend": 8,
+        "noplaylist": False,
+    }
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            result = ydl.extract_info(f"ytsearch8:{query}", download=False)
+    except Exception as exc:
+        print(f"  youtube_cc: search failed for '{query}': {exc}")
+        return []
+
+    entries = result.get("entries", []) if isinstance(result, dict) else []
+    out = []
+    for item in entries:
+        if not item or item.get("_type") == "playlist":
+            continue
+        license_name = str(item.get("license") or "")
+        if "creative commons attribution" not in license_name.lower():
+            continue
+        webpage_url = item.get("webpage_url") or item.get("original_url")
+        if not webpage_url and item.get("id"):
+            webpage_url = f"https://www.youtube.com/watch?v={item['id']}"
+        if not webpage_url:
+            continue
+        out.append({
+            "provider": "youtube_cc",
+            "kind": "video",
+            "url": webpage_url,
+            "source_url": webpage_url,
+            "creator": item.get("uploader") or item.get("channel"),
+            "title": item.get("title") or query,
+            "license": license_name,
+            "license_url": "https://support.google.com/youtube/answer/2797468",
+            "youtube_id": item.get("id"),
+        })
+    return out
+
+
+
 def pixabay(query, kind):
     key = os.getenv("PIXABAY_API_KEY")
     if not key:
@@ -285,6 +338,7 @@ def choose(query, kind):
 
     for variant in variants:
         for name, fn in (
+            ("youtube_cc", youtube_cc),
             ("pixabay", pixabay),
             ("pexels", pexels),
             ("mixkit", mixkit),
@@ -398,16 +452,35 @@ def ensure_asset(action, index, used_urls=None):
         if chosen.get("url") in used_urls:
             continue
         ext = (
-            ".webm"
-            if chosen["provider"] == "wikimedia_commons"
-            and "webm" in chosen["url"].lower()
-            else (".mp4" if kind == "video" else ".jpg")
+            ".mp4" if chosen["provider"] == "youtube_cc"
+            else (
+                ".webm"
+                if chosen["provider"] == "wikimedia_commons"
+                and "webm" in chosen["url"].lower()
+                else (".mp4" if kind == "video" else ".jpg")
+            )
         )
         path = MEDIA_DIR / f"{index:02}_{_slug(query)}_{candidate_no}{ext}"
         if path.exists() and path.stat().st_size > 0:
             break
         try:
-            _download(chosen["url"], path)
+            if chosen.get("provider") == "youtube_cc":
+                import yt_dlp
+                ydl_opts = {
+                    "quiet": True,
+                    "no_warnings": True,
+                    "format": "bv*[ext=mp4][height<=1080]+ba[ext=m4a]/b[ext=mp4]/b",
+                    "merge_output_format": "mp4",
+                    "outtmpl": str(path.with_suffix(".%(ext)s")),
+                    "noplaylist": True,
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([chosen["url"]])
+                produced = list(path.parent.glob(path.stem + ".*"))
+                if produced:
+                    produced[0].replace(path)
+            else:
+                _download(chosen["url"], path)
             if path.stat().st_size == 0:
                 raise RuntimeError("Downloaded media file is empty")
             break
