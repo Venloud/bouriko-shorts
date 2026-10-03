@@ -1,81 +1,45 @@
 {
   "channel_name": "Bouriko",
-  "target_seconds": [
-    61,
-    68
-  ],
-  "script_words": [
-    140,
-    152
-  ],
-  "pillar_rotation": [
-    "hidden",
-    "explainer",
-    "tip",
-    "hidden",
-    "fun_fact",
-    "gaming",
-    "hidden",
-    "finds"
-  ],
-  "pillars_enabled_later": [
-    "comparison",
-    "news"
-  ],
+  "target_seconds": [61, 68],
+  "script_words": [140, 152],
+  "pillar_rotation": ["hidden", "explainer", "tip", "hidden", "fun_fact", "gaming", "hidden", "finds"],
+  "pillars_enabled_later": ["comparison", "news"],
   "news_max_age_hours": 48,
   "pillar_rules": {
-    "hidden": "Bouriko thinks an everyday object is magic or has a person inside; Rock Phone reveals the hidden tech.",
-    "explainer": "Bouriko has a wrong theory about how something works; Rock Phone explains the real mechanism.",
-    "fun_fact": "Rock Phone tells a surprising true tech fact; Bouriko reacts and takes it too far.",
-    "gaming": "Bouriko is playing a game and has a wrong theory about what's happening inside the machine.",
-    "tip": "ROLES FLIP: Bouriko proudly teaches the viewer a real, verified setting or trick ('Rock Phone taught me this. Now I teach you.'). Rock Phone confirms details and requirements (device/OS versions).",
-    "finds": "Bouriko shows off a cool gadget or app he found; Rock Phone adds the facts; end with a 'rocks out of 10' rating.",
-    "comparison": "Two products side by side; Rock Phone gives verified specs; Bouriko picks a winner in rocks.",
-    "news": "Rock Phone reports one fresh verified tech story; Bouriko reacts with a hot take."
+    "hidden": "Explain a hidden piece of everyday technology with simple, factual narration.",
+    "explainer": "Explain how a technology works using a wrong assumption as the hook, then reveal the real mechanism.",
+    "fun_fact": "Deliver a surprising true technology fact with a simple explanation.",
+    "gaming": "Explain a real technology concept behind gaming hardware or software.",
+    "tip": "Teach one useful, verified technology setting or trick.",
+    "finds": "Explain a useful gadget or app with verified facts.",
+    "comparison": "Compare two products or technologies using verified facts.",
+    "news": "Explain one fresh, verified technology story."
   },
   "voices": {
-    "narrator": "am_liam",
+    "narrator": "am_michael",
     "lang": "a",
-    "speed": 0.98,
-    "line_pause": 0
+    "speed": 0.94,
+    "line_pause": 0,
+    "style_note": "Deep, warm, calm, authoritative teacher/narrator. Do not imitate or clone any real person."
   },
-  "voice_note": "One consistent narrator voice. NIGHTFILES_VOICE can override the configured Kokoro voice; current fallback is am_liam until the exact Night Files voice ID is wired in.",
-  "llm_models": [
-    "gemini-3.8-flash",
-    "gemini-3.5-flash-lite"
-  ],
-  "groq_models": [
-    "openai/gpt-oss-120b"
-  ],
+  "voice_note": "One consistent deep male narrator voice. NIGHTFILES_VOICE can override the configured Kokoro voice.",
+  "llm_models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"],
+  "groq_models": ["openai/gpt-oss-120b"],
   "style": {
     "background": "#F4EFE4",
     "ink": "#1B1B1B",
     "tech_glow": "#2EA8FF",
-    "fonts": [
-      "Patrick Hand",
-      "Permanent Marker",
-      "Caveat"
-    ],
-    "size": [
-      1080,
-      1920
-    ]
+    "fonts": ["Arial Black", "Arial"],
+    "size": [1080, 1920]
   },
   "qa_max_visual_share": 0.2,
   "qa_min_visuals": 8,
-  "post_times_new_york": [
-    "12:10",
-    "19:10"
-  ],
+  "post_times_new_york": ["12:10", "19:10"],
   "video_style": {
     "mascot_in_video": false,
     "phone_in_video": false,
-    "captions": "center",
-    "media_mix": [
-      "video",
-      "image",
-      "diagram"
-    ],
+    "captions": "dynamic_word_highlight",
+    "media_mix": ["video", "image", "diagram", "youtube_cc"],
     "camera_motion": false,
     "pose_motion": false,
     "transitions": "hard_cut"
