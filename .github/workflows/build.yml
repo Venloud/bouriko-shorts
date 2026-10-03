@@ -27,7 +27,7 @@ jobs:
       - name: Syntax check all pipeline Python
         run: python -m compileall -q pipeline
       - name: Python packages
-        run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai
+        run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
       - name: Write story
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
