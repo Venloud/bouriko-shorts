@@ -14,6 +14,8 @@ type Line = {
   text: string;
   media_asset?: string;
   media_kind?: string;
+  media_asset_2?: string;
+  media_kind_2?: string;
   start: number;
   duration: number;
   visual?: string;
@@ -108,8 +110,15 @@ const Caption = ({ text, visual, duration }: { text: string; visual?: string; du
 };
 
 const Scene = ({ line }: { line: Line }) => {
-  const asset = line.media_asset?.replace(/^output\//, "");
-  const kind = (line.media_kind || "").toLowerCase();
+  const primaryAsset = line.media_asset?.replace(/^output\//, "");
+  const primaryKind = (line.media_kind || "").toLowerCase();
+  const secondaryAsset = line.media_asset_2?.replace(/^output\//, "");
+  const secondaryKind = (line.media_kind_2 || "").toLowerCase();
+  const frame = useCurrentFrame();
+  const splitFrame = Math.floor(Math.max(1, line.duration * 30) / 2);
+  const useSecondary = Boolean(secondaryAsset && frame >= splitFrame);
+  const asset = useSecondary ? secondaryAsset : primaryAsset;
+  const kind = useSecondary ? secondaryKind : primaryKind;
 
   let visual: React.ReactNode;
 
