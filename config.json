@@ -16,13 +16,13 @@
     "news": "Explain one fresh, verified technology story."
   },
   "voices": {
-    "narrator": "af_bella",
+    "narrator": "am_michael",
     "lang": "a",
-    "speed": 0.98,
+    "speed": 0.96,
     "line_pause": 0,
-    "style_note": "Warm, friendly, expressive teacher voice. Clear, conversational, relaxed, approachable, and easy to understand. Do not imitate or clone any real person."
+    "style_note": "Educational, authoritative male narrator. Calm, confident, mature, and natural, like a knowledgeable teacher explaining something clearly to a class. Conversational rather than announcer-like. Strong articulation, measured pacing, subtle warmth, no exaggerated excitement, no robotic delivery, no generic AI-assistant tone. Do not imitate or clone any real person."
   },
-  "voice_note": "One consistent warm, friendly teacher narrator voice. NIGHTFILES_VOICE can override the configured Kokoro voice.",
+  "voice_note": "One consistent educational, authoritative male narrator voice. Natural teacher delivery, calm confidence, clear articulation, and human conversational rhythm. NIGHTFILES_VOICE can override the configured Kokoro voice.",
   "llm_models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"],
   "groq_models": ["openai/gpt-oss-120b"],
   "style": {
