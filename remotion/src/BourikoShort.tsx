@@ -324,7 +324,7 @@ const Scene = ({ line }: { line: Line }) => {
   );
 };
 
-export const BourikoShort = ({
+const BourikoShort = ({
   lines,
   sfxEvents = [],
 }: BourikoProps) => (
@@ -351,3 +351,6 @@ export const BourikoShort = ({
     ))}
   </AbsoluteFill>
 );
+
+export { BourikoShort };
+export default BourikoShort;
