@@ -35,16 +35,36 @@ export type BourikoProps = {
 
 const Caption = ({ text, visual, duration }: { text: string; visual?: string; duration: number }) => {
   const frame = useCurrentFrame();
-  const words = text.trim().split(/\s+/);
+  const words = text.trim().split(/\\s+/);
   const elapsed = frame / 30;
   const wordIndex = Math.min(
     words.length - 1,
     Math.floor((elapsed / Math.max(0.5, duration)) * words.length),
   );
-  const chunkSize = words.length > 11 ? 5 : 4;
+  const chunkSize = words.length > 11 ? 4 : 3;
   const chunkIndex = Math.floor(wordIndex / chunkSize);
   const chunk = words.slice(chunkIndex * chunkSize, chunkIndex * chunkSize + chunkSize);
   const label = (visual || "TECH").toUpperCase();
+
+  const palettes = ["#FFFFFF", "#FFD23F", "#2EA8FF", "#FF6B6B", "#7FF0C5", "#FF9F43"];
+  const positions = [
+    { top: 185, left: 55, right: 55 },
+    { top: 390, left: 80, right: 80 },
+    { top: 610, left: 55, right: 55 },
+    { top: 820, left: 90, right: 90 },
+    { bottom: 520, left: 55, right: 55 },
+    { bottom: 360, left: 80, right: 80 },
+    { bottom: 230, left: 55, right: 55 },
+    { top: 1040, left: 70, right: 70 },
+  ];
+  const sizes = [88, 102, 116, 96, 108, 92];
+  const styleSeed = text.length * 17 + chunkIndex * 31;
+  const paletteIndex = Math.abs(styleSeed) % palettes.length;
+  const positionIndex = Math.abs(styleSeed * 7) % positions.length;
+  const size = sizes[Math.abs(styleSeed * 11) % sizes.length];
+  const position = positions[positionIndex];
+  const captionColor = palettes[paletteIndex];
+  const activeColor = palettes[(paletteIndex + 2) % palettes.length];
 
   return (
     <AbsoluteFill style={{ pointerEvents: "none" }}>
@@ -69,25 +89,24 @@ const Caption = ({ text, visual, duration }: { text: string; visual?: string; du
       <div
         style={{
           position: "absolute",
-          left: 48,
-          right: 48,
-          bottom: 210,
+          ...position,
           display: "flex",
           justifyContent: "center",
+          width: "calc(100% - 110px)",
         }}
       >
         <div
           style={{
-            maxWidth: 980,
+            maxWidth: 1020,
             textAlign: "center",
             fontFamily: "Arial Black, Arial, sans-serif",
             fontWeight: 900,
-            fontSize: 72,
-            lineHeight: 0.98,
-            letterSpacing: -1.8,
-            textTransform: "none",
-            WebkitTextStroke: "2px rgba(0,0,0,.85)",
-            textShadow: "0 5px 14px rgba(0,0,0,.75)",
+            fontSize: size,
+            lineHeight: 0.94,
+            letterSpacing: -2.2,
+            WebkitTextStroke: "3px rgba(0,0,0,.9)",
+            textShadow: "0 6px 18px rgba(0,0,0,.85)",
+            transform: `rotate(${((chunkIndex % 3) - 1) * 0.7}deg)`,
           }}
         >
           {chunk.map((word, i) => (
@@ -95,9 +114,9 @@ const Caption = ({ text, visual, duration }: { text: string; visual?: string; du
               key={i}
               style={{
                 display: "inline-block",
-                marginRight: 16,
-                color: i === wordIndex % chunkSize ? "#FFD23F" : "#FFFFFF",
-                transform: i === wordIndex % chunkSize ? "translateY(-2px)" : "none",
+                marginRight: 14,
+                color: i === wordIndex % chunkSize ? activeColor : captionColor,
+                transform: i === wordIndex % chunkSize ? "scale(1.08)" : "scale(1)",
               }}
             >
               {word}
@@ -108,93 +127,3 @@ const Caption = ({ text, visual, duration }: { text: string; visual?: string; du
     </AbsoluteFill>
   );
 };
-
-const Scene = ({ line }: { line: Line }) => {
-  const primaryAsset = line.media_asset?.replace(/^output\//, "");
-  const primaryKind = (line.media_kind || "").toLowerCase();
-  const secondaryAsset = line.media_asset_2?.replace(/^output\//, "");
-  const secondaryKind = (line.media_kind_2 || "").toLowerCase();
-  const frame = useCurrentFrame();
-  const splitFrame = Math.floor(Math.max(1, line.duration * 30) / 2);
-  const useSecondary = Boolean(secondaryAsset && frame >= splitFrame);
-  const asset = useSecondary ? secondaryAsset : primaryAsset;
-  const kind = useSecondary ? secondaryKind : primaryKind;
-
-  let visual: React.ReactNode;
-
-  if (asset && kind === "video") {
-    visual = (
-      <Video
-        src={staticFile(asset)}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        muted
-      />
-    );
-  } else if (asset) {
-    visual = (
-      <Img
-        src={staticFile(asset)}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-      />
-    );
-  } else {
-    visual = (
-      <AbsoluteFill
-        style={{
-          background: "#111",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            color: "white",
-            fontFamily: "Arial, sans-serif",
-            fontWeight: 800,
-            fontSize: 52,
-            textAlign: "center",
-            padding: 70,
-          }}
-        >
-          {line.visual || "EXPLAINER"}
-        </div>
-      </AbsoluteFill>
-    );
-  }
-
-  return (
-    <AbsoluteFill>
-      {visual}
-      <Caption text={line.text} visual={line.visual} duration={line.duration} />
-    </AbsoluteFill>
-  );
-};
-
-export const BourikoShort = ({
-  lines,
-  sfxEvents = [],
-}: BourikoProps) => (
-  <AbsoluteFill style={{ backgroundColor: "black" }}>
-    {lines.map((line, index) => (
-      <Sequence
-        key={index}
-        from={Math.round(line.start * 30)}
-        durationInFrames={Math.max(1, Math.ceil(line.duration * 30))}
-      >
-        <Scene line={line} />
-      </Sequence>
-    ))}
-
-    <Audio src={staticFile("generated/narration.wav")} />
-
-    {sfxEvents.map((event, index) => (
-      <Sequence key={`sfx-${index}`} from={Math.round(event.time * 30)}>
-        <Audio
-          src={staticFile(event.file.replace(/^output\//, ""))}
-          volume={event.volume ?? 0.12}
-        />
-      </Sequence>
-    ))}
-  </AbsoluteFill>
-);
