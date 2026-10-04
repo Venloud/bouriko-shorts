@@ -32,10 +32,10 @@ def main():
     if manifest.exists():
         media_count = len(json.loads(manifest.read_text()))
     video_count = sum(1 for x in json.loads(manifest.read_text()) if x.get("kind") == "video") if manifest.exists() else 0
-    print(f"MEDIA DATA: {media_count} downloaded assets ({video_count} video)")
-    assert media_count >= 8, "not enough real media; refusing to publish a slideshow"
+    print(f"MEDIA DATA: {media_count} usable visual assets ({video_count} video)")
+    assert media_count >= 8, "not enough usable visual assets; refusing to publish a weak visual build"
     assert video_count >= 4, "not enough actual video footage; refusing to publish a slideshow"
-    print(f"QA PASS: {d:.2f}s, audio={a}, lines={len(lines)}, media={media_count}, video={video_count}")
+    print(f"QA PASS: {d:.2f}s, audio={a}, lines={len(lines)}, visuals={media_count}, video={video_count}")
 
 
 if __name__ == "__main__":
