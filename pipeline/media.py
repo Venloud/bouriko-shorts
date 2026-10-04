@@ -490,19 +490,30 @@ def generate_local_diagram(query, index):
         "local_path": str(path.relative_to(ROOT)),
     }
 
-def generate_ai_image(query, index):
+def generate_ai_image(query, index, exact_visual=False):
     """Last-resort realistic 9:16 image using the existing Gemini API key."""
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         return None
     model = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
-    prompt = (
-        "Create a realistic photographic vertical 9:16 image for a modern tech explainer short. "
-        "Show exactly this real-world subject: " + query + ". "
-        "Make it look like authentic documentary/B-roll photography, natural lighting, believable scale, "
-        "sharp details, no cartoon style, no logos, no captions, no UI, no watermark-like text. "
-        "Compose the important subject clearly in the center safe area for a vertical video."
-    )
+    if exact_visual:
+        prompt = (
+            "Create an original illustrated vertical 9:16 scene for a YouTube commentary video. "
+            "Follow this visual direction exactly as the scene concept: " + query + ". "
+            "Use a polished hand-drawn anime-inspired editorial illustration style, dynamic composition, "
+            "bold readable shapes, cinematic lighting, expressive faces when appropriate, and strong visual storytelling. "
+            "Do not copy or reproduce any copyrighted anime character exactly. Do not use stock photography. "
+            "No captions, logos, UI, watermark-like text, or fake screenshots. "
+            "The image should communicate the visual direction clearly on its own."
+        )
+    else:
+        prompt = (
+            "Create a realistic photographic vertical 9:16 image for a modern tech explainer short. "
+            "Show exactly this real-world subject: " + query + ". "
+            "Make it look like authentic documentary/B-roll photography, natural lighting, believable scale, "
+            "sharp details, no cartoon style, no logos, no captions, no UI, no watermark-like text. "
+            "Compose the important subject clearly in the center safe area for a vertical video."
+        )
     try:
         from google import genai
         client = genai.Client(api_key=key)
@@ -622,6 +633,41 @@ def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     records = []
     used_urls = set()
+
+    # Exact-script productions use the script's VISUAL directions directly.
+    # Do not search stock providers for these runs.
+    if story.get("exact_script"):
+        sections = {}
+        for i, line in enumerate(story.get("lines", [])):
+            key = line.get("section") or f"section-{i}"
+            sections.setdefault(key, {
+                "prompt": line.get("visual_prompt") or line.get("visual") or "original illustrated scene",
+                "lines": [],
+            })
+            sections[key]["lines"].append(i)
+
+        for section_no, (section_name, data) in enumerate(sections.items()):
+            rec = generate_ai_image(
+                data["prompt"],
+                section_no,
+                exact_visual=True,
+            )
+            if not rec:
+                rec = generate_local_diagram(data["prompt"], section_no)
+            if not rec:
+                continue
+
+            for line_index in data["lines"]:
+                story["lines"][line_index]["media_asset"] = rec["local_path"]
+                story["lines"][line_index]["media_kind"] = "image"
+                story["lines"][line_index]["media_source"] = rec
+            records.append(rec)
+
+        MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+        MANIFEST.write_text(json.dumps(records, indent=2))
+        (ROOT / "output/story.json").write_text(json.dumps(story, indent=2))
+        print(f"Exact-script visual production: {len(sections)} sections, {len(records)} original visual assets")
+        return
 
     # First pass: use the story's exact visual intent.
     for i, line in enumerate(story.get("lines", [])):
