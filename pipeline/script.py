@@ -61,19 +61,37 @@ def gemini(prompt):
 
 def parse_inbox_script(path):
     lines = []
+    meta = {}
     for raw in path.read_text(errors="ignore").splitlines():
         raw = raw.strip()
         if not raw or ":" not in raw:
             continue
         speaker, text = raw.split(":", 1)
         speaker = speaker.strip().upper()
+        text = text.strip()
+        if speaker in {"TITLE", "TOPIC", "CAPTION", "PILLAR"}:
+            meta[speaker.lower()] = text
+            continue
         if speaker in {"BOURIKO", "ROCK PHONE", "NARRATOR"}:
-            lines.append({"speaker": "NARRATOR", "text": text.strip()})
-    return lines
+            lines.append({"speaker": "NARRATOR", "text": text})
+    return lines, meta
 
 
 def media_action_for(text, index):
     t = text.lower()
+
+    if any(x in t for x in ("manga", "anime", "animation", "animated")):
+        if "fight" in t or "battle" in t:
+            return {"type":"media","kind":"video","query":"anime style action animation fight"}
+        if "voice" in t or "voice actor" in t:
+            return {"type":"media","kind":"video","query":"anime voice acting recording microphone"}
+        if "music" in t or "soundtrack" in t:
+            return {"type":"media","kind":"video","query":"anime soundtrack music studio"}
+        if "color" in t or "black and white" in t:
+            return {"type":"media","kind":"image","query":"anime manga black white color comparison"}
+        if "panel" in t or "page" in t:
+            return {"type":"media","kind":"image","query":"manga comic panels drawing"}
+        return {"type":"media","kind":"video","query":"anime animation drawing studio"}
 
     # Search for what the sentence is actually showing. Do not reuse one
     # generic traffic-intersection query for half the video.
@@ -130,7 +148,7 @@ def visual_actions_for(text, speaker, index):
 
 
 def exact_story(path):
-    raw_lines = parse_inbox_script(path)
+    raw_lines, meta = parse_inbox_script(path)
     if not raw_lines:
         raise RuntimeError(f"No narration lines found in {path}")
     lines = []
@@ -139,13 +157,13 @@ def exact_story(path):
         line["visual_actions"] = visual_actions_for(line["text"], "NARRATOR", i)
         lines.append(line)
     return {
-        "title": "How Traffic Lights Know You Are There",
-        "pillar": "hidden",
-        "topic": "traffic light sensors",
+        "title": meta.get("title", "Bouriko Test"),
+        "pillar": meta.get("pillar", "hidden"),
+        "topic": meta.get("topic", "technology"),
         "lines": lines,
-        "sources": [TRAFFIC_SOURCE],
-        "caption": "How traffic lights detect vehicles waiting at an intersection.",
-        "hashtags": ["#TechExplained", "#HowItWorks", "#Bouriko"],
+        "sources": [],
+        "caption": meta.get("caption", "Bouriko pipeline test"),
+        "hashtags": ["#Bouriko", "#Test"],
     }
 
 def write(pillar, topic, sources):
