@@ -12,7 +12,7 @@ def synthesize(text, voice, out):
     for _, _, audio in pipe(
         text,
         voice=voice,
-        speed=CONFIG.get("voices", {}).get("speed", 0.94),
+        speed=CONFIG.get("voices", {}).get("speed", 0.98),
     ):
         chunks.append(audio)
     if not chunks:
