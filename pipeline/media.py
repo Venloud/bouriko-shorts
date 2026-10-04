@@ -637,18 +637,15 @@ def main():
                 break
 
     # Second pass: fill failed scenes with broad, still-relevant stock footage.
-    # This is deliberately limited to the traffic-light test domain rather than
-    # weakening QA or fabricating visuals.
-    fallback_queries = [
-        "traffic light",
-        "intersection",
-        "road traffic",
-        "cars",
-        "street traffic",
-        "driving",
-        "city traffic",
-        "road",
-    ]
+    # Derive the fallback from the scene itself so the pipeline is reusable
+    # outside the original traffic-light test.
+    fallback_queries = []
+    for line in story.get("lines", []):
+        query = str(line.get("visual") or "").strip()
+        if query and query not in fallback_queries:
+            fallback_queries.append(query)
+    if not fallback_queries:
+        fallback_queries = ["technology explainer", "technology", "education"]
     for i, line in enumerate(story.get("lines", [])):
         if line.get("media_asset"):
             continue
