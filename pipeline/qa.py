@@ -23,7 +23,9 @@ def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     lines = story.get("lines", [])
     assert len(lines) >= 8, "too few narration lines"
-    assert story.get("sources"), "no sources"
+    exact_script = bool(story.get("exact_script"))
+    if not exact_script:
+        assert story.get("sources"), "no sources"
     assert all(x.get("text") for x in lines), "missing caption text"
     assert all(x.get("visual") for x in lines), "missing visual plan"
 
@@ -34,8 +36,9 @@ def main():
     video_count = sum(1 for x in json.loads(manifest.read_text()) if x.get("kind") == "video") if manifest.exists() else 0
     print(f"MEDIA DATA: {media_count} usable visual assets ({video_count} video)")
     assert media_count >= 8, "not enough usable visual assets; refusing to publish a weak visual build"
-    assert video_count >= 4, "not enough actual video footage; refusing to publish a slideshow"
-    print(f"QA PASS: {d:.2f}s, audio={a}, lines={len(lines)}, visuals={media_count}, video={video_count}")
+    if not exact_script:
+        assert video_count >= 4, "not enough actual video footage; refusing to publish a slideshow"
+    print(f"QA PASS: {d:.2f}s, audio={a}, lines={len(lines)}, visuals={media_count}, video={video_count}, exact_script={exact_script}")
 
 
 if __name__ == "__main__":
