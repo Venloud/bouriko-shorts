@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       fresh:
-        description: "Fresh build"
+        description: "Fresh build, ignore all saved checkpoints"
         required: false
         type: boolean
       test:
@@ -12,53 +12,174 @@ on:
         type: boolean
 permissions:
   contents: write
+  actions: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
+
       - uses: actions/setup-node@v4
         with: {node-version: "20"}
+
+      - name: Restore story checkpoint
+        if: ${ !inputs.fresh }}
+        uses: actions/cache/restore@v4
+        with:
+          path: output/story.json
+          key: bouriko-story-${ runner.os }}-${ hashFiles('pipeline/script.py', 'config.json', 'data/topics.json', 'prompts/**', 'inbox/**') }}
+
       - name: System packages
         run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
+
       - name: Syntax check all pipeline Python
         run: python -m compileall -q pipeline
+
       - name: Python packages
         run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
+
       - name: Write story
+        if: ${ inputs.fresh || !hashFiles('output/story.json') }}
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${ secrets.GEMINI_API_KEY }}
         run: python pipeline/script.py
+
+      - name: Save story checkpoint
+        if: ${ success() && hashFiles('output/story.json') }}
+        uses: actions/cache/save@v4
+        with:
+          path: output/story.json
+          key: bouriko-story-${ runner.os }}-${ hashFiles('pipeline/script.py', 'config.json', 'data/topics.json', 'prompts/**', 'inbox/**') }}
+
+      - name: Restore media checkpoint
+        if: ${ !inputs.fresh && hashFiles('output/story.json') }}
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            output/story.json
+            output/media
+            output/media_manifest.json
+          key: bouriko-media-${ runner.os }}-${ hashFiles('output/story.json', 'pipeline/media.py') }}
+
       - name: Download free photos and videos
+        if: ${ inputs.fresh || !hashFiles('output/media_manifest.json') }}
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          COVERR_API_KEY: ${{ secrets.COVERR_API_KEY }}
+          GEMINI_API_KEY: ${ secrets.GEMINI_API_KEY }}
+          PIXABAY_API_KEY: ${ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${ secrets.PEXELS_API_KEY }}
+          COVERR_API_KEY: ${ secrets.COVERR_API_KEY }}
         run: python pipeline/media.py
+
+      - name: Save media checkpoint
+        if: ${ success() && hashFiles('output/media_manifest.json') }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            output/story.json
+            output/media
+            output/media_manifest.json
+          key: bouriko-media-${ runner.os }}-${ hashFiles('output/story.json', 'pipeline/media.py') }}
+
+      - name: Restore voice checkpoint
+        if: ${ !inputs.fresh && hashFiles('output/story.json') }}
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            output/audio
+            output/word_timings.json
+            output/audio_concat.txt
+          key: bouriko-voice-${ runner.os }}-${ hashFiles('output/story.json', 'pipeline/voice.py', 'config.json') }}
+
       - name: Generate narrator voice
+        if: ${ inputs.fresh || !hashFiles('output/word_timings.json') }}
         env:
-          NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
+          NIGHTFILES_VOICE: ${ vars.NIGHTFILES_VOICE }}
         run: python pipeline/voice.py
+
+      - name: Save voice checkpoint
+        if: ${ success() && hashFiles('output/word_timings.json') }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            output/audio
+            output/word_timings.json
+            output/audio_concat.txt
+          key: bouriko-voice-${ runner.os }}-${ hashFiles('output/story.json', 'pipeline/voice.py', 'config.json') }}
+
+      - name: Restore SFX checkpoint
+        if: ${ !inputs.fresh && hashFiles('output/story.json', 'output/word_timings.json') }}
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            output/sfx
+            output/sfx_events.json
+            output/sfx_sources.json
+          key: bouriko-sfx-${ runner.os }}-${ hashFiles('output/story.json', 'output/word_timings.json', 'pipeline/sfx.py') }}
+
       - name: Generate real stock SFX
+        if: ${ inputs.fresh || !hashFiles('output/sfx_events.json') }}
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY: ${ secrets.GEMINI_API_KEY }}
         run: python pipeline/sfx.py
+
+      - name: Save SFX checkpoint
+        if: ${ success() && hashFiles('output/sfx_events.json') }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            output/sfx
+            output/sfx_events.json
+            output/sfx_sources.json
+          key: bouriko-sfx-${ runner.os }}-${ hashFiles('output/story.json', 'output/word_timings.json', 'pipeline/sfx.py') }}
+
+      - name: Restore Remotion preparation checkpoint
+        if: ${ !inputs.fresh && hashFiles('output/story.json', 'output/word_timings.json', 'output/sfx_events.json') }}
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            remotion/public/generated
+            remotion/props.json
+          key: bouriko-remotion-prep-${ runner.os }}-${ hashFiles('output/story.json', 'output/word_timings.json', 'output/sfx_events.json', 'pipeline/remotion_prepare.py') }}
+
       - name: Prepare Remotion assets
+        if: ${ inputs.fresh || !hashFiles('remotion/props.json') }}
         run: python pipeline/remotion_prepare.py
+
+      - name: Save Remotion preparation checkpoint
+        if: ${ success() && hashFiles('remotion/props.json') }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            remotion/public/generated
+            remotion/props.json
+          key: bouriko-remotion-prep-${ runner.os }}-${ hashFiles('output/story.json', 'output/word_timings.json', 'output/sfx_events.json', 'pipeline/remotion_prepare.py') }}
+
       - name: Install Remotion
         working-directory: remotion
         run: npm install --no-audit --no-fund
+
       - name: Render media-first Short
         working-directory: remotion
         run: npm run render
+
       - name: QA gate
         run: python pipeline/qa.py
+
+      - name: Save final render checkpoint
+        if: ${ success() }}
+        uses: actions/cache/save@v4
+        with:
+          path: output/bouriko.mp4
+          key: bouriko-final-${ runner.os }}-${ github.sha }}
+
       - uses: actions/upload-artifact@v4
-        if: ${{ always() }}
+        if: ${ always() }}
         with:
           name: bouriko-remotion-test
           path: |
