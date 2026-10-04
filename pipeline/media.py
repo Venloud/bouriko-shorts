@@ -699,9 +699,30 @@ def main():
                 line["media_kind"] = "image"
                 records.append(ai)
 
+    # Recovery pass inspired by capability-aware fallback systems:
+    # if every narration line already has a primary asset but the build is still
+    # below the visual minimum, add a real secondary cutaway to an existing scene.
+    # This avoids both a fake duplicate and a slideshow-only workaround.
+    min_assets = 8
+    if len(records) < min_assets:
+        print(f"Visual recovery: {len(records)}/{min_assets}; generating secondary cutaways.")
+        for i, line in enumerate(story.get("lines", [])):
+            if len(records) >= min_assets:
+                break
+            if not line.get("media_asset") or line.get("media_asset_2"):
+                continue
+            query = line.get("visual") or line.get("text") or "technology explainer"
+            diagram = generate_local_diagram(query, 100 + i)
+            if diagram:
+                line["media_asset_2"] = diagram["local_path"]
+                line["media_kind_2"] = "image"
+                line["media_source_2"] = diagram
+                records.append(diagram)
+                print(f"Secondary cutaway assigned: scene={i} query='{query}'")
+
     MANIFEST.write_text(json.dumps(records, indent=2))
     (ROOT / "output/story.json").write_text(json.dumps(story, indent=2))
-    print(f"After media fallback: {len(records)} assets")
+    print(f"After media fallback/recovery: {len(records)} assets")
 
 
 
