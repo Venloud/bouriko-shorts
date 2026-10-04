@@ -77,6 +77,51 @@ def parse_inbox_script(path):
     return lines, meta
 
 
+def parse_kairo_script(path):
+    """Parse the supplied Kairo script without rewriting its narration."""
+    import re
+    section_re = re.compile(r"^(\d+:\d+[–-]\d+:\d+)\s+—\s+(.+)$")
+    section = None
+    visual = ""
+    lines = []
+    started = False
+
+    for raw in path.read_text(errors="ignore").splitlines():
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        if stripped.lower().startswith("production notes for your first upload"):
+            break
+        match = section_re.match(stripped)
+        if match:
+            started = True
+            section = {"timestamp": match.group(1), "title": match.group(2).strip()}
+            visual = ""
+            continue
+        if not started:
+            continue
+        if stripped.upper().startswith("VISUAL:"):
+            visual = stripped.split(":", 1)[1].strip()
+            continue
+        lines.append({
+            "speaker": "NARRATOR",
+            "text": stripped,
+            "visual": section["title"],
+            "visual_prompt": visual,
+            "section": section["title"],
+            "section_timestamp": section["timestamp"],
+        })
+
+    if not lines:
+        raise RuntimeError(f"No Kairo narration found in {path}")
+    return lines, {
+        "title": "Anime Is BETTER Than Manga. Here's Why.",
+        "topic": "Anime vs Manga",
+        "pillar": "comparison",
+        "caption": "Anime vs Manga",
+    }
+
+
 def media_action_for(text, index):
     t = text.lower()
 
@@ -148,6 +193,20 @@ def visual_actions_for(text, speaker, index):
 
 
 def exact_story(path):
+    if "kairo" in path.name.lower():
+        raw_lines, meta = parse_kairo_script(path)
+        return {
+            "title": meta["title"],
+            "pillar": meta["pillar"],
+            "topic": meta["topic"],
+            "lines": raw_lines,
+            "sources": [],
+            "caption": meta["caption"],
+            "hashtags": ["#Kairo", "#Anime", "#Manga"],
+            "exact_script": True,
+            "script_file": path.name,
+        }
+
     raw_lines, meta = parse_inbox_script(path)
     if not raw_lines:
         raise RuntimeError(f"No narration lines found in {path}")
@@ -165,6 +224,7 @@ def exact_story(path):
         "caption": meta.get("caption", "Bouriko pipeline test"),
         "hashtags": ["#Bouriko", "#Test"],
     }
+
 
 def write(pillar, topic, sources):
     ledger = "\n".join(
@@ -207,13 +267,19 @@ def write(pillar, topic, sources):
 def main():
     pillar, topic = pick()
     script_path = None
-    for p in sorted((ROOT / "inbox").glob("*.txt")):
-        lines = p.read_text(errors="ignore").splitlines()
-        if lines and lines[0].strip().upper() == "SCRIPT":
+    inbox_files = sorted((ROOT / "inbox").glob("*.txt"))
+    for p in inbox_files:
+        if "kairo" in p.name.lower():
             script_path = p
             break
-        if lines and lines[0].strip().upper() == "TOPIC" and len(lines) > 1:
-            topic = lines[1].strip()
+    if not script_path:
+        for p in inbox_files:
+            lines = p.read_text(errors="ignore").splitlines()
+            if lines and lines[0].strip().upper() == "SCRIPT":
+                script_path = p
+                break
+            if lines and lines[0].strip().upper() == "TOPIC" and len(lines) > 1:
+                topic = lines[1].strip()
 
     if script_path:
         story = exact_story(script_path)
