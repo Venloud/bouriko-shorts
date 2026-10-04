@@ -35,7 +35,7 @@ export type BourikoProps = {
 
 const Caption = ({ text, visual, duration }: { text: string; visual?: string; duration: number }) => {
   const frame = useCurrentFrame();
-  const words = text.trim().split(/\\s+/);
+  const words = text.trim().split(/\s+/);
   const elapsed = frame / 30;
   const wordIndex = Math.min(
     words.length - 1,
