@@ -16,13 +16,13 @@
     "news": "Explain one fresh, verified technology story."
   },
   "voices": {
-    "narrator": "am_michael",
+    "narrator": "af_bella",
     "lang": "a",
-    "speed": 0.94,
+    "speed": 0.98,
     "line_pause": 0,
-    "style_note": "Deep, warm, calm, authoritative teacher/narrator. Do not imitate or clone any real person."
+    "style_note": "Warm, friendly, expressive teacher voice. Clear, conversational, relaxed, approachable, and easy to understand. Do not imitate or clone any real person."
   },
-  "voice_note": "One consistent deep male narrator voice. NIGHTFILES_VOICE can override the configured Kokoro voice.",
+  "voice_note": "One consistent warm, friendly teacher narrator voice. NIGHTFILES_VOICE can override the configured Kokoro voice.",
   "llm_models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"],
   "groq_models": ["openai/gpt-oss-120b"],
   "style": {
