@@ -328,10 +328,13 @@ const Scene = ({ line }: { line: Line }) => {
 
   const hasMedia = Boolean(asset && (kind === "video" || kind === "image" || kind === "gif"));
   const blackboard = line.anime_visual_type === "blackboard";
-  const mediaWidth = 870;
-  const mediaHeight = 640;
-  const mediaTop = 375;
-  const mediaLeft = 105;
+  // Seven-frame transition: circle -> tall oval -> wide oval -> media card.
+  // Media is mounted on frame zero, so the transition never waits for playback.
+  const mediaWidth = hasMedia ? interpolate(frame, [0, 2, 4, 7], [160, 105, 700, 870], {extrapolateLeft:"clamp",extrapolateRight:"clamp"}) : 870;
+  const mediaHeight = hasMedia ? interpolate(frame, [0, 2, 4, 7], [160, 350, 420, 640], {extrapolateLeft:"clamp",extrapolateRight:"clamp"}) : 640;
+  const mediaTop = 695 - mediaHeight / 2;
+  const mediaLeft = (1080 - mediaWidth) / 2;
+  const mediaRadius = interpolate(frame, [0, 2, 4, 7], [90, 55, 220, 28], {extrapolateLeft:"clamp",extrapolateRight:"clamp"});
   const serious = /death|danger|kill|curse|warning|penalty/i.test(line.text);
   const funny = /joke|funny|laugh|ridiculous|imagine/i.test(line.text);
   const glowColor = serious ? "#ff386a" : funny ? "#ff65df" : "#36eaff";
@@ -346,7 +349,7 @@ const Scene = ({ line }: { line: Line }) => {
         <div style={{
           position:"absolute", left:mediaLeft, top:mediaTop,
           width:mediaWidth, height:mediaHeight,
-          borderRadius: 28,
+          borderRadius: mediaRadius,
           overflow:"hidden", border:"6px solid #41edff",
           boxShadow:`0 0 ${30+glow*40}px ${glowColor}, 0 0 70px ${glowColor}77`,
           background:"#030c2b",
