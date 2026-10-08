@@ -95,5 +95,6 @@ jobs:
           path: |
             output/clip_pull_test/report.json
             output/clip_pull_test/character_reference.*
+            output/clip_pull_test/anime_poster.*
             output/clip_pull_test/sample_clip.mp4
           if-no-files-found: warn
