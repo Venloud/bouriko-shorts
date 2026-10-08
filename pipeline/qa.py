@@ -36,7 +36,14 @@ def main():
     video_count = sum(1 for x in json.loads(manifest.read_text()) if x.get("kind") == "video") if manifest.exists() else 0
     print(f"MEDIA DATA: {media_count} usable visual assets ({video_count} video)")
     assert media_count >= 8, "not enough usable visual assets; refusing to publish a weak visual build"
-    if not exact_script:
+    if story.get("pillar") == "anime_explainer":
+        assert video_count >= 4, "anime explainer requires actual video clips; local diagrams do not qualify"
+        assert sum(1 for x in json.loads(manifest.read_text()) if x.get("provider") == "local_diagram") == 0, "anime explainer silently fell back to local diagrams"
+        assert (ROOT / "output/scene_matches.json").exists(), "anime explainer missing scene timestamp evidence"
+        matches = json.loads((ROOT / "output/scene_matches.json").read_text())
+        assert len(matches) == len(lines), "scene matches must cover every narration line"
+        assert all(x.get("status") == "verified" for x in matches), "unverified anime scene clips; do not claim complete"
+    elif not exact_script:
         assert video_count >= 4, "not enough actual video footage; refusing to publish a slideshow"
     print(f"QA PASS: {d:.2f}s, audio={a}, lines={len(lines)}, visuals={media_count}, video={video_count}, exact_script={exact_script}")
 
