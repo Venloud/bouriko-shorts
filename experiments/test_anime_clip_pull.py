@@ -75,6 +75,28 @@ def fetch_anilist_character(name):
     return {"status":"image_downloaded","provider":"anilist","name":data["name"]["full"],
             "image_url":img,"downloaded_file":str(path.relative_to(ROOT)),"bytes":len(downloaded.content)}
 
+def fetch_kitsu_anime_image(slug):
+    """Download a Kitsu anime poster as a last-resort image fallback."""
+    title=ANIME[slug]["title"]
+    response=requests.get("https://kitsu.io/api/edge/anime",params={"filter[text]":title,"page[limit]":1},timeout=(7,20),headers={"User-Agent":"BourikoMediaTest/1.0"})
+    response.raise_for_status()
+    entries=response.json().get("data") or []
+    if not entries: return {"status":"not_found","provider":"kitsu","query":title}
+    item=entries[0]
+    attributes=item.get("attributes") or {}
+    poster=(attributes.get("posterImage") or {}).get("large") or (attributes.get("posterImage") or {}).get("original")
+    if not poster: return {"status":"image_failed","provider":"kitsu","reason":"No poster URL"}
+    image_response=requests.get(poster,timeout=(7,20),headers={"User-Agent":"BourikoMediaTest/1.0"})
+    image_response.raise_for_status()
+    if not image_response.headers.get("content-type","").startswith("image/") or len(image_response.content)<2000:
+        raise RuntimeError("Kitsu poster response invalid")
+    suffix=".png" if "png" in image_response.headers.get("content-type","") else ".jpg"
+    file=OUT/("anime_poster"+suffix)
+    file.write_bytes(image_response.content)
+    return {"status":"image_downloaded","provider":"kitsu","kind":"anime_poster_not_character",
+            "title":attributes.get("canonicalTitle"),"image_url":poster,
+            "downloaded_file":str(file.relative_to(ROOT)),"bytes":len(image_response.content)}
+
 def find_episode(slug,season,episode):
     root=ROOT/"assets"/"anime"/slug/f"season_{season}"
     for ext in (".mp4",".mkv",".webm",".mov"):
@@ -131,6 +153,11 @@ def main():
             report["image"]=fetch_character(args.character)
         except Exception as exc:
             report["image"]={"status":"network_error","provider":"jikan","error":str(exc)}\n        if report["image"]["status"] != "image_downloaded" and args.character.strip():\n            report["image_primary"]=report["image"]\n            try:\n                report["image"]=fetch_anilist_character(args.character)\n            except Exception as exc:\n                report["image"]={"status":"network_error","provider":"anilist","error":str(exc)}
+    if args.mode in {"image","both"} and report.get("image",{}).get("status") != "image_downloaded":
+        try:
+            report["poster"]=fetch_kitsu_anime_image(args.anime)
+        except Exception as exc:
+            report["poster"]={"status":"network_error","provider":"kitsu","error":str(exc)}
     if args.mode in {"clip","both"}:
         try:
             report["clip"]=extract_clip(args.anime,args.season,args.episode,args.timestamp,args.duration)
@@ -138,7 +165,7 @@ def main():
             report["clip"]={"status":"extract_error","error":str(exc)}
     (OUT/"report.json").write_text(json.dumps(report,indent=2)+"\n")
     print(json.dumps(report,indent=2),flush=True)
-    attempted=[report[k]["status"] for k in ("image","clip") if k in report and report[k]["status"]!="skipped"]
+    attempted=[report[k]["status"] for k in ("image","poster","clip") if k in report and report[k]["status"]!="skipped"]
     passed=args.mode=="catalog" or any(x in {"image_downloaded","clip_extracted"} for x in attempted)
     if not passed:
         raise SystemExit("TEST FAILED: no actual image downloaded or clip extracted. See report.json")
