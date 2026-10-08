@@ -55,6 +55,7 @@ jobs:
             output/bouriko.mp4
             output/story.json
             output/media_manifest.json
+            output/media_catalog.json
             output/word_timings.json
             output/scene_matches.json
           if-no-files-found: warn
