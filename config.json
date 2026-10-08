@@ -1,9 +1,27 @@
 {
   "channel_name": "Bouriko",
-  "target_seconds": [61, 68],
-  "script_words": [140, 152],
-  "pillar_rotation": ["hidden", "explainer", "tip", "hidden", "fun_fact", "gaming", "hidden", "finds"],
-  "pillars_enabled_later": ["comparison", "news"],
+  "target_seconds": [
+    61,
+    68
+  ],
+  "script_words": [
+    140,
+    152
+  ],
+  "pillar_rotation": [
+    "hidden",
+    "explainer",
+    "tip",
+    "hidden",
+    "fun_fact",
+    "gaming",
+    "hidden",
+    "finds"
+  ],
+  "pillars_enabled_later": [
+    "comparison",
+    "news"
+  ],
   "news_max_age_hours": 48,
   "pillar_rules": {
     "hidden": "Explain a hidden piece of everyday technology with simple, factual narration.",
@@ -16,30 +34,49 @@
     "news": "Explain one fresh, verified technology story."
   },
   "voices": {
-    "narrator": "am_michael",
+    "narrator": "am_echo",
     "lang": "a",
-    "speed": 0.96,
+    "speed": 1.05,
     "line_pause": 0,
-    "style_note": "Educational, authoritative male narrator. Calm, confident, mature, and natural, like a knowledgeable teacher explaining something clearly to a class. Conversational rather than announcer-like. Strong articulation, measured pacing, subtle warmth, no exaggerated excitement, no robotic delivery, no generic AI-assistant tone. Do not imitate or clone any real person."
+    "style_note": "Warm synthetic educational explainer: concise, precise, measured, confident, neutral radio-presenter cadence. No dramatic storytelling, no suspense, no emotional theatrical emphasis."
   },
-  "voice_note": "One consistent educational, authoritative male narrator voice. Natural teacher delivery, calm confidence, clear articulation, and human conversational rhythm. NIGHTFILES_VOICE can override the configured Kokoro voice.",
-  "llm_models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"],
-  "groq_models": ["openai/gpt-oss-120b"],
+  "voice_note": "Experimental JJK Kokoro explainer voice: am_echo at 1.05x, optional subtle radio-band EQ in post. No storyteller cadence.",
+  "llm_models": [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite"
+  ],
+  "groq_models": [
+    "openai/gpt-oss-120b"
+  ],
   "style": {
     "background": "#F4EFE4",
     "ink": "#1B1B1B",
     "tech_glow": "#2EA8FF",
-    "fonts": ["Arial Black", "Arial"],
-    "size": [1080, 1920]
+    "fonts": [
+      "Arial Black",
+      "Arial"
+    ],
+    "size": [
+      1080,
+      1920
+    ]
   },
   "qa_max_visual_share": 0.2,
   "qa_min_visuals": 8,
-  "post_times_new_york": ["12:10", "19:10"],
+  "post_times_new_york": [
+    "12:10",
+    "19:10"
+  ],
   "video_style": {
     "mascot_in_video": false,
     "phone_in_video": false,
     "captions": "dynamic_word_highlight",
-    "media_mix": ["video", "image", "diagram", "youtube_cc"],
+    "media_mix": [
+      "video",
+      "image",
+      "diagram",
+      "youtube_cc"
+    ],
     "camera_motion": false,
     "pose_motion": false,
     "transitions": "hard_cut"
