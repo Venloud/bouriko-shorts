@@ -29,19 +29,29 @@ def entries(obj, key):
                 return value[nested]
     return []
 
+def shape(value, depth=0):
+    """Safe response diagnostics: keys, types and list counts, never URLs/tokens."""
+    if depth >= 4:
+        return type(value).__name__
+    if isinstance(value, dict):
+        return {str(k): shape(v, depth + 1) for k, v in list(value.items())[:15]}
+    if isinstance(value, list):
+        return {"count": len(value), "first": shape(value[0], depth + 1) if value else None}
+    return type(value).__name__
+
 def candidates(stream):
-    payload = stream.get("stream", stream)
+    payload = stream.get("stream", stream) if isinstance(stream, dict) else stream
     if not isinstance(payload, dict):
         return []
-    sources = payload.get("streams", [])
+    sources = payload.get("streams") or payload.get("sources") or payload.get("videos") or []
     if isinstance(sources, dict):
         sources = list(sources.values())
     found = []
     for item in sources if isinstance(sources, list) else []:
-        if isinstance(item, str):
+        if isinstance(item, str) and item.startswith(("http://", "https://")):
             found.append((item, {}))
         elif isinstance(item, dict):
-            url = next((item.get(k) for k in ("url", "file", "src", "link") if isinstance(item.get(k), str)), None)
+            url = next((item.get(k) for k in ("url", "file", "src", "link", "source") if isinstance(item.get(k), str) and item.get(k).startswith(("http://", "https://"))), None)
             if url:
                 found.append((url, item.get("headers") or payload.get("headers") or {}))
     return found
@@ -69,9 +79,10 @@ try:
     REPORT["steps"]["episodes"] = "passed"
     response = api("/api/v1/stream", {"id": ep["id"], "provider": "animeparadise", "language": "sub"})
     sources = candidates(response)
+    REPORT["steps"]["stream_shape"] = shape(response)
     REPORT["steps"]["stream_candidates"] = len(sources)
     if not sources:
-        raise RuntimeError("Stream response has no usable URL")
+        raise RuntimeError("Stream response has no usable URL; inspect sanitized stream_shape in artifact")
     # Decode directly into the null muxer: no anime footage stored, published, or uploaded.
     # Limit to 3 seconds of decoded input and a 45-second wall-clock timeout.
     errors = []
