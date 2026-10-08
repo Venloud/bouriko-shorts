@@ -636,7 +636,7 @@ def main():
 
     # Exact-script productions use the script's VISUAL directions directly.
     # Do not search stock providers for these runs.
-    if story.get("exact_script"):
+    if story.get("exact_script") and story.get("pillar") != "anime_explainer":
         sections = {}
         for i, line in enumerate(story.get("lines", [])):
             key = line.get("section") or f"section-{i}"
@@ -668,6 +668,9 @@ def main():
         (ROOT / "output/story.json").write_text(json.dumps(story, indent=2))
         print(f"Exact-script visual production: {len(sections)} sections, {len(records)} original visual assets")
         return
+
+    if story.get("pillar") == "anime_explainer":
+        raise RuntimeError("JJK episode clips require verified scene-timecode inputs. Stock and local diagrams are not substitutes.")
 
     # First pass: use the story's exact visual intent.
     for i, line in enumerate(story.get("lines", [])):
