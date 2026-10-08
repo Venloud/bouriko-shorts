@@ -1,100 +1,133 @@
-"""Fetch JJK character reference images for experimental review rendering.
+"""Review-only JJK image acquisition, narration-first candidate selection.
 
-Uses Jikan character search. Images are third-party copyrighted references,
-not licensed stock. This workflow is REVIEW ONLY and must not auto-publish.
+Do not silently replace requested real character images with neon graphics.
+Character images from Jikan are third-party references, NOT publish-cleared.
 """
+import hashlib
 import json
+import os
 import re
 import time
 from pathlib import Path
 from urllib.parse import quote
+
 import requests
 
-ROOT=Path(__file__).resolve().parents[1]
-STORY=ROOT/"output/story.json"
-OUT=ROOT/"output"
-CHARACTERS={
-    "Kenjaku":["Kenjaku"],
-    "YUJI AND MEGUMI":["Yuji Itadori","Megumi Fushiguro"],
-    "GAME MASTER":["Kogane"],
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / "output"
+CHARACTERS = {
+    "Kenjaku": ["Kenjaku"],
+    "YUJI AND MEGUMI": ["Yuji Itadori", "Megumi Fushiguro"],
+    "GAME MASTER": ["Kogane"],
 }
-def fetch_character(name):
-    endpoint="https://api.jikan.moe/v4/characters?q="+quote(name)+"&limit=10"
-    resp=requests.get(endpoint,timeout=25)
-    resp.raise_for_status()
-    for item in resp.json().get("data",[]):
-        if item.get("name","").casefold()!=name.casefold():
+TIMEOUT = (8, 18)
+USER_AGENT = "BourikoJJKReview/1.1 (anime character reference experiment)"
+
+def get_json(session, url):
+    response = session.get(url, timeout=TIMEOUT)
+    response.raise_for_status()
+    return response.json()
+
+def fetch_character(session, name):
+    # Search by canonical character name; don't silently accept a similar character.
+    data = get_json(session, "https://api.jikan.moe/v4/characters?q=" + quote(name) + "&limit=10")
+    for item in data.get("data", []):
+        if item.get("name", "").casefold() != name.casefold():
             continue
-        image=((item.get("images") or {}).get("jpg") or {}).get("image_url")
-        if not image:
+        jpg = (item.get("images") or {}).get("jpg") or {}
+        url = jpg.get("large_image_url") or jpg.get("image_url")
+        if not url:
             continue
-        photo=requests.get(image,timeout=25,headers={"User-Agent":"BourikoExperimentalReview/1.0"})
-        photo.raise_for_status()
-        if not photo.headers.get("content-type","").startswith("image/"):
-            continue
-        return photo.content, image, item.get("url")
+        response = session.get(url, timeout=TIMEOUT)
+        response.raise_for_status()
+        if not response.headers.get("content-type", "").lower().startswith("image/"):
+            raise RuntimeError("Image endpoint did not return image content")
+        if len(response.content) < 2000:
+            raise RuntimeError("Image payload too small")
+        return response.content, url, item.get("url")
     return None
 
-def choose_media(line, candidates, recent_media, scene_index):
-    """Choose visuals after the narration is known; do not spam media.
-
-    This deterministic director favors images on named-character beats,
-    and graphics for numeric/rule explanations. Media IDs are persistent
-    content hashes, not scene numbers or fabricated episode references.
-    """
-    kind=line.get("anime_visual_type","")
-    if kind in {"animated_map","animated_counter","animated_timer","energy_diagram","blackboard"}:
-        return None, "educational_graphic"
+def choose_media(line, candidates, recent_media, index):
+    visual_type = line.get("anime_visual_type", "")
+    if visual_type in {"animated_map", "animated_counter", "animated_timer", "energy_diagram", "blackboard"}:
+        return None, "diagram_explains_better"
     if not candidates:
-        return None, "no_verified_candidate"
-    if recent_media and scene_index-recent_media[-1] <= 1:
-        return None, "spacing_between_media"
-    return candidates[0], "named_character_reference"
+        return None, "no_exact_character_match"
+    if recent_media and index - recent_media[-1] <= 1:
+        return None, "avoid_media_spam"
+    return candidates[0], "character_match"
 
 def main():
-    story=json.loads(STORY.read_text())
-    manifest=[]
-    matches=[]
-    cache={}
-    media=OUT/"anime_images"\n    catalog=[]\n    recent_media=[]
-    media.mkdir(parents=True,exist_ok=True)
-    for i,line in enumerate(story["lines"]):
-        visual=line.get("visual","")
-        names=CHARACTERS.get(visual,[])
-        candidates=[]
+    OUT.mkdir(parents=True, exist_ok=True)
+    story_path = OUT / "story.json"
+    story = json.loads(story_path.read_text())
+    media_dir = OUT / "anime_images"
+    media_dir.mkdir(parents=True, exist_ok=True)
+    session = requests.Session()
+    session.headers.update({"User-Agent": USER_AGENT})
+    cache, failures, manifest, matches, catalog, recent = {}, [], [], [], [], []
+    for index, line in enumerate(story["lines"]):
+        names = CHARACTERS.get(line.get("visual", ""), [])
+        candidates = []
         for name in names:
             if name not in cache:
                 try:
-                    cache[name]=fetch_character(name)
-                except (requests.RequestException,ValueError) as exc:
-                    print("Image lookup unavailable:",name,type(exc).__name__,str(exc)[:160])
-                    cache[name]=None
-                time.sleep(0.4)
-            result=cache[name]
-            if result:
-                raw,image_url,character_url=result
-                filename=re.sub(r"[^a-z0-9]+","_",name.lower()).strip("_")+".jpg"
-                path=media/filename
-                path.write_bytes(raw)
-                candidate={"scene":i,"kind":"image","provider":"jikan_character_reference",
-                    "character":name,"path":str(path.relative_to(ROOT)),
-                    "source_url":character_url,"image_url":image_url,
-                    "rights_status":"review_only_unlicensed","reviewed":False}
-                line["media_kind"]="image"
-                line["media_asset"]=str(path.relative_to(ROOT))
-                print("Reference image prepared:",name)
-                break
+                    cache[name] = fetch_character(session, name)
+                except (requests.RequestException, ValueError, RuntimeError) as exc:
+                    failures.append({"character": name, "error": str(exc)[:500]})
+                    print(f"MEDIA FETCH FAILED: {name}: {type(exc).__name__}: {exc}", flush=True)
+                    cache[name] = None
+                time.sleep(0.5)
+            result = cache[name]
+            if not result:
+                continue
+            raw, image_url, source_url = result
+            digest = hashlib.sha256(raw).hexdigest()
+            filename = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") + "_" + digest[:12] + ".jpg"
+            target = media_dir / filename
+            target.write_bytes(raw)
+            candidates.append({
+                "scene": index, "kind": "image", "provider": "jikan_character_reference",
+                "media_id": "sha256:" + digest, "character": name,
+                "path": str(target.relative_to(ROOT)), "source_url": source_url,
+                "image_url": image_url, "season": None, "episode": None,
+                "timestamp_seconds": None, "rights_status": "review_only_unlicensed",
+                "reviewed": False
+            })
+        selected, reason = choose_media(line, candidates, recent, index)
+        catalog.append({"scene": index, "narration": line["text"], "candidates": candidates,
+                        "selected_media_id": selected["media_id"] if selected else None,
+                        "selection_reason": reason})
         if selected:
+            recent.append(index)
+            line["media_kind"] = "image"
+            line["media_asset"] = selected["path"]
+            line["media_caller_id"] = selected["media_id"]
             manifest.append(selected)
-            matches.append({"scene":i,"status":"reference_image","character":selected["character"],"rights_status":"review_only_unlicensed"})
+            matches.append({"scene": index, "status": "reference_image",
+                            "character": selected["character"], "media_id": selected["media_id"]})
         else:
-            line["media_kind"]="motion_graphic"
-            line.pop("media_asset",None)\n            line.pop("media_caller_id",None)
-            manifest.append({"scene":i,"kind":"motion_graphic","provider":"remotion","visual_type":line.get("anime_visual_type")})
-            matches.append({"scene":i,"status":"graphic"})
-    STORY.write_text(json.dumps(story,indent=2)+"\n")
-    (OUT/"media_manifest.json").write_text(json.dumps(manifest,indent=2)+"\n")
-    (OUT/"scene_matches.json").write_text(json.dumps(matches,indent=2)+"\n")
-    print("Prepared",sum(x["kind"]=="image" for x in manifest),"reference-image scenes out of",len(manifest))
-if __name__=="__main__":
+            line["media_kind"] = "motion_graphic"
+            line.pop("media_asset", None)
+            line.pop("media_caller_id", None)
+            manifest.append({"scene": index, "kind": "motion_graphic",
+                             "provider": "remotion", "visual_type": line.get("anime_visual_type")})
+            matches.append({"scene": index, "status": "graphic", "reason": reason})
+    (OUT / "media_catalog.json").write_text(json.dumps(catalog, indent=2) + "\n")
+    (OUT / "media_fetch_failures.json").write_text(json.dumps(failures, indent=2) + "\n")
+    (OUT / "media_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (OUT / "scene_matches.json").write_text(json.dumps(matches, indent=2) + "\n")
+    story_path.write_text(json.dumps(story, indent=2) + "\n")
+    images = sum(item["kind"] == "image" for item in manifest)
+    print(f"IMAGE PREFLIGHT: {images} selected character-image scenes / {len(manifest)} scenes", flush=True)
+    if images == 0:
+        raise SystemExit(
+            "MEDIA QA FAILED: zero real character images retrieved. "
+            "Do not render a graphics-only build as an image-integrated success. "
+            "Check runner outbound HTTPS/DNS access to api.jikan.moe and image CDN; "
+            "see output/media_fetch_failures.json. "
+            "Alternative: provide approved character images in a durable media store."
+        )
+
+if __name__ == "__main__":
     main()
