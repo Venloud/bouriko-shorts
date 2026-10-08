@@ -29,8 +29,8 @@ jobs:
           pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
       - name: Prepare JJK Culling Game story
         run: python experiments/jjk_story.py
-      - name: Prepare JJK motion graphics
-        run: python experiments/prepare_motion_graphics.py
+      - name: Prepare JJK character reference images and neon graphics
+        run: python experiments/prepare_jjk_reference_images.py
       - name: Generate Kokoro narration
         run: python pipeline/voice.py
       - name: Generate SFX
