@@ -297,7 +297,7 @@ const NeonGraphic = ({ line }: { line: Line }) => {
           </div>
         </div>
       ) : (
-        <div style={{position:"absolute",top:470,left:75,right:75,height:750,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{position:"absolute",top:585,left:75,right:75,height:750,display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{position:"absolute",width:550,height:550,border:"8px solid #2fe9ff",borderRadius:"50%",boxShadow:"0 0 90px #04dfff, inset 0 0 85px #f02278",transform:`rotate(${frame*0.7}deg) scale(${0.95+pulse*0.06})`}}/>
           <div style={{position:"absolute",width:430,height:430,border:"7px dashed #ff376f",borderRadius:"50%",transform:`rotate(${-frame*1.3}deg)`}}/>
           <div style={{zIndex:2,fontSize:kind==="anime_reference"?80:65,textAlign:"center",maxWidth:800,lineHeight:1.12,textShadow:"0 0 32px #00dcff, 0 0 45px #ff236b"}}>{line.visual}</div>
@@ -332,7 +332,7 @@ const Scene = ({ line }: { line: Line }) => {
   // Media is mounted on frame zero, so the transition never waits for playback.
   const mediaWidth = hasMedia ? interpolate(frame, [0, 2, 4, 7], [160, 105, 700, 870], {extrapolateLeft:"clamp",extrapolateRight:"clamp"}) : 870;
   const mediaHeight = hasMedia ? interpolate(frame, [0, 2, 4, 7], [160, 350, 420, 640], {extrapolateLeft:"clamp",extrapolateRight:"clamp"}) : 640;
-  const mediaTop = 695 - mediaHeight / 2;
+  // Voice orb begins at the exact canvas center (540,960). The revealed media\n  // moves to its dedicated safe-layout slot above the captions.\n  const mediaCenterY = interpolate(frame, [0, 7], [960, 695], {extrapolateLeft:"clamp",extrapolateRight:"clamp"});\n  const mediaTop = mediaCenterY - mediaHeight / 2;
   const mediaLeft = (1080 - mediaWidth) / 2;
   const mediaRadius = interpolate(frame, [0, 2, 4, 7], [90, 55, 220, 28], {extrapolateLeft:"clamp",extrapolateRight:"clamp"});
   const serious = /death|danger|kill|curse|warning|penalty/i.test(line.text);
