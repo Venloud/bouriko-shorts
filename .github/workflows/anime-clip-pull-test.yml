@@ -83,10 +83,14 @@ jobs:
           TIMESTAMP: ${{ inputs.timestamp }}
           DURATION: ${{ inputs.duration }}
         run: |
-          python experiments/test_anime_clip_pull.py \
-            --anime "$ANIME" --season "$SEASON" --episode "$EPISODE" \
-            --character "$CHARACTER" --mode "$MODE" \
-            --timestamp "$TIMESTAMP" --duration "$DURATION"
+          args=(--anime "$ANIME" --mode "$MODE")
+          [[ -n "$SEASON" ]] && args+=(--season "$SEASON")
+          [[ -n "$EPISODE" ]] && args+=(--episode "$EPISODE")
+          [[ -n "$CHARACTER" ]] && args+=(--character "$CHARACTER")
+          [[ -n "$TIMESTAMP" ]] && args+=(--timestamp "$TIMESTAMP")
+          [[ -n "$DURATION" ]] && args+=(--duration "$DURATION")
+          python -m py_compile experiments/test_anime_clip_pull.py
+          python experiments/test_anime_clip_pull.py "${args[@]}"
       - name: Upload diagnostic report and media samples
         if: always()
         uses: actions/upload-artifact@v4
