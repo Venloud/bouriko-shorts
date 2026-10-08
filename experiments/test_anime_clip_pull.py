@@ -56,6 +56,25 @@ def fetch_character(name):
             result.update(status="image_failed",error=str(e))
     return result
 
+def fetch_anilist_character(name):
+    """Fallback public character portrait lookup using AniList GraphQL."""
+    query="query ($search: String) { Character(search: $search) { id name { full } image { large } } }"
+    response=requests.post("https://graphql.anilist.co",json={"query":query,"variables":{"search":name}},timeout=(7,20),headers={"User-Agent":"BourikoMediaTest/1.0"})
+    response.raise_for_status()
+    data=(response.json().get("data") or {}).get("Character")
+    if not data: return {"status":"not_found","provider":"anilist","query":name}
+    img=(data.get("image") or {}).get("large")
+    if not img: return {"status":"image_failed","provider":"anilist","reason":"No image URL"}
+    downloaded=requests.get(img,timeout=(7,20),headers={"User-Agent":"BourikoMediaTest/1.0"})
+    downloaded.raise_for_status()
+    if not downloaded.headers.get("content-type","").startswith("image/") or len(downloaded.content)<2000:
+        raise RuntimeError("AniList image response invalid")
+    suffix=".png" if "png" in downloaded.headers.get("content-type","") else ".jpg"
+    path=OUT/("character_reference"+suffix)
+    path.write_bytes(downloaded.content)
+    return {"status":"image_downloaded","provider":"anilist","name":data["name"]["full"],
+            "image_url":img,"downloaded_file":str(path.relative_to(ROOT)),"bytes":len(downloaded.content)}
+
 def find_episode(slug,season,episode):
     root=ROOT/"assets"/"anime"/slug/f"season_{season}"
     for ext in (".mp4",".mkv",".webm",".mov"):
@@ -111,7 +130,7 @@ def main():
         try:
             report["image"]=fetch_character(args.character)
         except Exception as exc:
-            report["image"]={"status":"network_error","error":str(exc)}
+            report["image"]={"status":"network_error","provider":"jikan","error":str(exc)}\n        if report["image"]["status"] != "image_downloaded" and args.character.strip():\n            report["image_primary"]=report["image"]\n            try:\n                report["image"]=fetch_anilist_character(args.character)\n            except Exception as exc:\n                report["image"]={"status":"network_error","provider":"anilist","error":str(exc)}
     if args.mode in {"clip","both"}:
         try:
             report["clip"]=extract_clip(args.anime,args.season,args.episode,args.timestamp,args.duration)
