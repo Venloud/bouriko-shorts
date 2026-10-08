@@ -21,7 +21,7 @@ def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     GENERATED.mkdir(parents=True, exist_ok=True)
     if story.get("pillar") == "anime_explainer":
-        kinds = {"animated_map", "animated_counter", "animated_timer", "energy_diagram", "hero_motion", "anime_reference"}
+        kinds = {"animated_map", "animated_counter", "animated_timer", "energy_diagram", "hero_motion", "anime_reference", "blackboard"}
         if any(line.get("anime_visual_type") not in kinds for line in story.get("lines", [])):
             raise RuntimeError("Missing approved JJK motion graphic visual plan")
 
