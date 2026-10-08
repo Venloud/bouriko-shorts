@@ -139,8 +139,16 @@ def main():
     p.add_argument("--timestamp",type=float,default=None)
     p.add_argument("--duration",type=float,default=None)
     args=p.parse_args()
-    if args.season<1 or args.episode<1 or args.timestamp<0 or not 0.5<=args.duration<=20:
-        p.error("Season/episode must be positive, timestamp >= 0, duration 0.5-20 seconds")
+    if args.season is not None and args.season < 1:
+        p.error("Season must be positive")
+    if args.episode is not None and args.episode < 1:
+        p.error("Episode must be positive")
+    if args.timestamp is not None and args.timestamp < 0:
+        p.error("Timestamp must be nonnegative")
+    if args.duration is not None and not 0.5 <= args.duration <= 20:
+        p.error("Duration must be 0.5-20 seconds")
+    if args.mode in {"clip", "both"} and any(v is None for v in (args.season,args.episode,args.timestamp,args.duration)):
+        p.error("Clip mode requires season, episode, timestamp and duration")
     OUT.mkdir(parents=True,exist_ok=True)
     report={"anime":args.anime,"anime_title":ANIME[args.anime]["title"],
             "season":args.season,"episode":args.episode,"character_query":args.character,
