@@ -1,0 +1,45 @@
+name: Blitz Anime API Smoke Test
+on:
+  push:
+    branches: [experiment/anime-motion-kokoro]
+    paths:
+      - '.github/workflows/blitz-smoke-test.yml'
+      - 'experiments/blitz_smoke_test.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  blitz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Clone Blitz and install dependencies
+        run: |
+          git clone --depth 1 https://github.com/blitzlabx/blitz-anime-api.git /tmp/blitz-api
+          cd /tmp/blitz-api
+          npm install --no-audit --no-fund
+      - name: Start Blitz server
+        run: |
+          cd /tmp/blitz-api
+          nohup npm start > /tmp/blitz.log 2>&1 &
+          echo $! > /tmp/blitz.pid
+      - name: Verify health, providers, anime search, episodes and stream resolution
+        run: python experiments/blitz_smoke_test.py
+      - name: Save diagnostics
+        if: always()
+        run: |
+          tail -100 /tmp/blitz.log || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blitz-smoke-test
+          path: |
+            output/blitz_smoke_results.json
+            /tmp/blitz.log
