@@ -51,7 +51,7 @@ def candidates(stream):
         if isinstance(item, str) and item.startswith(("http://", "https://")):
             found.append((item, {}))
         elif isinstance(item, dict):
-            url = next((item.get(k) for k in ("url", "file", "src", "link", "source") if isinstance(item.get(k), str) and item.get(k).startswith(("http://", "https://"))), None)
+            url = next((item.get(k) for k in ("sourceUrl", "url", "file", "src", "link", "source") if isinstance(item.get(k), str) and item.get(k).startswith(("http://", "https://"))), None)
             if url:
                 found.append((url, item.get("headers") or payload.get("headers") or {}))
     return found
