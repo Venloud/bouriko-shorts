@@ -39,12 +39,14 @@ jobs:
           nohup npm start > /tmp/blitz.log 2>&1 &
       - name: Decode a short JJK sample without saving footage
         run: python experiments/blitz_decode_test.py
-      - name: Upload diagnostic JSON only
+      - name: Upload diagnostic JSON and review-only preview
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: blitz-decode-diagnostics
-          path: output/blitz_decode_results.json
+          path: |
+            output/blitz_decode_results.json
+            output/blitz_jjk_preview.mp4
       - name: Publish sanitized diagnostic issue
         if: always()
         env:
