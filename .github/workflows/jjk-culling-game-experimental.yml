@@ -29,10 +29,10 @@ jobs:
           pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
       - name: Prepare JJK Culling Game story
         run: python experiments/jjk_story.py
-      - name: Prepare JJK character reference images and neon graphics
-        run: python experiments/prepare_jjk_reference_images.py
       - name: Generate Kokoro narration
         run: python pipeline/voice.py
+      - name: Prepare JJK character reference images and neon graphics
+        run: python experiments/prepare_jjk_reference_images.py
       - name: Generate SFX
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -56,6 +56,7 @@ jobs:
             output/story.json
             output/media_manifest.json
             output/media_catalog.json
+            output/media_fetch_failures.json
             output/word_timings.json
             output/scene_matches.json
           if-no-files-found: warn
