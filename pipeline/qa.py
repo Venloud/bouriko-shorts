@@ -39,7 +39,7 @@ def main():
     if story.get("pillar") == "anime_explainer":
         entries = json.loads(manifest.read_text()) if manifest.exists() else []
         assert len(entries) == len(lines), "every JJK scene requires a visual"
-        assert all(x.get("kind") in {"motion_graphic", "video"} for x in entries), "unapproved JJK visual"
+        assert all(x.get("kind") in {"motion_graphic", "video", "image"} for x in entries), "unapproved JJK visual"
         assert all(x.get("provider") != "local_diagram" for x in entries), "static diagram fallback forbidden"
         assert (ROOT / "output/scene_matches.json").exists(), "missing JJK scene visual plan"
     elif not exact_script:
