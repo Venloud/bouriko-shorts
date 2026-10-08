@@ -16,6 +16,9 @@ import requests
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "output"
 CHARACTERS = {
+    "KOGANE ENTRY": ["Kogane"],
+    "YUJI AND KOGANE": ["Yuji Itadori", "Kogane"],
+    "MEGUMI AND TSUMIKI": ["Megumi Fushiguro", "Tsumiki Fushiguro"],
     "Kenjaku": ["Kenjaku"],
     "YUJI AND MEGUMI": ["Yuji Itadori", "Megumi Fushiguro"],
     "GAME MASTER": ["Kogane"],
