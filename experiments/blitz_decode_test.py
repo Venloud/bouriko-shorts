@@ -81,6 +81,8 @@ try:
     sources = candidates(response)
     REPORT["steps"]["stream_shape"] = shape(response)
     REPORT["steps"]["stream_candidates"] = len(sources)
+    print("SANITIZED_STREAM_SHAPE:", json.dumps(REPORT["steps"]["stream_shape"], sort_keys=True), flush=True)
+    print("STREAM_CANDIDATES:", len(sources), flush=True)
     if not sources:
         raise RuntimeError("Stream response has no usable URL; inspect sanitized stream_shape in artifact")
     # Decode directly into the null muxer: no anime footage stored, published, or uploaded.
@@ -91,7 +93,7 @@ try:
                "-rw_timeout", "12000000"]
         if isinstance(headers, dict) and headers:
             safe_headers = {str(k): str(v) for k, v in headers.items() if isinstance(v, (str, int, float))}
-            cmd += ["-headers", "".join(f"{k}: {v}\\r\\n" for k, v in safe_headers.items())]
+            cmd += ["-headers", "".join(f"{k}: {v}\r\n" for k, v in safe_headers.items())]
         cmd += ["-i", url, "-t", "3", "-map", "0:v:0", "-f", "null", "-"]
         try:
             p = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
