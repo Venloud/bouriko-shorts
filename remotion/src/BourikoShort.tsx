@@ -328,14 +328,17 @@ const Scene = ({ line }: { line: Line }) => {
 
   const hasMedia = Boolean(asset && (kind === "video" || kind === "image" || kind === "gif"));
   const blackboard = line.anime_visual_type === "blackboard";
-  const enter = interpolate(frame, [0, 9, 19], [0, 0.25, 1], {extrapolateLeft:"clamp",extrapolateRight:"clamp"});
-  const exitStart = Math.max(22, Math.floor(line.duration * 30) - 12);
-  const leave = interpolate(frame, [exitStart, exitStart + 10], [1, 0], {extrapolateLeft:"clamp",extrapolateRight:"clamp"});
-  const open = hasMedia ? Math.min(enter, leave) : 0;
-  const mediaWidth = 540 + open * 340;
-  const mediaHeight = 540 + open * 180;
-  const mediaTop = 540 - open * 90;
-  const mediaLeft = (1080 - mediaWidth) / 2;
+  const mediaWidth = 870;
+  const mediaHeight = 640;
+  const mediaTop = 375;
+  const mediaLeft = 105;
+  const serious = /death|danger|kill|curse|warning|penalty/i.test(line.text);
+  const funny = /joke|funny|laugh|ridiculous|imagine/i.test(line.text);
+  const glowColor = serious ? "#ff386a" : funny ? "#ff65df" : "#36eaff";
+  const words = line.text.split(/\\s+/).filter(Boolean);
+  const index = Math.min(words.length - 1, Math.floor(frame / Math.max(1, line.duration * 30 / Math.max(1, words.length))));
+  const consonant = /^[pbtdkg]/i.test(words[Math.max(0,index)] || "");
+  const glow = 0.7 + 0.15 * Math.sin(frame / 9) + (consonant ? 0.18 : 0);
   return (
     <AbsoluteFill>
       <NeonGraphic line={{...line, anime_visual_type: hasMedia ? "hero_motion" : line.anime_visual_type}} />
@@ -343,9 +346,9 @@ const Scene = ({ line }: { line: Line }) => {
         <div style={{
           position:"absolute", left:mediaLeft, top:mediaTop,
           width:mediaWidth, height:mediaHeight,
-          borderRadius: (1-open)*270 + open*28,
+          borderRadius: 28,
           overflow:"hidden", border:"6px solid #41edff",
-          boxShadow:"0 0 40px #08d8ff, 0 0 80px #fa285c66",
+          boxShadow:`0 0 ${30+glow*40}px ${glowColor}, 0 0 70px ${glowColor}77`,
           background:"#030c2b",
         }}>
           {kind === "video" ? (
