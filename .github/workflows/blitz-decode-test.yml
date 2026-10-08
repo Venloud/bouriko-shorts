@@ -1,0 +1,42 @@
+name: Blitz AnimeParadise Decode Test
+on:
+  push:
+    branches: [experiment/anime-motion-kokoro]
+    paths:
+      - 'experiments/blitz_decode_test.py'
+      - '.github/workflows/blitz-decode-test.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  decode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install FFmpeg and verify
+        run: |
+          ffmpeg -version | head -1
+      - name: Install Blitz
+        run: |
+          git clone --depth 1 https://github.com/blitzlabx/blitz-anime-api.git /tmp/blitz-api
+          cd /tmp/blitz-api
+          npm install --no-audit --no-fund
+      - name: Start Blitz API
+        run: |
+          cd /tmp/blitz-api
+          nohup npm start > /tmp/blitz.log 2>&1 &
+      - name: Decode a short JJK sample without saving footage
+        run: python experiments/blitz_decode_test.py
+      - name: Upload diagnostic JSON only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blitz-decode-diagnostics
+          path: output/blitz_decode_results.json
