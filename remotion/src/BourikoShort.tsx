@@ -20,6 +20,7 @@ type Line = {
   start: number;
   duration: number;
   visual?: string;
+  anime_visual_type?: string;
 };
 
 type Sfx = {
@@ -125,6 +126,7 @@ const Caption = ({
   text: string;
   visual?: string;
   duration: number;
+  visualType?: string;
 }) => {
   const frame = useCurrentFrame();
   const words = text.trim().split(/\s+/).filter(Boolean);
@@ -143,8 +145,8 @@ const Caption = ({
   const label = (visual || "TECH").toUpperCase();
 
   const palettes = ["#FFFFFF", "#FFD23F", "#2EA8FF", "#FF6B6B", "#7FF0C5", "#FF9F43"];
-  const positions = [{ bottom: 230, left: 55, right: 55 }];
-  const sizes = [68, 72, 76];
+  const positions = [{ bottom: 255, left: 65, right: 65 }];
+  const sizes = [48, 52, 56];
   const styleSeed = text.length * 17 + chunkIndex * 31;
   const paletteIndex = Math.abs(styleSeed) % palettes.length;
   const positionIndex = Math.abs(styleSeed * 7) % positions.length;
@@ -179,14 +181,14 @@ const Caption = ({
       <div
         style={{
           position: "absolute",
-          top: 150,
+          top: 170,
           left: 56,
           padding: "9px 16px",
           borderRadius: 999,
           background: "rgba(20,20,20,.78)",
           color: "#fff",
           fontFamily: '"Arial Black", "DejaVu Sans", sans-serif',
-          fontSize: 24,
+          fontSize: 21,
           fontWeight: 900,
           letterSpacing: 1.2,
         }}
@@ -253,6 +255,61 @@ const Caption = ({
   );
 };
 
+const NeonGraphic = ({ line }: { line: Line }) => {
+  const frame = useCurrentFrame();
+  const kind = line.anime_visual_type || "hero_motion";
+  const pulse = 0.5 + 0.5 * Math.sin(frame / 11);
+  const advance = interpolate(frame, [0, 38], [0, 1], { extrapolateRight: "clamp" });
+  const isMap = kind === "animated_map";
+  const isCounter = kind === "animated_counter";
+  const isTimer = kind === "animated_timer";
+  const isEnergy = kind === "energy_diagram";
+  const number = parseInt(line.visual || "", 10) || 100;
+  const main = isCounter ? String(Math.round(number * advance)) : isTimer ? String(Math.round(19 * advance)) : "";
+  return (
+    <AbsoluteFill style={{
+      overflow: "hidden",
+      background: "radial-gradient(ellipse at 28% 32%, #064fbf 0%, #092a7e 34%, #10145b 65%, #470b68 100%)",
+      color: "#f5fbff", fontFamily: '"Arial Black", sans-serif',
+    }}>
+      <AbsoluteFill style={{
+        opacity: .25, transform: `translateY(${frame % 80}px)`,
+        backgroundImage: "linear-gradient(#1de6ff55 2px, transparent 2px), linear-gradient(90deg, #1de6ff55 2px, transparent 2px)",
+        backgroundSize: "80px 80px",
+      }}/>
+      <div style={{ position: "absolute", top: 240, left: 76, fontSize: 28, letterSpacing: 8, color: "#5ceaff" }}>CULLING GAME // SYSTEM</div>
+      <div style={{ position: "absolute", top: 305, left: 76, right: 76, height: 3, background: "#fa376d", boxShadow: "0 0 28px #ff1c60" }}/>
+      {isMap ? (
+        <svg viewBox="0 0 900 900" style={{position:"absolute",top:330,left:70,width:940,height:940,filter:"drop-shadow(0 0 18px #00dfff)"}}>
+          <path d="M590 55 L645 98 L630 160 L688 196 L659 242 L616 251 L627 304 L584 356 L545 370 L541 423 L489 459 L452 512 L395 545 L365 613 L301 638 L259 706 L197 736 L144 793 L96 780 L132 721 L190 676 L229 624 L287 602 L330 551 L375 520 L419 464 L457 422 L487 365 L513 313 L539 252 L550 197 L571 145 Z" fill="#123fbd" stroke="#5bf2ff" strokeWidth="9" strokeLinejoin="round"/>
+          {[[600,160],[575,245],[545,335],[485,415],[410,510],[345,575],[280,635],[220,695],[160,750],[500,460]].map(([x,y],i)=>(
+            <g key={i}><circle cx={x} cy={y} r={17+pulse*13} fill="#f42162" fillOpacity=".35" stroke="#ff547e" strokeWidth="4"/><circle cx={x} cy={y} r="6" fill="#fff"/></g>
+          ))}
+          <text x="80" y="95" fill="#ffffff" fontSize="45" fontWeight="900">JAPAN</text>
+          <text x="80" y="145" fill="#67edff" fontSize="26">10 ACTIVE COLONIES</text>
+        </svg>
+      ) : isCounter || isTimer ? (
+        <div style={{position:"absolute",top:480,left:70,right:70,textAlign:"center"}}>
+          <div style={{fontSize:250,lineHeight:1,color:"#fff",textShadow:"0 0 50px #00dcff, 0 0 90px #fc205d"}}>{main}</div>
+          <div style={{fontSize:50,letterSpacing:12,color:"#64efff"}}>{isTimer?"DAYS REMAINING":"POINTS"}</div>
+          <div style={{height:18,background:"#103d8c",marginTop:75,borderRadius:20}}>
+            <div style={{height:"100%",width:`${Math.max(3,advance*100)}%`,background:"linear-gradient(90deg,#00dfff,#ff306a)",boxShadow:"0 0 30px #00dfff",borderRadius:20}}/>
+          </div>
+        </div>
+      ) : (
+        <div style={{position:"absolute",top:470,left:75,right:75,height:750,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{position:"absolute",width:550,height:550,border:"8px solid #2fe9ff",borderRadius:"50%",boxShadow:"0 0 90px #04dfff, inset 0 0 85px #f02278",transform:`rotate(${frame*0.7}deg) scale(${0.95+pulse*0.06})`}}/>
+          <div style={{position:"absolute",width:430,height:430,border:"7px dashed #ff376f",borderRadius:"50%",transform:`rotate(${-frame*1.3}deg)`}}/>
+          <div style={{zIndex:2,fontSize:kind==="anime_reference"?80:65,textAlign:"center",maxWidth:800,lineHeight:1.12,textShadow:"0 0 32px #00dcff, 0 0 45px #ff236b"}}>{line.visual}</div>
+          {isEnergy && <div style={{position:"absolute",bottom:5,fontSize:28,letterSpacing:7,color:"#75e9ff"}}>CURSED ENERGY → RITUAL</div>}
+        </div>
+      )}
+      <div style={{position:"absolute",top:1370,left:80,right:80,height:3,background:"#42e5ff",boxShadow:"0 0 20px #32e4ff"}}/>
+      <div style={{position:"absolute",top:1400,left:80,color:"#8befff",fontSize:24,letterSpacing:4}}>JUJUTSU KAISEN // EXPLAINED</div>
+    </AbsoluteFill>
+  );
+};
+
 const Scene = ({ line }: { line: Line }) => {
   const primaryAsset = line.media_asset?.replace(/^output\//, "");
   const primaryKind = (line.media_kind || "").toLowerCase();
@@ -287,29 +344,8 @@ const Scene = ({ line }: { line: Line }) => {
       />
     );
   } else {
-    visual = (
-      <AbsoluteFill
-        style={{
-          background: "#111",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            color: "white",
-            fontFamily: '"Arial Black", "DejaVu Sans", sans-serif',
-            fontWeight: 800,
-            fontSize: 52,
-            textAlign: "center",
-            padding: 70,
-          }}
-        >
-          {line.visual || "EXPLAINER"}
-        </div>
-      </AbsoluteFill>
-    );
+    visual = <NeonGraphic line={line} />;
+
   }
 
   return (
