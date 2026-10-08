@@ -1,0 +1,82 @@
+name: Anime YouTube Scene Retrieval Test
+on:
+  workflow_dispatch:
+    inputs:
+      query:
+        description: YouTube search query
+        required: false
+        type: string
+        default: Jujutsu Kaisen Culling Game official trailer TOHO animation
+      seed:
+        description: Official trailer seed, or blank to use first search result
+        required: false
+        type: choice
+        default: culling_game
+        options:
+          - culling_game
+          - gojo
+          - ''
+      url:
+        description: Optional exact YouTube video URL
+        required: false
+        type: string
+        default: ''
+      start:
+        description: Start second in source trailer
+        required: true
+        type: string
+        default: '10'
+      duration:
+        description: Clip duration (0.5-20 seconds)
+        required: true
+        type: string
+        default: '5'
+      search_only:
+        description: Discover videos without downloading
+        required: false
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  youtube-scene-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout experimental implementation
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/anime-motion-kokoro
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install downloader and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --upgrade yt-dlp
+      - name: Discover and extract official trailer footage
+        env:
+          QUERY: ${{ inputs.query }}
+          SEED: ${{ inputs.seed }}
+          URL: ${{ inputs.url }}
+          START: ${{ inputs.start }}
+          DURATION: ${{ inputs.duration }}
+          SEARCH_ONLY: ${{ inputs.search_only }}
+        run: |
+          python -m py_compile experiments/test_youtube_anime_scene.py
+          args=(--query "$QUERY" --start "$START" --duration "$DURATION")
+          [[ -n "$SEED" ]] && args+=(--seed "$SEED")
+          [[ -n "$URL" ]] && args+=(--url "$URL")
+          [[ "$SEARCH_ONLY" == "true" ]] && args+=(--search-only)
+          python experiments/test_youtube_anime_scene.py "${args[@]}"
+      - name: Upload extracted anime scene and diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-anime-scene-test
+          path: |
+            output/youtube_scene_test/report.json
+            output/youtube_scene_test/anime_scene_clip.mp4
+          if-no-files-found: warn
