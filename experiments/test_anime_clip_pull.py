@@ -152,7 +152,13 @@ def main():
         try:
             report["image"]=fetch_character(args.character)
         except Exception as exc:
-            report["image"]={"status":"network_error","provider":"jikan","error":str(exc)}\n        if report["image"]["status"] != "image_downloaded" and args.character.strip():\n            report["image_primary"]=report["image"]\n            try:\n                report["image"]=fetch_anilist_character(args.character)\n            except Exception as exc:\n                report["image"]={"status":"network_error","provider":"anilist","error":str(exc)}
+            report["image"]={"status":"network_error","provider":"jikan","error":str(exc)}
+        if report["image"]["status"] != "image_downloaded" and args.character.strip():
+            report["image_primary"]=report["image"]
+            try:
+                report["image"]=fetch_anilist_character(args.character)
+            except Exception as exc:
+                report["image"]={"status":"network_error","provider":"anilist","error":str(exc)}
     if args.mode in {"image","both"} and report.get("image",{}).get("status") != "image_downloaded":
         try:
             report["poster"]=fetch_kitsu_anime_image(args.anime)
@@ -163,7 +169,8 @@ def main():
             report["clip"]=extract_clip(args.anime,args.season,args.episode,args.timestamp,args.duration)
         except Exception as exc:
             report["clip"]={"status":"extract_error","error":str(exc)}
-    (OUT/"report.json").write_text(json.dumps(report,indent=2)+"\n")
+    (OUT/"report.json").write_text(json.dumps(report,indent=2)+"
+")
     print(json.dumps(report,indent=2),flush=True)
     attempted=[report[k]["status"] for k in ("image","poster","clip") if k in report and report[k]["status"]!="skipped"]
     passed=args.mode=="catalog" or any(x in {"image_downloaded","clip_extracted"} for x in attempted)
