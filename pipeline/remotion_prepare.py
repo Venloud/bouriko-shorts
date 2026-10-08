@@ -21,14 +21,9 @@ def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     GENERATED.mkdir(parents=True, exist_ok=True)
     if story.get("pillar") == "anime_explainer":
-        matches_path = ROOT / "output/scene_matches.json"
-        if not matches_path.exists():
-            raise RuntimeError("Anime scene matching missing: cannot render unrelated still-image slideshow")
-        matches = json.loads(matches_path.read_text())
-        if len(matches) != len(story.get("lines", [])) or any(m.get("status") != "verified" for m in matches):
-            raise RuntimeError("Anime scenes not verified against episode/timecodes; refusing slideshow render")
-        if any(line.get("media_kind") != "video" for line in story.get("lines", [])):
-            raise RuntimeError("Anime explainer requires verified motion clips for every scene")
+        kinds = {"animated_map", "animated_counter", "animated_timer", "energy_diagram", "hero_motion", "anime_reference"}
+        if any(line.get("anime_visual_type") not in kinds for line in story.get("lines", [])):
+            raise RuntimeError("Missing approved JJK motion graphic visual plan")
 
     audio = ROOT / "output/audio"
     cursor = 0.0
