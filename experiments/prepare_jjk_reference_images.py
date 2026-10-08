@@ -35,17 +35,33 @@ def fetch_character(name):
         return photo.content, image, item.get("url")
     return None
 
+def choose_media(line, candidates, recent_media, scene_index):
+    """Choose visuals after the narration is known; do not spam media.
+
+    This deterministic director favors images on named-character beats,
+    and graphics for numeric/rule explanations. Media IDs are persistent
+    content hashes, not scene numbers or fabricated episode references.
+    """
+    kind=line.get("anime_visual_type","")
+    if kind in {"animated_map","animated_counter","animated_timer","energy_diagram","blackboard"}:
+        return None, "educational_graphic"
+    if not candidates:
+        return None, "no_verified_candidate"
+    if recent_media and scene_index-recent_media[-1] <= 1:
+        return None, "spacing_between_media"
+    return candidates[0], "named_character_reference"
+
 def main():
     story=json.loads(STORY.read_text())
     manifest=[]
     matches=[]
     cache={}
-    media=OUT/"anime_images"
+    media=OUT/"anime_images"\n    catalog=[]\n    recent_media=[]
     media.mkdir(parents=True,exist_ok=True)
     for i,line in enumerate(story["lines"]):
         visual=line.get("visual","")
         names=CHARACTERS.get(visual,[])
-        selected=None
+        candidates=[]
         for name in names:
             if name not in cache:
                 try:
@@ -60,7 +76,7 @@ def main():
                 filename=re.sub(r"[^a-z0-9]+","_",name.lower()).strip("_")+".jpg"
                 path=media/filename
                 path.write_bytes(raw)
-                selected={"scene":i,"kind":"image","provider":"jikan_character_reference",
+                candidate={"scene":i,"kind":"image","provider":"jikan_character_reference",
                     "character":name,"path":str(path.relative_to(ROOT)),
                     "source_url":character_url,"image_url":image_url,
                     "rights_status":"review_only_unlicensed","reviewed":False}
@@ -73,7 +89,7 @@ def main():
             matches.append({"scene":i,"status":"reference_image","character":selected["character"],"rights_status":"review_only_unlicensed"})
         else:
             line["media_kind"]="motion_graphic"
-            line.pop("media_asset",None)
+            line.pop("media_asset",None)\n            line.pop("media_caller_id",None)
             manifest.append({"scene":i,"kind":"motion_graphic","provider":"remotion","visual_type":line.get("anime_visual_type")})
             matches.append({"scene":i,"status":"graphic"})
     STORY.write_text(json.dumps(story,indent=2)+"\n")
