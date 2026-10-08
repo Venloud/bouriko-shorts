@@ -143,17 +143,8 @@ const Caption = ({
   const label = (visual || "TECH").toUpperCase();
 
   const palettes = ["#FFFFFF", "#FFD23F", "#2EA8FF", "#FF6B6B", "#7FF0C5", "#FF9F43"];
-  const positions = [
-    { top: 185, left: 55, right: 55 },
-    { top: 390, left: 80, right: 80 },
-    { top: 610, left: 55, right: 55 },
-    { top: 820, left: 90, right: 90 },
-    { bottom: 520, left: 55, right: 55 },
-    { bottom: 360, left: 80, right: 80 },
-    { bottom: 230, left: 55, right: 55 },
-    { top: 1040, left: 70, right: 70 },
-  ];
-  const sizes = [88, 102, 116, 96, 108, 92];
+  const positions = [{ bottom: 230, left: 55, right: 55 }];
+  const sizes = [68, 72, 76];
   const styleSeed = text.length * 17 + chunkIndex * 31;
   const paletteIndex = Math.abs(styleSeed) % palettes.length;
   const positionIndex = Math.abs(styleSeed * 7) % positions.length;
@@ -269,6 +260,11 @@ const Scene = ({ line }: { line: Line }) => {
   const secondaryKind = (line.media_kind_2 || "").toLowerCase();
   const frame = useCurrentFrame();
   const splitFrame = Math.floor(Math.max(1, line.duration * 30) / 2);
+  const progress = Math.min(1, frame / Math.max(1, line.duration * 30));
+  const cameraScale = 1.04 + progress * 0.11;
+  const cameraX = Math.sin(progress * Math.PI) * 22;
+  const cameraY = (progress - 0.5) * 32;
+  const cameraTransform = `scale(${cameraScale}) translate(${cameraX}px, ${cameraY}px)`;
   const useSecondary = Boolean(secondaryAsset && frame >= splitFrame);
   const asset = useSecondary ? secondaryAsset : primaryAsset;
   const kind = useSecondary ? secondaryKind : primaryKind;
@@ -279,7 +275,7 @@ const Scene = ({ line }: { line: Line }) => {
     visual = (
       <Video
         src={staticFile(asset)}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", transform: cameraTransform }}
         muted
       />
     );
