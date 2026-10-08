@@ -169,8 +169,7 @@ def main():
             report["clip"]=extract_clip(args.anime,args.season,args.episode,args.timestamp,args.duration)
         except Exception as exc:
             report["clip"]={"status":"extract_error","error":str(exc)}
-    (OUT/"report.json").write_text(json.dumps(report,indent=2)+"
-")
+    (OUT/"report.json").write_text(json.dumps(report,indent=2)+"\n")
     print(json.dumps(report,indent=2),flush=True)
     attempted=[report[k]["status"] for k in ("image","poster","clip") if k in report and report[k]["status"]!="skipped"]
     passed=args.mode=="catalog" or any(x in {"image_downloaded","clip_extracted"} for x in attempted)
