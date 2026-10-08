@@ -32,7 +32,6 @@ jobs:
       - name: Prepare verified JJK episode clips
         run: python experiments/prepare_verified_clips.py
       - name: Generate Kokoro narration
-        env:
         run: python pipeline/voice.py
       - name: Generate SFX
         env:
