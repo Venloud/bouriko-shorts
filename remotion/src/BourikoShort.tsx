@@ -145,7 +145,7 @@ const Caption = ({
   const label = (visual || "TECH").toUpperCase();
 
   const palettes = ["#FFFFFF", "#FFD23F", "#2EA8FF", "#FF6B6B", "#7FF0C5", "#FF9F43"];
-  const positions = [{ bottom: 255, left: 65, right: 65 }];
+  const positions = [{ bottom: 280, left: 110, right: 190 }];
   const sizes = [48, 52, 56];
   const styleSeed = text.length * 17 + chunkIndex * 31;
   const paletteIndex = Math.abs(styleSeed) % palettes.length;
@@ -202,7 +202,7 @@ const Caption = ({
           ...position,
           display: "flex",
           justifyContent: "center",
-          width: "calc(100% - 110px)",
+          width: "calc(100% - 300px)",
         }}
       >
         <div
@@ -326,31 +326,48 @@ const Scene = ({ line }: { line: Line }) => {
   const asset = useSecondary ? secondaryAsset : primaryAsset;
   const kind = useSecondary ? secondaryKind : primaryKind;
 
-  let visual: React.ReactNode;
-
-  if (asset && kind === "video") {
-    visual = (
-      <Video
-        src={staticFile(asset)}
-        style={{ width: "100%", height: "100%", objectFit: "cover", transform: cameraTransform }}
-        muted
-      />
-    );
-  } else if (asset) {
-    visual = (
-      <Img
-        src={staticFile(asset)}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-      />
-    );
-  } else {
-    visual = <NeonGraphic line={line} />;
-
-  }
-
+  const hasMedia = Boolean(asset && (kind === "video" || kind === "image" || kind === "gif"));
+  const blackboard = line.anime_visual_type === "blackboard";
+  const enter = interpolate(frame, [0, 9, 19], [0, 0.25, 1], {extrapolateLeft:"clamp",extrapolateRight:"clamp"});
+  const exitStart = Math.max(22, Math.floor(line.duration * 30) - 12);
+  const leave = interpolate(frame, [exitStart, exitStart + 10], [1, 0], {extrapolateLeft:"clamp",extrapolateRight:"clamp"});
+  const open = hasMedia ? Math.min(enter, leave) : 0;
+  const mediaWidth = 540 + open * 340;
+  const mediaHeight = 540 + open * 180;
+  const mediaTop = 540 - open * 90;
+  const mediaLeft = (1080 - mediaWidth) / 2;
   return (
     <AbsoluteFill>
-      {visual}
+      <NeonGraphic line={{...line, anime_visual_type: hasMedia ? "hero_motion" : line.anime_visual_type}} />
+      {hasMedia && (
+        <div style={{
+          position:"absolute", left:mediaLeft, top:mediaTop,
+          width:mediaWidth, height:mediaHeight,
+          borderRadius: (1-open)*270 + open*28,
+          overflow:"hidden", border:"6px solid #41edff",
+          boxShadow:"0 0 40px #08d8ff, 0 0 80px #fa285c66",
+          background:"#030c2b",
+        }}>
+          {kind === "video" ? (
+            <Video src={staticFile(asset!)} muted
+              style={{width:"100%",height:"100%",objectFit:"contain",transform:cameraTransform}}/>
+          ) : (
+            <Img src={staticFile(asset!)}
+              style={{width:"100%",height:"100%",objectFit:"contain"}}/>
+          )}
+          <div style={{position:"absolute",left:18,top:18,padding:"8px 15px",background:"#06152bcf",color:"#6af4ff",fontSize:23,fontWeight:900,letterSpacing:2}}>SCENE FILE</div>
+        </div>
+      )}
+      {blackboard && (
+        <div style={{position:"absolute",top:425,left:105,width:870,height:775,
+          border:"7px solid #42eaff",borderRadius:25,background:"#060b19f5",
+          boxShadow:"0 0 40px #00d9ff77",padding:65,color:"#fff",
+          fontFamily:'"Arial Black", sans-serif',textAlign:"center"}}>
+          <div style={{fontSize:34,color:"#71edff",letterSpacing:6}}>RULE BREAKDOWN</div>
+          <div style={{fontSize:80,marginTop:145,overflowWrap:"anywhere"}}>{line.visual}</div>
+          <div style={{fontSize:26,color:"#ff607f",marginTop:100}}>WHAT THIS MEANS FOR THE PLAYERS</div>
+        </div>
+      )}
       <Caption text={line.text} visual={line.visual} duration={line.duration} />
     </AbsoluteFill>
   );
