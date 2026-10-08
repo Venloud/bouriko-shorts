@@ -21,37 +21,38 @@ on:
       season:
         description: Season number (positive integer)
         type: string
-        required: true
-        default: '1'
+        required: false
+        default: ''
       episode:
         description: Episode number (positive integer)
         type: string
-        required: true
-        default: '1'
+        required: false
+        default: ''
       character:
         description: Character name for image lookup (e.g. Yuji Itadori)
         type: string
         required: false
-        default: Yuji Itadori
+        default: ''
       mode:
         description: What to retrieve/test
         type: choice
         required: true
-        default: both
+        default: catalog
         options:
+          - catalog
           - both
           - image
           - clip
       timestamp:
         description: Clip start in seconds (requires supplied episode)
         type: string
-        required: true
-        default: '0'
+        required: false
+        default: ''
       duration:
         description: Clip length in seconds (0.5 to 20)
         type: string
-        required: true
-        default: '5'
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
