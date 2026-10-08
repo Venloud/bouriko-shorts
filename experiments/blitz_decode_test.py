@@ -85,8 +85,8 @@ try:
     print("STREAM_CANDIDATES:", len(sources), flush=True)
     if not sources:
         raise RuntimeError("Stream response has no usable URL; inspect sanitized stream_shape in artifact")
-    # Decode directly into the null muxer: no anime footage stored, published, or uploaded.
-    # Limit to 3 seconds of decoded input and a 45-second wall-clock timeout.
+    # Create a short review-only preview in the isolated experiment; never publish it.
+    # Limit to 3 seconds of input and a 45-second wall-clock timeout.
     errors = []
     for i, (url, headers) in enumerate(sources[:4]):
         cmd = ["ffmpeg", "-hide_banner", "-nostdin", "-loglevel", "error",
@@ -94,14 +94,15 @@ try:
         if isinstance(headers, dict) and headers:
             safe_headers = {str(k): str(v) for k, v in headers.items() if isinstance(v, (str, int, float))}
             cmd += ["-headers", "".join(f"{k}: {v}\r\n" for k, v in safe_headers.items())]
-        cmd += ["-i", url, "-t", "3", "-map", "0:v:0", "-f", "null", "-"]
+        cmd += ["-i", url, "-t", "3", "-map", "0:v:0", "-an", "-vf", "scale=640:-2", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "30", "-movflags", "+faststart", "-y", "output/blitz_jjk_preview.mp4"]
         try:
             p = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
-            if p.returncode == 0:
+            if p.returncode == 0 and Path("output/blitz_jjk_preview.mp4").stat().st_size > 1000:
+                REPORT["steps"]["preview_bytes"] = Path("output/blitz_jjk_preview.mp4").stat().st_size
                 REPORT["passed"] = True
                 REPORT["steps"]["decode"] = "passed"
                 REPORT["steps"]["successful_candidate_index"] = i
-                print("PASS: AnimeParadise JJK stream decoded by FFmpeg", flush=True)
+                print("PASS: AnimeParadise JJK 3-second MP4 preview rendered", flush=True)
                 break
             errors.append(f"candidate {i}: ffmpeg exit {p.returncode}: {p.stderr[-450:]}")
         except subprocess.TimeoutExpired:
