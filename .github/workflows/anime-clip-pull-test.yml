@@ -1,0 +1,98 @@
+name: Anime Clip Pull Test
+on:
+  workflow_dispatch:
+    inputs:
+      anime:
+        description: Anime title
+        type: choice
+        required: true
+        default: jujutsu_kaisen
+        options:
+          - jujutsu_kaisen
+          - naruto
+          - one_piece
+          - demon_slayer
+          - attack_on_titan
+          - bleach
+          - dragon_ball_z
+          - chainsaw_man
+          - solo_leveling
+          - my_hero_academia
+      season:
+        description: Season number (positive integer)
+        type: string
+        required: true
+        default: '1'
+      episode:
+        description: Episode number (positive integer)
+        type: string
+        required: true
+        default: '1'
+      character:
+        description: Character name for image lookup (e.g. Yuji Itadori)
+        type: string
+        required: false
+        default: Yuji Itadori
+      mode:
+        description: What to retrieve/test
+        type: choice
+        required: true
+        default: both
+        options:
+          - both
+          - image
+          - clip
+      timestamp:
+        description: Clip start in seconds (requires supplied episode)
+        type: string
+        required: true
+        default: '0'
+      duration:
+        description: Clip length in seconds (0.5 to 20)
+        type: string
+        required: true
+        default: '5'
+permissions:
+  contents: read
+jobs:
+  media-pull-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout experiment branch
+        uses: actions/checkout@v4
+        with:
+          ref: experiment/anime-motion-kokoro
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install diagnostic dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          pip install -q requests
+      - name: Test character image and authorized episode clip
+        env:
+          ANIME: ${{ inputs.anime }}
+          SEASON: ${{ inputs.season }}
+          EPISODE: ${{ inputs.episode }}
+          CHARACTER: ${{ inputs.character }}
+          MODE: ${{ inputs.mode }}
+          TIMESTAMP: ${{ inputs.timestamp }}
+          DURATION: ${{ inputs.duration }}
+        run: |
+          python experiments/test_anime_clip_pull.py \
+            --anime "$ANIME" --season "$SEASON" --episode "$EPISODE" \
+            --character "$CHARACTER" --mode "$MODE" \
+            --timestamp "$TIMESTAMP" --duration "$DURATION"
+      - name: Upload diagnostic report and media samples
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anime-clip-pull-test
+          path: |
+            output/clip_pull_test/report.json
+            output/clip_pull_test/character_reference.*
+            output/clip_pull_test/sample_clip.mp4
+          if-no-files-found: warn
