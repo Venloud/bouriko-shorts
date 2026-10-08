@@ -47,6 +47,25 @@ def fetch_character(session, name):
         return response.content, url, item.get("url")
     return None
 
+def fetch_local_character(name):
+    """Offline fallback: vetted user-supplied stills plus sidecar metadata."""
+    folder = ROOT / "assets" / "anime" / "jujutsu_kaisen"
+    stem = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+    for suffix in (".jpg", ".jpeg", ".png", ".webp"):
+        file = folder / (stem + suffix)
+        sidecar = folder / (stem + suffix + ".json")
+        if not file.is_file() or not sidecar.is_file():
+            continue
+        meta = json.loads(sidecar.read_text())
+        if meta.get("character", "").casefold() != name.casefold():
+            continue
+        if meta.get("rights_status") not in {"licensed", "user_supplied_review_only"}:
+            continue
+        if not meta.get("source_url"):
+            continue
+        return file.read_bytes(), meta["source_url"], meta["source_url"]
+    return None
+
 def choose_media(line, candidates, recent_media, index):
     visual_type = line.get("anime_visual_type", "")
     if visual_type in {"animated_map", "animated_counter", "animated_timer", "energy_diagram", "blackboard"}:
@@ -72,7 +91,7 @@ def main():
         for name in names:
             if name not in cache:
                 try:
-                    cache[name] = fetch_character(session, name)
+                    cache[name] = fetch_local_character(name) or fetch_character(session, name)
                 except (requests.RequestException, ValueError, RuntimeError) as exc:
                     failures.append({"character": name, "error": str(exc)[:500]})
                     print(f"MEDIA FETCH FAILED: {name}: {type(exc).__name__}: {exc}", flush=True)
