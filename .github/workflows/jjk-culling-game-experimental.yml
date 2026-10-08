@@ -1,6 +1,9 @@
 name: JJK Culling Game Experimental Render
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/jjk-culling-game-experimental.yml']
 permissions:
   contents: read
 jobs:
@@ -26,16 +29,10 @@ jobs:
           pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
       - name: Prepare JJK Culling Game story
         run: python experiments/jjk_story.py
-      - name: Discover media
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-          COVERR_API_KEY: ${{ secrets.COVERR_API_KEY }}
-        run: python pipeline/media.py
+      - name: Prepare verified JJK episode clips
+        run: python experiments/prepare_verified_clips.py
       - name: Generate Kokoro narration
         env:
-          NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
         run: python pipeline/voice.py
       - name: Generate SFX
         env:
@@ -60,4 +57,5 @@ jobs:
             output/story.json
             output/media_manifest.json
             output/word_timings.json
+            output/scene_matches.json
           if-no-files-found: warn
