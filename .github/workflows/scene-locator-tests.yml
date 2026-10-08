@@ -1,0 +1,21 @@
+name: Anime Scene Locator Tests
+on:
+  push:
+    branches: [experiment/anime-motion-kokoro]
+    paths:
+      - 'experiments/scene_locator.py'
+      - 'tests/test_scene_locator.py'
+      - '.github/workflows/scene-locator-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run conservative scene matching tests
+        run: python -m unittest discover -s tests -p test_scene_locator.py -v
