@@ -6,6 +6,7 @@ import argparse
 import json
 import re
 import subprocess
+import urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,6 +60,25 @@ def score_candidate(candidate, script):
     if "reaction" in title or "fan made" in title: score -= 8
     return score, hits
 
+def direct_source(url):
+    """Only allow explicit HTTPS MP4 URLs from an operator-controlled host."""
+    parsed = urllib.parse.urlsplit(url)
+    return parsed.scheme == "https" and parsed.path.lower().endswith(".mp4") and bool(parsed.hostname)
+
+def extract_direct(url, start, duration):
+    final = OUT / "anime_scene_clip.mp4"
+    run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-ss", str(start),
+         "-i", url, "-t", str(duration), "-vf", "scale=720:-2", "-an",
+         "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+         "-movflags", "+faststart", str(final)], timeout=180)
+    return {"file": str(final.relative_to(ROOT)), **validate(final)}
+
+def probe_youtube(url):
+    cmd = ["yt-dlp", "-4", "--verbose", "--simulate", "--no-playlist",
+           "--socket-timeout", "15", "--retries", "1", url]
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+    return {"exit_code": result.returncode, "diagnostics": (result.stderr + "\\n" + result.stdout)[-3500:]}
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--query", default="", help="Optional search override")
@@ -68,14 +88,16 @@ def main():
     p.add_argument("--start", type=float, default=10)
     p.add_argument("--duration", type=float, default=5)
     p.add_argument("--search-only", action="store_true")
+    p.add_argument("--authorized-mp4-url", default="", help="Explicit HTTPS MP4 URL you are permitted to reuse; used as fallback")
+    p.add_argument("--diagnose", action="store_true", help="Record IPv4 yt-dlp verbose simulation diagnostics")
     args = p.parse_args()
     if args.start < 0 or not 0.5 <= args.duration <= 20:
         p.error("start must be nonnegative; duration must be between 0.5 and 20 seconds")
     script = args.script_file.read_text(encoding="utf-8") if args.script_file else args.script
-    if not (args.query.strip() or script.strip() or args.url.strip()):
+    if not (args.query.strip() or script.strip() or args.url.strip() or args.authorized_mp4_url.strip()):
         p.error("Provide --script, --script-file, --query or --url")
     query = args.query or (" ".join(keywords(script)[:9]) + " anime official trailer" if script.strip() else "")
-    if not query.strip() and not args.url:
+    if not query.strip() and not (args.url or args.authorized_mp4_url):
         p.error("Provide --script, --script-file, --query or --url")
     OUT.mkdir(parents=True, exist_ok=True)
     report = {"query": query, "script": script, "start": args.start, "requested_duration": args.duration}
@@ -93,14 +115,20 @@ def main():
         selected = args.url or next((x["url"] for x in report["candidates"]), "")
         report["selected_url"] = selected
         report["selection_method"] = "explicit_url" if args.url else "ranked_search_result"
-        if not selected:
+        if args.authorized_mp4_url and not direct_source(args.authorized_mp4_url):
+            p.error("--authorized-mp4-url must be an HTTPS URL ending in .mp4")
+        if not selected and not args.authorized_mp4_url:
             report["status"] = "no_source"
         else:
             # The downloaded section is only a candidate until ffprobe verifies real video frames.
             end = args.start + args.duration
             template = str(OUT / "downloaded_section.%(ext)s")
             try:
-                run(["yt-dlp", "--no-playlist", "--no-progress", "--socket-timeout", "20",
+                if not selected:
+                    raise RuntimeError("No YouTube candidate; trying authorized MP4 fallback")
+                if args.diagnose:
+                    report["youtube_probe"] = probe_youtube(selected)
+                run(["yt-dlp", "-4", "--no-playlist", "--no-progress", "--socket-timeout", "20",
                      "--retries", "2", "--download-sections", f"*{args.start}-{end}",
                      "--force-keyframes-at-cuts", "-f", "bv*[height<=720]+ba/b[height<=720]/best",
                      "--merge-output-format", "mp4", "--recode-video", "mp4",
@@ -121,9 +149,16 @@ def main():
                 report["status"] = "download_or_extract_failed"
                 report["error"] = str(exc)
                 report["hint"] = "YouTube may require authentication on hosted runners; a JavaScript runtime alone cannot resolve bot verification."
+                if args.authorized_mp4_url:
+                    try:
+                        report["video"] = extract_direct(args.authorized_mp4_url, args.start, args.duration)
+                        report["status"] = "authorized_fallback_extracted"
+                        report["fallback_url_host"] = urllib.parse.urlsplit(args.authorized_mp4_url).hostname
+                    except Exception as fallback_exc:
+                        report["fallback_error"] = str(fallback_exc)
     (OUT / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2), flush=True)
-    if report["status"] not in {"video_downloaded_and_extracted", "search_complete"}:
+    if report["status"] not in {"video_downloaded_and_extracted", "authorized_fallback_extracted", "search_complete"}:
         raise SystemExit(1)
 if __name__ == "__main__":
     main()
