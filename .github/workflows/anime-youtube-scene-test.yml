@@ -78,13 +78,13 @@ jobs:
       - name: Discover and extract official trailer footage
         env:
           QUERY: ${{ inputs.query }}
-          SCRIPT: ${{ inputs.script }}
+          SCRIPT: ${{ inputs.script || 'Jujutsu Kaisen Culling Game: Yuji Itadori and Megumi Fushiguro enter the deadly Culling Game.' }}
           URL: ${{ inputs.url }}
-          START: ${{ inputs.start }}
-          DURATION: ${{ inputs.duration }}
+          START: ${{ inputs.start || '10' }}
+          DURATION: ${{ inputs.duration || '5' }}
           SEARCH_ONLY: ${{ inputs.search_only }}
           AUTHORIZED_MP4_URL: ${{ inputs.authorized_mp4_url }}
-          DIAGNOSE: ${{ inputs.diagnose }}
+          DIAGNOSE: ${{ inputs.diagnose || 'true' }}
         run: |
           python -m py_compile experiments/test_youtube_anime_scene.py
           args=(--script "$SCRIPT" --start "$START" --duration "$DURATION")
