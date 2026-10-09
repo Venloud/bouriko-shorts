@@ -78,7 +78,7 @@ jobs:
       - name: Discover and extract official trailer footage
         env:
           QUERY: ${{ inputs.query }}
-          SCRIPT: ${{ inputs.script || 'Jujutsu Kaisen Culling Game: Yuji Itadori and Megumi Fushiguro enter the deadly Culling Game.' }}
+          SCRIPT: "${{ inputs.script || 'Jujutsu Kaisen Culling Game: Yuji Itadori and Megumi Fushiguro enter the deadly Culling Game.' }}"
           URL: ${{ inputs.url }}
           START: ${{ inputs.start || '10' }}
           DURATION: ${{ inputs.duration || '5' }}
