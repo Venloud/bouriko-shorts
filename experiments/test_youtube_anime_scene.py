@@ -72,7 +72,9 @@ def main():
     if args.start < 0 or not 0.5 <= args.duration <= 20:
         p.error("start must be nonnegative; duration must be between 0.5 and 20 seconds")
     script = args.script_file.read_text(encoding="utf-8") if args.script_file else args.script
-    query = args.query or " ".join(keywords(script)[:9]) + " anime official trailer"
+    if not (args.query.strip() or script.strip() or args.url.strip()):
+        p.error("Provide --script, --script-file, --query or --url")
+    query = args.query or (" ".join(keywords(script)[:9]) + " anime official trailer" if script.strip() else "")
     if not query.strip() and not args.url:
         p.error("Provide --script, --script-file, --query or --url")
     OUT.mkdir(parents=True, exist_ok=True)
