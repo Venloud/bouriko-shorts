@@ -51,7 +51,11 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-          python -m pip install --upgrade 'yt-dlp[default]'\n          if ! command -v deno >/dev/null; then\n            curl -fsSL https://deno.land/install.sh | sh\n            echo "$HOME/.deno/bin" >> "$GITHUB_PATH"\n          fi
+          python -m pip install --upgrade 'yt-dlp[default]'
+          if ! command -v deno >/dev/null; then
+            curl -fsSL https://deno.land/install.sh | sh
+            echo "$HOME/.deno/bin" >> "$GITHUB_PATH"
+          fi
       - name: Discover and extract official trailer footage
         env:
           QUERY: ${{ inputs.query }}
