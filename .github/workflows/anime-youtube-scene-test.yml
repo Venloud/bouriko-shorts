@@ -27,6 +27,16 @@ on:
         required: true
         type: string
         default: '5'
+      authorized_mp4_url:
+        description: Optional authorized HTTPS MP4 fallback URL
+        required: false
+        type: string
+        default: ''
+      diagnose:
+        description: Run verbose IPv4 YouTube access probe
+        required: false
+        type: boolean
+        default: true
       search_only:
         description: Discover videos without downloading
         required: false
@@ -64,12 +74,16 @@ jobs:
           START: ${{ inputs.start }}
           DURATION: ${{ inputs.duration }}
           SEARCH_ONLY: ${{ inputs.search_only }}
+          AUTHORIZED_MP4_URL: ${{ inputs.authorized_mp4_url }}
+          DIAGNOSE: ${{ inputs.diagnose }}
         run: |
           python -m py_compile experiments/test_youtube_anime_scene.py
           args=(--script "$SCRIPT" --start "$START" --duration "$DURATION")
           [[ -n "$QUERY" ]] && args+=(--query "$QUERY")
           [[ -n "$URL" ]] && args+=(--url "$URL")
           [[ "$SEARCH_ONLY" == "true" ]] && args+=(--search-only)
+          [[ "$DIAGNOSE" == "true" ]] && args+=(--diagnose)
+          [[ -n "$AUTHORIZED_MP4_URL" ]] && args+=(--authorized-mp4-url "$AUTHORIZED_MP4_URL")
           python experiments/test_youtube_anime_scene.py "${args[@]}"
       - name: Upload extracted anime scene and diagnostic report
         if: always()
