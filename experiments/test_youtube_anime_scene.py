@@ -80,7 +80,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     report = {"query": query, "script": script, "start": args.start, "requested_duration": args.duration}
     try:
-        report["candidates"] = discover(query, limit=10)
+        report["candidates"] = discover(query, limit=10) if query.strip() else []
         for candidate in report["candidates"]:
             candidate["relevance_score"], candidate["matched_terms"] = score_candidate(candidate, script or query)
         report["candidates"].sort(key=lambda x: x["relevance_score"], reverse=True)
@@ -120,6 +120,7 @@ def main():
             except Exception as exc:
                 report["status"] = "download_or_extract_failed"
                 report["error"] = str(exc)
+                report["hint"] = "YouTube may require authentication on hosted runners; a JavaScript runtime alone cannot resolve bot verification."
     (OUT / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2), flush=True)
     if report["status"] not in {"video_downloaded_and_extracted", "search_complete"}:
