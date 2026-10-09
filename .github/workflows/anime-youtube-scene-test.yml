@@ -1,5 +1,8 @@
 name: Anime YouTube Scene Retrieval Test
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/anime-youtube-scene-test.yml']
   workflow_dispatch:
     inputs:
       query:
@@ -57,11 +60,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install downloader and media tools
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg
-          python -m pip install --upgrade 'yt-dlp[default]'
+          python -m pip install --upgrade 'yt-dlp[default]' 'bgutil-ytdlp-pot-provider==2.0.2'
+          git clone --depth 1 --branch 2.0.2 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git "$HOME/bgutil-ytdlp-pot-provider"
+          (cd "$HOME/bgutil-ytdlp-pot-provider/server" && npm ci && npx tsc)
+          yt-dlp --verbose --version
           if ! command -v deno >/dev/null; then
             curl -fsSL https://deno.land/install.sh | sh
             echo "$HOME/.deno/bin" >> "$GITHUB_PATH"
