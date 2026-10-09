@@ -6,16 +6,12 @@ on:
         description: YouTube search query
         required: false
         type: string
-        default: Jujutsu Kaisen Culling Game official trailer TOHO animation
-      seed:
-        description: Official trailer seed, or blank to use first search result
+        default: ''
+      script:
+        description: Story or narration used to find relevant footage
         required: false
-        type: choice
-        default: culling_game
-        options:
-          - culling_game
-          - gojo
-          - ''
+        type: string
+        default: 'Jujutsu Kaisen Culling Game: Yuji Itadori and Megumi Fushiguro enter the deadly Culling Game.'
       url:
         description: Optional exact YouTube video URL
         required: false
@@ -59,15 +55,15 @@ jobs:
       - name: Discover and extract official trailer footage
         env:
           QUERY: ${{ inputs.query }}
-          SEED: ${{ inputs.seed }}
+          SCRIPT: ${{ inputs.script }}
           URL: ${{ inputs.url }}
           START: ${{ inputs.start }}
           DURATION: ${{ inputs.duration }}
           SEARCH_ONLY: ${{ inputs.search_only }}
         run: |
           python -m py_compile experiments/test_youtube_anime_scene.py
-          args=(--query "$QUERY" --start "$START" --duration "$DURATION")
-          [[ -n "$SEED" ]] && args+=(--seed "$SEED")
+          args=(--script "$SCRIPT" --start "$START" --duration "$DURATION")
+          [[ -n "$QUERY" ]] && args+=(--query "$QUERY")
           [[ -n "$URL" ]] && args+=(--url "$URL")
           [[ "$SEARCH_ONLY" == "true" ]] && args+=(--search-only)
           python experiments/test_youtube_anime_scene.py "${args[@]}"
