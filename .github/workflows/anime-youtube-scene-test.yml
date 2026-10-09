@@ -1,5 +1,8 @@
 name: Anime YouTube Scene Retrieval Test
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/anime-youtube-scene-test.yml']
   workflow_dispatch:
     inputs:
       query:
@@ -46,6 +49,7 @@ permissions:
   contents: read
 jobs:
   youtube-scene-test:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -100,3 +104,27 @@ jobs:
             output/youtube_scene_test/report.json
             output/youtube_scene_test/anime_scene_clip.mp4
           if-no-files-found: warn
+
+  cobalt-api-probe:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Probe Cobalt API with JJK trailer
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, urllib.request, urllib.error, socket
+          video = "https://www.youtube.com/watch?v=t4_PZR2xAtc"
+          for base in ("https://nuko-c.meowing.de", "https://cobalt-api.meowing.de"):
+              print("TESTING", base, flush=True)
+              try:
+                  req = urllib.request.Request(base.rstrip("/")+"/", data=json.dumps({"url":video,"videoQuality":"720","youtubeVideoContainer":"mp4"}).encode(), headers={"Accept":"application/json","Content-Type":"application/json","User-Agent":"Bouriko-Cobalt-Probe/1.0"}, method="POST")
+                  with urllib.request.urlopen(req, timeout=25) as resp:
+                      payload = resp.read(4096).decode(errors="replace")
+                      print("HTTP", resp.status, "BODY", payload[:1800], flush=True)
+              except urllib.error.HTTPError as e:
+                  print("HTTP", e.code, "BODY", e.read(1800).decode(errors="replace"), flush=True)
+              except Exception as e:
+                  print("ERROR", type(e).__name__, str(e), flush=True)
+          PY
