@@ -110,13 +110,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
+      - name: Start self-hosted Cobalt
+        run: |
+          docker run -d --name cobalt-test -p 127.0.0.1:9000:9000 -e API_URL=http://127.0.0.1:9000/ ghcr.io/imputnet/cobalt:11
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:9000/ > /tmp/cobalt-info.json; then cat /tmp/cobalt-info.json; break; fi
+            sleep 2
+          done
       - name: Probe Cobalt API with JJK trailer
         shell: bash
         run: |
           python - <<'PY'
           import json, urllib.request, urllib.error, socket
           video = "https://www.youtube.com/watch?v=t4_PZR2xAtc"
-          for base in ("https://nuko-c.meowing.de", "https://cobalt-api.meowing.de"):
+          for base in ("http://127.0.0.1:9000",):
               print("TESTING", base, flush=True)
               try:
                   req = urllib.request.Request(base.rstrip("/")+"/", data=json.dumps({"url":video,"videoQuality":"720","youtubeVideoContainer":"mp4"}).encode(), headers={"Accept":"application/json","Content-Type":"application/json","User-Agent":"Bouriko-Cobalt-Probe/1.0"}, method="POST")
@@ -128,3 +135,4 @@ jobs:
               except Exception as e:
                   print("ERROR", type(e).__name__, str(e), flush=True)
           PY
+          docker logs --tail 80 cobalt-test
