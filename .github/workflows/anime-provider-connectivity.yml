@@ -1,8 +1,5 @@
 name: Anime Provider Connectivity Test
 on:
-  push:
-    paths:
-      - .github/workflows/anime-provider-connectivity.yml
   workflow_dispatch:
 permissions:
   contents: read

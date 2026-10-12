@@ -1,8 +1,5 @@
 name: Anime YouTube Scene Retrieval Test
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/anime-youtube-scene-test.yml']
   workflow_dispatch:
     inputs:
       query:

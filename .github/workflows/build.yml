@@ -45,9 +45,10 @@ jobs:
         run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
 
       - name: Write story
-        if: ${{ inputs.fresh || !hashFiles('output/story.json') }}
+        if: ${{ inputs.fresh || inputs.test || !hashFiles('output/story.json') }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BOURIKO_SCRIPT: ${{ inputs.test && 'inbox/traffic_light.txt' || '' }}
         run: python pipeline/script.py
 
       - name: Save story checkpoint
@@ -76,6 +77,18 @@ jobs:
           COVERR_API_KEY: ${{ secrets.COVERR_API_KEY }}
         run: python pipeline/media.py
 
+      - name: Restore pinned-media and ElevenLabs caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            cache/media
+            cache/tts
+          key: bouriko-assets-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: bouriko-assets-${{ runner.os }}-
+
+      - name: Apply visual plan (beats, diagrams, pinned media, tts_text)
+        run: python pipeline/visual_plan.py
+
       - name: Save media checkpoint
         if: ${{ success() && hashFiles('output/media_manifest.json') }}
         uses: actions/cache/save@v4
@@ -94,12 +107,15 @@ jobs:
             output/audio
             output/word_timings.json
             output/audio_concat.txt
-          key: bouriko-voice-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/voice.py', 'config.json') }}
+          key: bouriko-voice-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/voice.py', 'pipeline/elevenlabs_voice.py', 'config.json') }}-${{ secrets.ELEVENLABS_API_KEY != '' }}
 
-      - name: Generate narrator voice
+      - name: Generate narrator voice (ElevenLabs, Kokoro fallback)
         if: ${{ inputs.fresh || !hashFiles('output/word_timings.json') }}
         env:
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
+          BOURIKO_ELEVENLABS_API_KEY: ${{ secrets.BOURIKO_ELEVENLABS_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: python pipeline/voice.py
 
       - name: Save voice checkpoint
@@ -110,7 +126,7 @@ jobs:
             output/audio
             output/word_timings.json
             output/audio_concat.txt
-          key: bouriko-voice-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/voice.py', 'config.json') }}
+          key: bouriko-voice-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/voice.py', 'pipeline/elevenlabs_voice.py', 'config.json') }}-${{ secrets.ELEVENLABS_API_KEY != '' }}
 
       - name: Restore SFX checkpoint
         if: ${{ !inputs.fresh && hashFiles('output/story.json', 'output/word_timings.json') }}
@@ -168,8 +184,17 @@ jobs:
         working-directory: remotion
         run: npm run render
 
+      - name: Save pinned-media and ElevenLabs caches
+        if: ${{ always() }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            cache/media
+            cache/tts
+          key: bouriko-assets-${{ runner.os }}-${{ github.run_id }}
+
       - name: QA gate
-        run: python pipeline/qa.py
+        run: python pipeline/qa.py --frames 6
 
       - name: Save final render checkpoint
         if: ${{ success() }}
@@ -187,3 +212,8 @@ jobs:
             output/story.json
             output/word_timings.json
             output/media_manifest.json
+            output/voice_report.json
+            output/beats.json
+            output/visual_plan_assets.json
+            output/sfx_events.json
+            output/frames/

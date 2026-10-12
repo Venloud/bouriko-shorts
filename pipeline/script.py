@@ -223,6 +223,7 @@ def exact_story(path):
         "sources": [],
         "caption": meta.get("caption", "Bouriko pipeline test"),
         "hashtags": ["#Bouriko", "#Test"],
+        "script_file": path.name,
     }
 
 
@@ -265,6 +266,15 @@ def write(pillar, topic, sources):
     return story
 
 def main():
+    # Test builds can force one script (build.yml "test" -> inbox/traffic_light.txt).
+    forced = os.getenv("BOURIKO_SCRIPT", "").strip()
+    if forced:
+        story = exact_story(ROOT / forced)
+        out = ROOT / "output/story.json"
+        out.parent.mkdir(exist_ok=True)
+        out.write_text(json.dumps(story, indent=2))
+        log(f"Forced script: {forced}")
+        return
     pillar, topic = pick()
     script_path = None
     inbox_files = sorted((ROOT / "inbox").glob("*.txt"))

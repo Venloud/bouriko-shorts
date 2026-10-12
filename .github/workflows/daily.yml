@@ -28,7 +28,10 @@ jobs:
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           COVERR_API_KEY: ${{ secrets.COVERR_API_KEY }}
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
-        run: python pipeline/script.py && python pipeline/media.py && python pipeline/voice.py && python pipeline/sfx.py && python pipeline/remotion_prepare.py
+          BOURIKO_ELEVENLABS_API_KEY: ${{ secrets.BOURIKO_ELEVENLABS_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python pipeline/script.py && python pipeline/media.py && python pipeline/visual_plan.py && python pipeline/voice.py && python pipeline/sfx.py && python pipeline/remotion_prepare.py
       - name: Render with Remotion
         working-directory: remotion
         run: npm install --no-audit --no-fund && npm run render

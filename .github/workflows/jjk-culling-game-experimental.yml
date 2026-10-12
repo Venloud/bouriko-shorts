@@ -1,9 +1,7 @@
 name: JJK Culling Game Experimental Render
+# Manual only. Never publishes. Runs the branch you dispatch it on (Actions > Run workflow > branch).
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/jjk-culling-game-experimental.yml']
 permissions:
   contents: read
 jobs:
@@ -11,10 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - name: Check out isolated experimental branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: experiment/anime-motion-kokoro
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
@@ -26,37 +22,56 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg espeak-ng
-          pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
-      - name: Prepare JJK Culling Game story
-        run: python experiments/jjk_story.py
-      - name: Generate Kokoro narration
-        run: python pipeline/voice.py
-      - name: Prepare JJK character reference images and neon graphics
-        run: python experiments/prepare_jjk_reference_images.py
-      - name: Generate SFX
+          pip install -q requests "kokoro>=0.9.4" soundfile numpy pillow
+      - name: Restore ElevenLabs audio cache
+        uses: actions/cache/restore@v4
+        with:
+          path: cache/tts
+          key: jjk-tts-${{ github.run_id }}
+          restore-keys: jjk-tts-
+      - name: Fact-locked JJK story (script v2) + fact ledger
+        run: python experiments/jjk/jjk_story.py
+      - name: JJK media director (character images + media plan, replaces pipeline/media.py)
+        run: python experiments/jjk/prepare_jjk_media.py
+      - name: Apply visual plan
+        run: python pipeline/visual_plan.py --strict
+      - name: Narration (ElevenLabs, Kokoro fallback)
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BOURIKO_ELEVENLABS_API_KEY: ${{ secrets.BOURIKO_ELEVENLABS_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python pipeline/voice.py
+      - name: Save ElevenLabs audio cache
+        if: ${{ always() }}
+        uses: actions/cache/save@v4
+        with:
+          path: cache/tts
+          key: jjk-tts-${{ github.run_id }}
+      - name: SFX
         run: python pipeline/sfx.py
-      - name: Prepare Remotion scenes
+      - name: Prepare Remotion props (beats, captions, mastering)
         run: python pipeline/remotion_prepare.py
-      - name: Render video
+      - name: Render
         working-directory: remotion
         run: |
           npm install --no-audit --no-fund
           npm run render
-      - name: Run video QA
-        run: python pipeline/qa.py
+      - name: QA (+ 8 review frames)
+        run: python pipeline/qa.py --frames 8
       - name: Upload review artifact
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: jjk-culling-game-experimental-review
+          name: jjk-culling-game-review
           path: |
             output/bouriko.mp4
+            output/frames/
             output/story.json
-            output/media_manifest.json
-            output/media_catalog.json
-            output/media_fetch_failures.json
+            output/fact_ledger.json
+            output/jjk_media_plan.json
+            output/jjk_media_plan.md
+            output/jjk_images/
+            output/voice_report.json
+            output/beats.json
             output/word_timings.json
-            output/scene_matches.json
           if-no-files-found: warn

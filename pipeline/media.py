@@ -21,7 +21,8 @@ from common import ROOT
 MEDIA_DIR = ROOT / "output/media"
 MANIFEST = ROOT / "output/media_manifest.json"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
-UA = "BourikoShorts/1.0 (automated media retrieval)"
+# Wikimedia rate-limits anonymous agents without contact details (HTTP 429).
+UA = "BourikoShorts/1.0 (https://github.com/Venloud/bouriko-shorts; contact via GitHub)"
 
 
 def _slug(s):
@@ -680,6 +681,15 @@ def main():
                 line["media_source"] = rec
                 records.append(rec)
                 used_urls.add(rec["url"])
+                # Lines longer than ~4 s need a second shot (new visual every 2-4 s).
+                if len(line.get("text", "").split()) > 10:
+                    rec2 = ensure_asset(action, 200 + i, used_urls)
+                    if rec2 and rec2.get("url") and rec2["url"] != rec["url"]:
+                        line["media_asset_2"] = rec2["local_path"]
+                        line["media_kind_2"] = rec2.get("kind", "image")
+                        line["media_source_2"] = rec2
+                        records.append(rec2)
+                        used_urls.add(rec2["url"])
                 break
 
     # Second pass: fill failed scenes with broad, still-relevant stock footage.

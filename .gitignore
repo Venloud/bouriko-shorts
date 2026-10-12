@@ -6,3 +6,8 @@ out/
 *.mp4
 *.wav
 !assets/**
+output/
+cache/
+remotion/node_modules/
+remotion/public/generated/
+remotion/props.json

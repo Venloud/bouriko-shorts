@@ -1,356 +1,151 @@
-import React from "react";
-import {
-  AbsoluteFill,
-  Audio,
-  Img,
-  Sequence,
-  staticFile,
-  useCurrentFrame,
-  Video,
-  interpolate,
-  spring,
-} from "remotion";
+import React from 'react';
+import {AbsoluteFill, Audio, Img, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
+import {Annotation, Annotations} from './Annotations';
+import {CaptionChunk, Captions} from './Captions';
+import {Diagram} from './Diagrams';
+import {BOX, FONT, Theme, themeOf} from './theme';
 
-type Line = {
-  text: string;
-  media_asset?: string;
-  media_kind?: string;
-  media_asset_2?: string;
-  media_kind_2?: string;
+// Narrator-led, evidence-first Short. Every beat (2-4 s, built by pipeline/remotion_prepare.py)
+// is one visual: real footage/photo in a framed box, or a diagram that builds step by step.
+// Hard cuts between beats; motion comes from the footage and the drawing itself (no Ken Burns).
+
+type Box = {x: number; y: number; w: number; h: number};
+
+export type Beat = {
   start: number;
-  duration: number;
-  visual?: string;
+  end: number;
+  key: string;
+  kind: 'media' | 'diagram';
+  media?: {
+    src: string;
+    kind: 'video' | 'image';
+    startFrom?: number;
+    fit?: 'cover' | 'contain';
+    focus?: [number, number];
+    backdrop?: string;
+    credit?: string;
+  };
+  diagram?: {name: string; params?: Record<string, any>; steps?: number[]};
+  annotations?: Annotation[];
+  box?: Box;
+  tag?: string;
 };
 
-type Sfx = {
-  time: number;
-  file: string;
-  volume?: number;
-};
+type Sfx = {time: number; file: string; volume?: number};
 
 export type BourikoProps = {
-  lines: Line[];
   durationSeconds: number;
+  theme?: string;
+  beats: Beat[];
+  captions: CaptionChunk[];
   sfxEvents?: Sfx[];
+  narration?: string;
+  brand?: string;
 };
 
-const FONT_STYLES = [
-  { family: '"Arial Black", "DejaVu Sans", sans-serif', weight: 900, spacing: -2.4 },
-  { family: '"Impact", "Arial Black", "DejaVu Sans", sans-serif', weight: 900, spacing: -2.8 },
-  { family: '"Trebuchet MS", "DejaVu Sans", sans-serif', weight: 900, spacing: -2.0 },
-  { family: '"Courier New", "DejaVu Sans Mono", monospace', weight: 900, spacing: -1.4 },
-  { family: '"Georgia", "DejaVu Serif", serif', weight: 900, spacing: -2.0 },
-];
+const FontLoader: React.FC = () => (
+  <style>{`
+    @font-face { font-family: 'Montserrat'; font-weight: 700; src: url('${staticFile('fonts/montserrat-latin-700-normal.woff2')}') format('woff2'); }
+    @font-face { font-family: 'Montserrat'; font-weight: 800; src: url('${staticFile('fonts/montserrat-latin-800-normal.woff2')}') format('woff2'); }
+    @font-face { font-family: 'Montserrat'; font-weight: 900; src: url('${staticFile('fonts/montserrat-latin-900-normal.woff2')}') format('woff2'); }
+  `}</style>
+);
 
-const STRONG_WORDS = new Set([
-  "secret", "actually", "wait", "why", "how", "never", "always", "hidden",
-  "free", "fast", "slow", "crazy", "million", "billion", "true", "real",
-  "hack", "warning", "important", "boom", "but", "because", "really",
-]);
-
-const CaptionBurst = ({
-  active,
-  color,
-  intensity,
-}: {
-  active: boolean;
-  color: string;
-  intensity: number;
-}) => {
+const Background: React.FC<{theme: Theme; backdrop?: string}> = ({theme, backdrop}) => {
   const frame = useCurrentFrame();
-  if (!active) return null;
-
-  const burst = spring({
-    frame,
-    fps: 30,
-    config: { damping: 10, stiffness: 230, mass: 0.55 },
-  });
-  const fade = interpolate(frame, [0, 5, 15, 25], [0, 1, 0.7, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const scale = interpolate(burst, [0, 1], [0.35, 1.25 + intensity * 0.35]);
-  const rotation = interpolate(frame, [0, 25], [-5, 8]);
-
   return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        pointerEvents: "none",
-        opacity: fade,
-        transform: `scale(${scale}) rotate(${rotation}deg)`,
-      }}
-    >
-      {Array.from({ length: 10 }).map((_, i) => {
-        const angle = i * 36;
-        const length = 95 + intensity * 35;
-        return (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              width: length,
-              height: 7,
-              borderRadius: 99,
-              background: color,
-              boxShadow: `0 0 12px ${color}`,
-              transform: `rotate(${angle}deg) translateX(150px)`,
-              transformOrigin: "left center",
-            }}
-          />
-        );
-      })}
-      <div
-        style={{
-          width: 24 + intensity * 12,
-          height: 24 + intensity * 12,
-          borderRadius: "50%",
-          border: `7px solid ${color}`,
-          boxShadow: `0 0 24px ${color}`,
-        }}
-      />
-    </div>
-  );
-};
-
-const Caption = ({
-  text,
-  visual,
-  duration,
-}: {
-  text: string;
-  visual?: string;
-  duration: number;
-}) => {
-  const frame = useCurrentFrame();
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  const elapsed = frame / 30;
-  const safeDuration = Math.max(0.5, duration);
-  const wordIndex = Math.min(
-    Math.max(0, words.length - 1),
-    Math.floor((elapsed / safeDuration) * words.length),
-  );
-  const chunkSize = words.length > 11 ? 4 : 3;
-  const chunkIndex = Math.floor(wordIndex / chunkSize);
-  const chunk = words.slice(chunkIndex * chunkSize, chunkIndex * chunkSize + chunkSize);
-  const activeIndex = wordIndex % chunkSize;
-  const activeWord = (words[wordIndex] || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const strong = STRONG_WORDS.has(activeWord);
-  const label = (visual || "TECH").toUpperCase();
-
-  const palettes = ["#FFFFFF", "#FFD23F", "#2EA8FF", "#FF6B6B", "#7FF0C5", "#FF9F43"];
-  const positions = [
-    { top: 185, left: 55, right: 55 },
-    { top: 390, left: 80, right: 80 },
-    { top: 610, left: 55, right: 55 },
-    { top: 820, left: 90, right: 90 },
-    { bottom: 520, left: 55, right: 55 },
-    { bottom: 360, left: 80, right: 80 },
-    { bottom: 230, left: 55, right: 55 },
-    { top: 1040, left: 70, right: 70 },
-  ];
-  const sizes = [88, 102, 116, 96, 108, 92];
-  const styleSeed = text.length * 17 + chunkIndex * 31;
-  const paletteIndex = Math.abs(styleSeed) % palettes.length;
-  const positionIndex = Math.abs(styleSeed * 7) % positions.length;
-  const size = sizes[Math.abs(styleSeed * 11) % sizes.length];
-  const position = positions[positionIndex];
-  const captionColor = palettes[paletteIndex];
-  const activeColor = palettes[(paletteIndex + 2) % palettes.length];
-  const font = FONT_STYLES[Math.abs(styleSeed * 13) % FONT_STYLES.length];
-
-  const chunkStart = (chunkIndex * chunkSize / Math.max(1, words.length)) * safeDuration;
-  const chunkElapsed = Math.max(0, elapsed - chunkStart);
-  const wordWindow = safeDuration / Math.max(1, words.length);
-  const activeWordElapsed = chunkElapsed - activeIndex * wordWindow;
-  const activeFrame = Math.max(0, Math.round(activeWordElapsed * 30));
-  const pop = spring({
-    frame: activeFrame,
-    fps: 30,
-    config: {
-      damping: strong ? 8 : 12,
-      stiffness: strong ? 300 : 220,
-      mass: 0.5,
-    },
-  });
-  const punch = interpolate(pop, [0, 1], [0.72, strong ? 1.2 : 1.08]);
-  const shake = strong
-    ? Math.sin(activeFrame * 1.7) * Math.max(0, 1 - activeFrame / 14) * 5
-    : 0;
-  const burstActive = activeFrame < (strong ? 18 : 11);
-
-  return (
-    <AbsoluteFill style={{ pointerEvents: "none" }}>
-      <div
-        style={{
-          position: "absolute",
-          top: 150,
-          left: 56,
-          padding: "9px 16px",
-          borderRadius: 999,
-          background: "rgba(20,20,20,.78)",
-          color: "#fff",
-          fontFamily: '"Arial Black", "DejaVu Sans", sans-serif',
-          fontSize: 24,
-          fontWeight: 900,
-          letterSpacing: 1.2,
-        }}
-      >
-        {label}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          ...position,
-          display: "flex",
-          justifyContent: "center",
-          width: "calc(100% - 110px)",
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            maxWidth: 1020,
-            textAlign: "center",
-            fontFamily: font.family,
-            fontWeight: font.weight,
-            fontSize: size,
-            lineHeight: 0.94,
-            letterSpacing: font.spacing,
-            WebkitTextStroke: "3px rgba(0,0,0,.9)",
-            textShadow: "0 6px 18px rgba(0,0,0,.85)",
-            transform: `rotate(${((chunkIndex % 3) - 1) * 0.7}deg)`,
-          }}
-        >
-          <CaptionBurst
-            active={burstActive}
-            color={activeColor}
-            intensity={strong ? 1 : 0}
-          />
-
-          {chunk.map((word, i) => {
-            const isActive = i === activeIndex;
-            const isStrong = isActive && STRONG_WORDS.has(
-              word.replace(/[^a-z0-9]/gi, "").toLowerCase(),
-            );
-            return (
-              <span
-                key={`${chunkIndex}-${i}`}
-                style={{
-                  display: "inline-block",
-                  marginRight: 14,
-                  color: isActive ? activeColor : captionColor,
-                  transform: isActive
-                    ? `translateY(${-6 * pop}px) translateX(${shake}px) scale(${punch}) rotate(${isStrong ? shake * 0.7 : 0}deg)`
-                    : "scale(1)",
-                  transition: "none",
-                  filter: isActive && isStrong ? `drop-shadow(0 0 12px ${activeColor})` : "none",
-                }}
-              >
-                {word}
-              </span>
-            );
-          })}
-        </div>
-      </div>
+    <AbsoluteFill style={{background: `radial-gradient(ellipse at 50% 30%, ${theme.bg2} 0%, ${theme.bg} 70%)`}}>
+      {backdrop ? (
+        <Img src={staticFile(backdrop)} style={{position: 'absolute', inset: -80, width: 1240, height: 2080, objectFit: 'cover', filter: 'blur(46px) brightness(0.32) saturate(1.2)'}} />
+      ) : (
+        <AbsoluteFill style={{
+          backgroundImage: `linear-gradient(${theme.grid} 2px, transparent 2px), linear-gradient(90deg, ${theme.grid} 2px, transparent 2px)`,
+          backgroundSize: '60px 60px',
+          backgroundPosition: `0 ${(frame * 0.6) % 60}px`,
+        }} />
+      )}
     </AbsoluteFill>
   );
 };
 
-const Scene = ({ line }: { line: Line }) => {
-  const primaryAsset = line.media_asset?.replace(/^output\//, "");
-  const primaryKind = (line.media_kind || "").toLowerCase();
-  const secondaryAsset = line.media_asset_2?.replace(/^output\//, "");
-  const secondaryKind = (line.media_kind_2 || "").toLowerCase();
+const BeatView: React.FC<{beat: Beat; theme: Theme}> = ({beat, theme}) => {
   const frame = useCurrentFrame();
-  const splitFrame = Math.floor(Math.max(1, line.duration * 30) / 2);
-  const useSecondary = Boolean(secondaryAsset && frame >= splitFrame);
-  const asset = useSecondary ? secondaryAsset : primaryAsset;
-  const kind = useSecondary ? secondaryKind : primaryKind;
-
-  let visual: React.ReactNode;
-
-  if (asset && kind === "video") {
-    visual = (
-      <Video
-        src={staticFile(asset)}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        muted
-      />
-    );
-  } else if (asset) {
-    visual = (
-      <Img
-        src={staticFile(asset)}
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-      />
-    );
-  } else {
-    visual = (
-      <AbsoluteFill
-        style={{
-          background: "#111",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div
-          style={{
-            color: "white",
-            fontFamily: '"Arial Black", "DejaVu Sans", sans-serif',
-            fontWeight: 800,
-            fontSize: 52,
-            textAlign: "center",
-            padding: 70,
-          }}
-        >
-          {line.visual || "EXPLAINER"}
-        </div>
-      </AbsoluteFill>
-    );
-  }
+  const {fps} = useVideoConfig();
+  const t = frame / fps;
+  const box = beat.box || BOX;
+  const pop = Math.min(1, frame / 5);
+  const scale = 0.97 + 0.03 * pop;
 
   return (
     <AbsoluteFill>
-      {visual}
-      <Caption text={line.text} visual={line.visual} duration={line.duration} />
+      <Background theme={theme} backdrop={beat.media?.backdrop} />
+      <div style={{
+        position: 'absolute', left: box.x, top: box.y, width: box.w, height: box.h,
+        transform: `scale(${scale})`,
+        borderRadius: beat.kind === 'media' ? 30 : 0,
+        overflow: beat.kind === 'media' ? 'hidden' : 'visible',
+        boxShadow: beat.kind === 'media' ? '0 30px 80px rgba(0,0,0,.6), 0 0 0 5px rgba(255,255,255,.92)' : 'none',
+        background: beat.kind === 'media' ? '#000' : 'transparent',
+      }}>
+        {beat.kind === 'media' && beat.media && (
+          beat.media.kind === 'video' ? (
+            <OffthreadVideo src={staticFile(beat.media.src)} muted
+              style={{width: '100%', height: '100%', objectFit: beat.media.fit || 'cover',
+                objectPosition: `${(beat.media.focus?.[0] ?? 0.5) * 100}% ${(beat.media.focus?.[1] ?? 0.5) * 100}%`}} />
+          ) : (
+            <Img src={staticFile(beat.media.src)}
+              style={{width: '100%', height: '100%', objectFit: beat.media.fit || 'cover',
+                objectPosition: `${(beat.media.focus?.[0] ?? 0.5) * 100}% ${(beat.media.focus?.[1] ?? 0.5) * 100}%`}} />
+          )
+        )}
+        {beat.kind === 'diagram' && beat.diagram && (
+          <Diagram name={beat.diagram.name} params={beat.diagram.params} steps={beat.diagram.steps || [0]}
+            t={t} dur={beat.end - beat.start} theme={theme} w={box.w} h={box.h} />
+        )}
+        {beat.annotations && beat.annotations.length > 0 && (
+          <Annotations items={beat.annotations} t={t} w={box.w} h={box.h} theme={theme} />
+        )}
+        {beat.media?.credit && (
+          <div style={{position: 'absolute', left: 18, bottom: 14, padding: '4px 12px', borderRadius: 8,
+            background: 'rgba(0,0,0,.55)', color: 'rgba(255,255,255,.8)', fontFamily: FONT, fontWeight: 700, fontSize: 18}}>
+            {beat.media.credit}
+          </div>
+        )}
+      </div>
+      {beat.tag && (
+        <div style={{position: 'absolute', left: box.x, top: box.y - 34 > 160 ? box.y - 34 : 164, fontFamily: FONT, fontWeight: 800,
+          fontSize: 22, letterSpacing: 4, color: theme.accent}}>
+          {beat.tag.toUpperCase()}
+        </div>
+      )}
     </AbsoluteFill>
   );
 };
 
-const BourikoShort = ({
-  lines,
-  sfxEvents = [],
-}: BourikoProps) => (
-  <AbsoluteFill style={{ backgroundColor: "black" }}>
-    {lines.map((line, index) => (
-      <Sequence
-        key={index}
-        from={Math.round(line.start * 30)}
-        durationInFrames={Math.max(1, Math.ceil(line.duration * 30))}
-      >
-        <Scene line={line} />
-      </Sequence>
-    ))}
+export const BourikoShort: React.FC<BourikoProps> = ({beats = [], captions = [], sfxEvents = [], theme: themeName, narration}) => {
+  const {fps} = useVideoConfig();
+  const theme = themeOf(themeName);
+  return (
+    <AbsoluteFill style={{backgroundColor: theme.bg}}>
+      <FontLoader />
+      {beats.map((beat, i) => {
+        const from = Math.round(beat.start * fps);
+        const to = Math.round(beat.end * fps);
+        return (
+          <Sequence key={i} from={from} durationInFrames={Math.max(1, to - from)}>
+            <BeatView beat={beat} theme={theme} />
+          </Sequence>
+        );
+      })}
+      <Captions chunks={captions} theme={theme} />
+      <Audio src={staticFile(narration || 'generated/narration.wav')} />
+      {sfxEvents.map((e, i) => (
+        <Sequence key={`sfx-${i}`} from={Math.round(e.time * fps)}>
+          <Audio src={staticFile(e.file)} volume={e.volume ?? 1} />
+        </Sequence>
+      ))}
+    </AbsoluteFill>
+  );
+};
 
-    <Audio src={staticFile("generated/narration.wav")} />
-
-    {sfxEvents.map((event, index) => (
-      <Sequence key={`sfx-${index}`} from={Math.round(event.time * 30)}>
-        <Audio
-          src={staticFile(event.file.replace(/^output\//, ""))}
-          volume={event.volume ?? 0.12}
-        />
-      </Sequence>
-    ))}
-  </AbsoluteFill>
-);
-
-export { BourikoShort };
 export default BourikoShort;

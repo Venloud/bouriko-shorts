@@ -1,9 +1,27 @@
 {
   "channel_name": "Bouriko",
-  "target_seconds": [61, 68],
-  "script_words": [140, 152],
-  "pillar_rotation": ["hidden", "explainer", "tip", "hidden", "fun_fact", "gaming", "hidden", "finds"],
-  "pillars_enabled_later": ["comparison", "news"],
+  "target_seconds": [
+    61,
+    68
+  ],
+  "script_words": [
+    140,
+    152
+  ],
+  "pillar_rotation": [
+    "hidden",
+    "explainer",
+    "tip",
+    "hidden",
+    "fun_fact",
+    "gaming",
+    "hidden",
+    "finds"
+  ],
+  "pillars_enabled_later": [
+    "comparison",
+    "news"
+  ],
   "news_max_age_hours": 48,
   "pillar_rules": {
     "hidden": "Explain a hidden piece of everyday technology with simple, factual narration.",
@@ -23,25 +41,96 @@
     "style_note": "Educational, authoritative male narrator. Calm, confident, mature, and natural, like a knowledgeable teacher explaining something clearly to a class. Conversational rather than announcer-like. Strong articulation, measured pacing, subtle warmth, no exaggerated excitement, no robotic delivery, no generic AI-assistant tone. Do not imitate or clone any real person."
   },
   "voice_note": "One consistent educational, authoritative male narrator voice. Natural teacher delivery, calm confidence, clear articulation, and human conversational rhythm. NIGHTFILES_VOICE can override the configured Kokoro voice.",
-  "llm_models": ["gemini-3.8-flash", "gemini-3.5-flash-lite"],
-  "groq_models": ["openai/gpt-oss-120b"],
+  "llm_models": [
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite"
+  ],
+  "groq_models": [
+    "openai/gpt-oss-120b"
+  ],
   "style": {
     "background": "#F4EFE4",
     "ink": "#1B1B1B",
     "tech_glow": "#2EA8FF",
-    "fonts": ["Arial Black", "Arial"],
-    "size": [1080, 1920]
+    "fonts": [
+      "Arial Black",
+      "Arial"
+    ],
+    "size": [
+      1080,
+      1920
+    ]
   },
   "qa_max_visual_share": 0.2,
   "qa_min_visuals": 8,
-  "post_times_new_york": ["12:10", "19:10"],
+  "post_times_new_york": [
+    "12:10",
+    "19:10"
+  ],
   "video_style": {
     "mascot_in_video": false,
     "phone_in_video": false,
     "captions": "dynamic_word_highlight",
-    "media_mix": ["video", "image", "diagram", "youtube_cc"],
+    "media_mix": [
+      "video",
+      "image",
+      "diagram",
+      "youtube_cc"
+    ],
     "camera_motion": false,
     "pose_motion": false,
     "transitions": "hard_cut"
+  },
+  "voice_engine": "elevenlabs",
+  "elevenlabs": {
+    "voice_id": "6OzrBCQf8cjERkYgzSg8",
+    "key_secrets": [
+      "BOURIKO_ELEVENLABS_API_KEY",
+      "ELEVENLABS_API_KEY"
+    ],
+    "key_note": "Bouriko's own ElevenLabs account. Never the Kindled Iron key.",
+    "model_id": "eleven_v4",
+    "model_fallbacks": [
+      "eleven_v3"
+    ],
+    "output_format": "mp3_44100_128",
+    "voice_settings": {
+      "stability": 0.5,
+      "similarity_boost": 0.8,
+      "style": 0.0,
+      "use_speaker_boost": true
+    },
+    "credit_multiplier": 1.0,
+    "min_reserve_credits": 500,
+    "allow_unverified_balance": true
+  },
+  "audio": {
+    "voice_lufs": -17,
+    "sfx_below_voice_db": 20,
+    "max_sfx": 8,
+    "audio_codec": "aac",
+    "audio_bitrate": "192k",
+    "channels": 2,
+    "sample_rate": 48000
+  },
+  "visual_rules": {
+    "beat_min_seconds": 2.0,
+    "beat_max_seconds": 4.0,
+    "caption_words": [
+      3,
+      5
+    ],
+    "safe_box": {
+      "x": [
+        120,
+        960
+      ],
+      "y": [
+        160,
+        1440
+      ]
+    },
+    "accent": "#2EA8FF",
+    "hook_answer_by_seconds": 10
   }
 }

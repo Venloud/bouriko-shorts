@@ -1,0 +1,84 @@
+{
+  "id": "traffic_light",
+  "match": {"script_files": ["traffic_light.txt"], "title_contains": ["traffic light know"]},
+  "theme": "tech",
+  "hook_answer_line": 1,
+  "facts_source": "https://www.fhwa.dot.gov/publications/research/operations/its/06108/02.cfm",
+  "assets": {
+    "loop_photo": {"commons": "File:RLC induction loop.jpg", "kind": "image"},
+    "sawcut_photo": {"commons": "File:Saw Cut Loop Detectors.jpg", "kind": "image"},
+    "mast_camera": {"commons": "File:Detection camera and radio on a traffic signal mast arm.jpg", "kind": "image"},
+    "pole_cameras": {"commons": "File:Traffic light with camera (San Prospero) in 2024.01.jpg", "kind": "image"},
+    "cabinet": {"commons": "File:Traffic signal interior, Washington DC.jpg", "kind": "image"},
+    "signal_video": {"commons": "File:Temporary traffic signal at Colonel By Drive.webm", "kind": "video"},
+    "green_video": {"commons": "File:FFM - Münchener Straße, Grünschaltung Auto- und Straßenbahnampel.webm", "kind": "video"},
+    "red_video": {"commons": "File:Chinese Signal.webm", "kind": "video"},
+    "street_video": {"commons": "File:Tirana traffic lights.webm", "kind": "video"}
+  },
+  "lines": [
+    {"text": "How does a traffic light know your car is waiting?",
+     "tts_text": "[curious] How does a traffic light know... your car is waiting?",
+     "beats": [{"word": 0, "diagram": {"name": "hook_question", "steps": [0, 6, 9]}}]},
+    {"text": "It can actually feel your car sitting on the road.",
+     "tts_text": "It can actually feel your car — sitting on the road.",
+     "beats": [{"word": 0, "asset": "signal_video", "sfx": "whoosh"}]},
+    {"text": "Many roads have a hidden sensor under the pavement.",
+     "tts_text": "Many roads have a hidden sensor... under the pavement.",
+     "beats": [{"word": 0, "asset": "sawcut_photo",
+                "annotations": [{"type": "label", "word": 4, "x": 0.5, "y": 0.08, "text": "hidden sensor"}]}]},
+    {"text": "Look near the white stop line. You might see a rectangle cut into the road.",
+     "tts_text": "Look near the white stop line. You might see a rectangle — cut into the road.",
+     "beats": [
+       {"word": 0, "asset": "loop_photo", "focus": [0.5, 0.5]},
+       {"word": 6, "asset": "loop_photo", "focus": [0.62, 0.5], "box": {"h": 760, "y": 270}}]},
+    {"text": "That rectangle can be a wire loop hiding under the pavement.",
+     "tts_text": "That rectangle can be a wire loop, hiding under the pavement.",
+     "beats": [
+       {"word": 0, "diagram": {"name": "loop_field", "steps": [{"t": 0}, 1]}},
+       {"word": 5, "diagram": {"name": "loop_field", "stage": "wire", "steps": [{"t": -2}, {"t": -2}, 5]}}]},
+    {"text": "Electricity runs through the wire, making an invisible magnetic field.",
+     "tts_text": "Electricity runs through the wire... making an invisible magnetic field.",
+     "beats": [
+       {"word": 0, "diagram": {"name": "loop_field", "stage": "current", "steps": [{"t": -2}, {"t": -2}, {"t": -2}]}, "sfx": "interface"},
+       {"word": 5, "diagram": {"name": "loop_field", "stage": "field", "steps": [{"t": -2}, {"t": -2}, {"t": -2}, 8]}}]},
+    {"text": "When a car stops on top of it, the car changes that field.",
+     "tts_text": "When a car stops on top of it... the car changes that field.",
+     "beats": [
+       {"word": 0, "diagram": {"name": "loop_field", "stage": "car", "steps": [{"t": -2}, {"t": -2}, {"t": -2}, {"t": -2}, 2]}},
+       {"word": 8, "diagram": {"name": "keyword", "params": {"lines": ["THE CAR", "CHANGES THE FIELD"], "accentLine": 1, "size": 84}, "steps": [{"t": 0}, {"t": 0.3}, {"t": 0.6}, {"t": 0.9}]}}]},
+    {"text": "The sensor notices the change and tells the traffic light, \"Hey, a car is here.\"",
+     "tts_text": "The sensor notices the change, and tells the traffic light: [playful] \"Hey — a car is here.\"",
+     "beats": [
+       {"word": 0, "diagram": {"name": "detection_flow", "steps": [{"t": 0}, 1, 6, 9]}, "sfx": "beep"},
+       {"word": 10, "asset": "cabinet", "tag": "signal cabinet",
+        "annotations": [{"type": "label", "word": 11, "x": 0.45, "y": 0.5, "text": "a car is here!"}]}]},
+    {"text": "Then the light can decide when it is time to let that car go.",
+     "tts_text": "Then the light can decide when it is time... to let that car go.",
+     "beats": [
+       {"word": 0, "asset": "green_video"},
+       {"word": 9, "asset": "street_video"}]},
+    {"text": "But some traffic lights use cameras or radar instead.",
+     "tts_text": "But some traffic lights use cameras... or radar instead.",
+     "beats": [
+       {"word": 0, "asset": "pole_cameras", "sfx": "camera"},
+       {"word": 6, "diagram": {"name": "methods", "steps": [{"t": -1}, {"t": -1}, {"t": 0}], "params": {"highlight": [2]}}}]},
+    {"text": "And some simply change because a timer says it is time.",
+     "tts_text": "And some simply change because a timer says it is time.",
+     "beats": [{"word": 0, "diagram": {"name": "methods", "stage": "timer", "steps": [{"t": -1}, {"t": -1}, {"t": -1}, 6], "params": {"highlight": [3]}}}]},
+    {"text": "So next time you stop at a red light, look down at the road.",
+     "tts_text": "So next time you stop at a red light... look down at the road.",
+     "beats": [
+       {"word": 0, "asset": "red_video"},
+       {"word": 9, "asset": "loop_photo", "focus": [0.5, 0.75], "sfx": "whoosh"}]},
+    {"text": "That little rectangle might be the hidden sensor that knows you are there.",
+     "tts_text": "That little rectangle might be the hidden sensor... that knows you are there.",
+     "beats": [
+       {"word": 0, "asset": "sawcut_photo", "focus": [0.5, 0.3]},
+       {"word": 6, "diagram": {"name": "loop_field", "stage": "detected", "steps": [{"t": -2}, {"t": -2}, {"t": -2}, {"t": -2}, {"t": -2}]}}]},
+    {"text": "The traffic light is not guessing. It is getting a signal from the road.",
+     "tts_text": "The traffic light is not guessing. It is getting a signal — from the road.",
+     "beats": [
+       {"word": 0, "asset": "mast_camera", "focus": [0.3, 0.5]},
+       {"word": 6, "diagram": {"name": "detection_flow", "stage": "done", "steps": [{"t": -2}, {"t": -2}, {"t": -2}, {"t": -2}, 10]}}]}
+  ]
+}
