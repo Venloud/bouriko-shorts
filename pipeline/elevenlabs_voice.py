@@ -65,11 +65,14 @@ def _request(path: str, body: dict | None = None, timeout: int = 30) -> dict:
 
 
 def _http_detail(e: urllib.error.HTTPError) -> str:
+    """Status + ElevenLabs' own message (it never contains the key) so plan limits are readable."""
     try:
         detail = json.loads(e.read().decode()).get("detail", {})
         if isinstance(detail, dict):
-            return str(detail.get("status") or detail.get("code") or "")[:80]
-        return str(detail)[:120]
+            status = str(detail.get("status") or detail.get("code") or "")
+            msg = str(detail.get("message") or "")
+            return f"{status}: {msg}"[:220] if msg else status[:80]
+        return str(detail)[:220]
     except Exception:  # noqa: BLE001
         return ""
 
@@ -245,8 +248,9 @@ def synthesize_story(lines: list[dict], out_dir: Path, cache_dir: Path, cfg: dic
             except RuntimeError as e:
                 last = e
                 log(f"ElevenLabs: {m} failed: {e}")
-                # invalid model -> try the next one; anything else (quota, auth) -> stop
-                if not re.search(r"HTTP (400|404|422)", str(e)):
+                # invalid model, or a model the plan doesn't include (402) -> try the next one;
+                # auth / quota / rate errors -> stop
+                if not re.search(r"HTTP (400|402|404|422)", str(e)):
                     break
         if data is None:
             raise SkipElevenLabs(str(last) if last else "no audio returned")
