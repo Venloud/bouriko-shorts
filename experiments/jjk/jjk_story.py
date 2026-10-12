@@ -18,6 +18,7 @@ SRC_RULES = {"source": WIKI + "#Rules", "primary": "Jujutsu Kaisen manga ch. 143
 # Character images are resolved by prepare_jjk_media.py (local vetted stills first, then AniList,
 # then Jikan; exact name + Jujutsu Kaisen credit required, sha256 + source logged, review only).
 ASSETS = {
+    "kogane": {"character": "Kogane"},
     "tengen": {"character": "Tengen"},
     "kenjaku": {"character": "Kenjaku"},
     "tsumiki": {"character": "Tsumiki Fushiguro"},
@@ -185,6 +186,9 @@ story = {
     "hook_answer_line": 2,
     # more energy than the tech videos (ElevenLabs v3/v4: lower stability = more expressive)
     "voice_settings": {"stability": 0.0, "style": 0.35, "similarity_boost": 0.8, "use_speaker_boost": True},
+    # JJK: ElevenLabs eleven_v4 only. No Kokoro fallback: a failure stops with "VOICE BLOCKED".
+    "voice_fallback": False,
+    "elevenlabs": {"model_id": "eleven_v4", "model_fallbacks": []},
     "voice_speed": 1.15,
     "trim_pauses": {"lead": 0.06, "tail": 0.16},
     "assets": ASSETS,

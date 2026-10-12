@@ -213,10 +213,12 @@ const Keyword: React.FC<Ctx> = ({w, h, p, theme, params}) => {
   );
 };
 
-const Counter: React.FC<Ctx> = ({w, h, p, theme, params}) => {
+const Counter: React.FC<Ctx> = ({w, h, p, theme, params, dur, steps}) => {
   const from = params?.from ?? 0, to = params?.to ?? 100;
-  const k = p(1, params?.countDur ?? 1.2);
-  const v = Math.round(from + (to - from) * k);
+  // finish counting at least 0.6 s before the beat ends, so the final value is on screen
+  const room = Math.max(0.3, dur - (steps[1] ?? 0) - 0.6);
+  const k = p(1, Math.min(params?.countDur ?? 1.2, room));
+  const v = k > 0.995 ? to : Math.round(from + (to - from) * k);
   return (
     <g opacity={p(0, 0.2)}>
       <Txt x={w / 2} y={h * 0.5} size={260} color="#fff">{`${params?.prefix || ''}${v}`}</Txt>
@@ -303,7 +305,7 @@ const Points: React.FC<Ctx> = ({w, h, p, theme}) => (
   </g>
 );
 
-const Rule100: React.FC<Ctx> = ({w, h, p, on, theme, t, steps}) => {
+const Rule100: React.FC<Ctx> = ({w, h, p, on, theme, t, steps, params}) => {
   const k = on(0) ? clamp01((t - steps[0]) / 1.0) : 0;
   return (
     <g>
@@ -311,7 +313,10 @@ const Rule100: React.FC<Ctx> = ({w, h, p, on, theme, t, steps}) => {
       <Txt x={w / 2} y={h * 0.27} size={40} color={theme.accent} spacing={6} o={p(0, 0.2)}>POINTS SPENT</Txt>
       <Card x={w * 0.1} y={h * 0.36} w={w * 0.8} h={h * 0.3} s={p(1, 0.3)} theme={theme}>
         <Txt x={w * 0.4} y={h * 0.1} size={40} color={theme.accent} spacing={4}>NEW RULE</Txt>
-        {[0, 1, 2].map((i) => <line key={i} x1={w * 0.08} y1={h * (0.15 + i * 0.045)} x2={w * (i === 2 ? 0.5 : 0.72)} y2={h * (0.15 + i * 0.045)} stroke="#4A5280" strokeWidth={14} strokeLinecap="round" {...stroke(w, p(1, 0.6))} />)}
+        {(params?.rule || ['PLAYERS MAY TRANSFER', 'POINTS TO EACH OTHER']).map((l: string, i: number) => (
+          <Txt key={i} x={w * 0.4} y={h * (0.165 + i * 0.05)} size={38} weight={800} o={p(1, 0.3 + i * 0.15)}>{l}</Txt>
+        ))}
+        {params?.ruleNote && <Txt x={w * 0.4} y={h * 0.275} size={24} color={theme.muted} weight={700} o={p(1, 0.6)}>{params.ruleNote}</Txt>}
       </Card>
       {on(2) && (
         <g transform={`translate(${w / 2} ${h * 0.8}) rotate(-4) scale(${1.4 - 0.4 * p(2, 0.2)})`} opacity={p(2, 0.15)}>
@@ -401,24 +406,33 @@ const Loophole: React.FC<Ctx> = ({w, h, p, on, theme, params}) => {
   );
 };
 
-const FanProposal: React.FC<Ctx> = ({w, h, p, on, theme}) => (
-  <g>
-    <g transform={`translate(${w / 2} ${h * 0.09}) rotate(-3)`} opacity={p(0, 0.15)}>
-      <rect x={-w * 0.46} y={-48} width={w * 0.92} height={96} fill={theme.warn} />
-      <Txt x={0} y={15} size={40} color="#111">FAN PROPOSAL · NOT CANON</Txt>
+// Font size that fits `text` in `width` (Montserrat 900 is ~0.68 em per character).
+const fit = (text: string, width: number, max: number) => Math.min(max, width / (Math.max(1, text.length) * 0.68));
+
+const FanProposal: React.FC<Ctx> = ({w, h, p, on, theme, params}) => {
+  const tape = params?.tape || 'FAN PROPOSAL · NOT CANON';
+  const top: string[] = params?.top || ['DEFEAT A CURSE', "THAT'S A PLAYER"];
+  const bottom: string = params?.bottom || 'TAKE ALL ITS POINTS';
+  const ask: string = params?.ask || 'WOULD IT PASS?';
+  const cardW = w * 0.84;
+  return (
+    <g>
+      <g transform={`translate(${w / 2} ${h * 0.08}) rotate(-2)`} opacity={p(0, 0.15)}>
+        <rect x={-w * 0.44} y={-44} width={w * 0.88} height={88} fill={theme.warn} />
+        <Txt x={0} y={14} size={fit(tape, w * 0.8, 40)} color="#111">{tape}</Txt>
+      </g>
+      <Card x={w * 0.08} y={h * 0.18} w={cardW} h={h * 0.22} s={p(0, 0.3)} theme={theme} border={theme.accent2}>
+        {top.map((l, i) => <Txt key={i} x={cardW / 2} y={h * (0.09 + i * 0.07)} size={fit(l, cardW * 0.88, 46)}>{l}</Txt>)}
+      </Card>
+      <line x1={w / 2} y1={h * 0.42} x2={w / 2} y2={h * 0.5} stroke={theme.accent} strokeWidth={12} strokeLinecap="round" {...stroke(100, p(1, 0.3))} />
+      {p(1, 0.3) > 0.9 && <polygon points={`${w / 2},${h * 0.53} ${w / 2 - 26},${h * 0.49} ${w / 2 + 26},${h * 0.49}`} fill={theme.accent} />}
+      <Card x={w * 0.08} y={h * 0.55} w={cardW} h={h * 0.16} s={p(1, 0.3)} theme={theme}>
+        <Txt x={cardW / 2} y={h * 0.1} size={fit(bottom, cardW * 0.88, 48)} color={theme.accent}>{bottom}</Txt>
+      </Card>
+      {on(2) && <Txt x={w / 2} y={h * 0.86} size={fit(ask, w * 0.9, 60)} color={theme.warn} o={p(2, 0.2)}>{ask}</Txt>}
     </g>
-    <Card x={w * 0.08} y={h * 0.2} w={w * 0.84} h={h * 0.22} s={p(0, 0.3)} theme={theme} border={theme.accent2}>
-      <Txt x={w * 0.42} y={h * 0.09} size={44}>DEFEAT A CURSE</Txt>
-      <Txt x={w * 0.42} y={h * 0.16} size={44}>THAT'S A PLAYER</Txt>
-    </Card>
-    <line x1={w / 2} y1={h * 0.44} x2={w / 2} y2={h * 0.53} stroke={theme.accent} strokeWidth={12} strokeLinecap="round" {...stroke(100, p(1, 0.3))} />
-    {p(1, 0.3) > 0.9 && <polygon points={`${w / 2},${h * 0.56} ${w / 2 - 26},${h * 0.52} ${w / 2 + 26},${h * 0.52}`} fill={theme.accent} />}
-    <Card x={w * 0.08} y={h * 0.58} w={w * 0.84} h={h * 0.18} s={p(1, 0.3)} theme={theme}>
-      <Txt x={w * 0.42} y={h * 0.115} size={48} color={theme.accent}>TAKE ALL ITS POINTS</Txt>
-    </Card>
-    {on(2) && <Txt x={w / 2} y={h * 0.93} size={58} color={theme.warn} o={p(2, 0.2)}>WOULD IT PASS?</Txt>}
-  </g>
-);
+  );
+};
 
 const TitleCard: React.FC<Ctx> = ({w, h, p, theme, params}) => {
   const lines: string[] = params?.lines || ['THE CULLING GAME'];

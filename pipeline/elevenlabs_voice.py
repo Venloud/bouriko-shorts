@@ -92,6 +92,26 @@ def balance() -> dict:
             "tier": sub.get("tier")}
 
 
+def voice_info(voice_id: str) -> dict:
+    """Name/category of the voice, so the log proves which voice was used (/v2/voices, v1 fallback)."""
+    try:
+        data = _request(f"/v2/voices?voice_ids={voice_id}&page_size=1")
+        for v in data.get("voices", []):
+            if v.get("voice_id") == voice_id:
+                return {"name": v.get("name"), "category": v.get("category"), "source": "/v2/voices"}
+    except Exception as e:  # noqa: BLE001
+        first = type(e).__name__
+    else:
+        first = "not listed"
+    try:
+        v = _request(f"/v1/voices/{voice_id}")
+        return {"name": v.get("name"), "category": v.get("category"), "source": f"/v1/voices ({first} on /v2)"}
+    except urllib.error.HTTPError as e:
+        return {"error": f"HTTP {e.code} {_http_detail(e)}".strip()}
+    except Exception as e:  # noqa: BLE001
+        return {"error": type(e).__name__}
+
+
 def strip_tags(text: str) -> str:
     """Caption text from a tagged tts_text: no [tags], normal spacing."""
     return re.sub(r"\s+", " ", TAG_RE.sub(" ", text)).strip()
@@ -212,8 +232,14 @@ def synthesize_story(lines: list[dict], out_dir: Path, cache_dir: Path, cfg: dic
         raise SkipElevenLabs("no elevenlabs.voice_id in config.json")
     sent, spans = build_script(lines)
     models = [cfg.get("model_id", "eleven_v4")] + list(cfg.get("model_fallbacks", []))
+    info = voice_info(cfg["voice_id"])
+    if "error" in info:
+        log(f"ElevenLabs: voice {cfg['voice_id']} lookup failed: {info['error']}")
+    else:
+        log(f"ElevenLabs: voice {cfg['voice_id']} = \"{info['name']}\" ({info.get('category')}, via {info['source']})")
     cache_dir.mkdir(parents=True, exist_ok=True)
     report = {"engine": "elevenlabs", "voice_id": cfg["voice_id"], "key_secret": key_name(),
+              "voice_name": info.get("name"), "voice_category": info.get("category"),
               "chars": len(sent), "credits_used": 0, "cache_hit": False}
 
     data, model = None, None

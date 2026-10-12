@@ -78,7 +78,17 @@ def visual_checks(story, d, hard, report):
     if bad_caps and total_words >= lo:
         hard.append(f"{len(bad_caps)} caption chunk(s) outside {lo}-{hi} words: " +
                     "; ".join(" ".join(w["text"] for w in c["words"]) for c in bad_caps[:3]))
-    # caption lane (Captions.tsx) sits at y 1150-1430, x 120-960: inside the safe box by construction
+    # caption lane (Captions.tsx) sits at y 1290-1440, x 120-960: inside the safe box, above the
+    # bottom 300 px; evidence boxes must end by y 1260 so the captions sit under them
+    for b in beats:
+        box = b.get("box") or {}
+        if box and box["y"] + box["h"] > 1260:
+            hard.append(f"evidence box reaches y {box['y'] + box['h']} at {b['start']:.1f}s (captions sit below 1260)")
+    cuts = [b["start"] for b in beats[1:]]
+    for c in caps:
+        crossed = [t for t in cuts if c["start"] + 0.06 < t < c["end"] - 0.06 and t < c["words"][-1]["end"]]
+        if crossed:
+            hard.append(f"caption '{' '.join(w['text'] for w in c['words'])}' spans a scene cut at {crossed[0]:.2f}s")
     if len(sfx) > int(AU.get("max_sfx", 8)):
         hard.append(f"{len(sfx)} SFX (max {AU.get('max_sfx', 8)})")
     words = json.loads((ROOT / "output/word_timings.json").read_text())

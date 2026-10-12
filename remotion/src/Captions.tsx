@@ -16,7 +16,7 @@ export const Captions: React.FC<{chunks: CaptionChunk[]; theme: Theme}> = ({chun
   if (!chunk) return null;
 
   const chars = chunk.words.reduce((n, w) => n + w.text.length + 1, 0);
-  const size = Math.round(Math.max(60, Math.min(88, 96 - Math.max(0, chars - 12) * 1.7)));
+  const size = Math.round(Math.max(52, Math.min(74, 82 - Math.max(0, chars - 12) * 1.5)));
   const enter = Math.min(1, (t - chunk.start) * fps / 4);
   let active = -1;
   chunk.words.forEach((w, i) => {
@@ -52,21 +52,25 @@ export const Captions: React.FC<{chunks: CaptionChunk[]; theme: Theme}> = ({chun
       >
         {chunk.words.map((w, i) => {
           const isActive = i === active;
+          // A real space after every word (the highlighted one too), so the scaled active word
+          // never touches its neighbour.
           return (
-            <span
-              key={i}
-              style={{
-                display: 'inline-block',
-                margin: '0 10px',
-                color: isActive ? theme.accent : '#FFFFFF',
-                WebkitTextStroke: '10px #05070A',
-                paintOrder: 'stroke fill',
-                textShadow: '0 6px 18px rgba(0,0,0,.7)',
-                transform: isActive ? 'scale(1.08) translateY(-4px)' : 'none',
-              }}
-            >
-              {w.text}
-            </span>
+            <React.Fragment key={i}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  padding: '0 6px',
+                  color: isActive ? theme.accent : '#FFFFFF',
+                  WebkitTextStroke: '9px #05070A',
+                  paintOrder: 'stroke fill',
+                  textShadow: '0 6px 18px rgba(0,0,0,.7)',
+                  transform: isActive ? 'scale(1.06) translateY(-3px)' : 'none',
+                }}
+              >
+                {w.text}
+              </span>
+              {i < chunk.words.length - 1 ? ' ' : null}
+            </React.Fragment>
           );
         })}
       </div>

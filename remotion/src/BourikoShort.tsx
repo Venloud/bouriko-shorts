@@ -3,7 +3,7 @@ import {AbsoluteFill, Audio, Img, OffthreadVideo, Sequence, staticFile, useCurre
 import {Annotation, Annotations} from './Annotations';
 import {CaptionChunk, Captions} from './Captions';
 import {Diagram} from './Diagrams';
-import {BOX, FONT, Theme, themeOf} from './theme';
+import {BOX, FONT, ORB, PURPLE, Theme, themeOf} from './theme';
 
 // Narrator-led, evidence-first Short. Every beat (2-4 s, built by pipeline/remotion_prepare.py)
 // is one visual: real footage/photo in a framed box, or a diagram that builds step by step.
@@ -24,6 +24,7 @@ export type Beat = {
     focus?: [number, number];
     backdrop?: string;
     credit?: string;
+    frame?: 'red' | 'white';
   };
   diagram?: {name: string; params?: Record<string, any>; steps?: number[]};
   annotations?: Annotation[];
@@ -41,6 +42,29 @@ export type BourikoProps = {
   sfxEvents?: Sfx[];
   narration?: string;
   brand?: string;
+  voiceEnv?: number[]; // narration loudness per frame, 0-1 (pipeline/remotion_prepare.py)
+};
+
+// Centered purple orb on the seam between the evidence box and the captions; it swells and
+// glows with the narrator's voice (envelope pre-computed from the mastered narration).
+const VoiceOrb: React.FC<{env: number[]}> = ({env}) => {
+  const frame = useCurrentFrame();
+  const raw = env[frame] ?? 0;
+  const prev = env[Math.max(0, frame - 1)] ?? 0;
+  const v = Math.max(raw, prev * 0.85);
+  const r = ORB.r * (0.85 + 0.55 * v);
+  return (
+    <div style={{position: 'absolute', left: ORB.x - 120, top: ORB.y - 120, width: 240, height: 240,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none'}}>
+      {[2.1, 1.6].map((k, i) => (
+        <div key={i} style={{position: 'absolute', width: r * 2 * k, height: r * 2 * k, borderRadius: '50%',
+          border: `3px solid ${PURPLE}`, opacity: (0.15 + 0.45 * v) / (i + 1)}} />
+      ))}
+      <div style={{width: r * 2, height: r * 2, borderRadius: '50%',
+        background: `radial-gradient(circle at 35% 30%, #E9DDFF 0%, #B794FF 30%, ${PURPLE} 62%, #4C1D95 100%)`,
+        boxShadow: `0 0 ${18 + 50 * v}px ${PURPLE}, 0 0 0 4px rgba(10,6,25,.9)`}} />
+    </div>
+  );
 };
 
 const FontLoader: React.FC = () => (
@@ -84,7 +108,10 @@ const BeatView: React.FC<{beat: Beat; theme: Theme}> = ({beat, theme}) => {
         transform: `scale(${scale})`,
         borderRadius: beat.kind === 'media' ? 30 : 0,
         overflow: beat.kind === 'media' ? 'hidden' : 'visible',
-        boxShadow: beat.kind === 'media' ? '0 30px 80px rgba(0,0,0,.6), 0 0 0 5px rgba(255,255,255,.92)' : 'none',
+        boxShadow: beat.kind !== 'media' ? 'none'
+          : beat.media?.frame === 'red'
+            ? '0 30px 80px rgba(0,0,0,.6), 0 0 0 6px #FF3B6B, 0 0 46px rgba(255,59,107,.55)'
+            : '0 30px 80px rgba(0,0,0,.6), 0 0 0 5px rgba(255,255,255,.92)',
         background: beat.kind === 'media' ? '#000' : 'transparent',
       }}>
         {beat.kind === 'media' && beat.media && (
@@ -122,7 +149,7 @@ const BeatView: React.FC<{beat: Beat; theme: Theme}> = ({beat, theme}) => {
   );
 };
 
-export const BourikoShort: React.FC<BourikoProps> = ({beats = [], captions = [], sfxEvents = [], theme: themeName, narration}) => {
+export const BourikoShort: React.FC<BourikoProps> = ({beats = [], captions = [], sfxEvents = [], theme: themeName, narration, voiceEnv}) => {
   const {fps} = useVideoConfig();
   const theme = themeOf(themeName);
   return (
@@ -137,6 +164,7 @@ export const BourikoShort: React.FC<BourikoProps> = ({beats = [], captions = [],
           </Sequence>
         );
       })}
+      {voiceEnv && voiceEnv.length > 0 && <VoiceOrb env={voiceEnv} />}
       <Captions chunks={captions} theme={theme} />
       <Audio src={staticFile(narration || 'generated/narration.wav')} />
       {sfxEvents.map((e, i) => (

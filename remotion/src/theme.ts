@@ -4,10 +4,13 @@ export const W = 1080;
 export const H = 1920;
 export const SAFE = {x0: 120, x1: 960, y0: 160, y1: 1440};
 
-// Evidence box (footage / photos / diagrams) and the caption lane under it.
+// Evidence box (footage / photos / diagrams, y 200-1250) and the caption lane under it.
 // Captions never share space with the box, so they can't cover faces or on-screen text.
-export const BOX = {x: 120, y: 200, w: 840, h: 900};
-export const CAPTION_LANE = {top: 1150, bottom: 1430};
+// Nothing is drawn in the bottom 300 px (TikTok caption/UI area).
+export const BOX = {x: 120, y: 200, w: 840, h: 1050};
+export const CAPTION_LANE = {top: 1290, bottom: 1440};
+export const ORB = {x: 540, y: 1252, r: 34};
+export const PURPLE = '#8B5CF6';
 
 export const FONT = '"Montserrat", "DejaVu Sans", "Arial Black", sans-serif';
 

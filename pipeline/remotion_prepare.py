@@ -24,11 +24,12 @@ VR = CONFIG.get("visual_rules", {})
 AU = CONFIG.get("audio", {})
 BEAT_MIN = float(VR.get("beat_min_seconds", 2.0))
 BEAT_MAX = float(VR.get("beat_max_seconds", 4.0))
-BOX = {"x": 120, "y": 200, "w": 840, "h": 900}
+# Evidence box fills y 200-1250; captions sit under it; nothing in the bottom 300 px.
+BOX = {"x": 120, "y": 200, "w": 840, "h": 1050}
 BOXES = {
     "default": BOX,
-    "portrait": {"x": 240, "y": 200, "w": 600, "h": 900},
-    "wide": {"x": 120, "y": 330, "w": 840, "h": 640},
+    "portrait": {"x": 190, "y": 200, "w": 700, "h": 1050},
+    "wide": {"x": 120, "y": 300, "w": 840, "h": 900},
 }
 TAG_RE = re.compile(r"\[[^\]]*\]")
 
@@ -127,7 +128,16 @@ def auto_segments(ls, le, words):
     return list(zip(cuts[:-1], cuts[1:]))
 
 
-def build_beats(story, line_starts, total, words_by_line):
+def snap_to_chunk(t, chunk_starts, lo, hi, prev):
+    """Move a scene cut onto the start of a caption chunk, so no caption phrase spans a cut."""
+    cands = [c for c in chunk_starts if lo <= c < hi and c > prev + 0.8]
+    if not cands:
+        return t
+    best = min(cands, key=lambda c: abs(c - t))
+    return best if abs(best - t) <= 1.6 else t
+
+
+def build_beats(story, line_starts, total, words_by_line, chunk_starts=()):
     resolved = story.get("resolved_assets", {})
     beats = []
     for i, line in enumerate(story["lines"]):
@@ -136,8 +146,13 @@ def build_beats(story, line_starts, total, words_by_line):
         words = words_by_line.get(i, [])
         plan_beats = [b for b in line.get("beats", []) if b.get("asset") or b.get("diagram")]
         if plan_beats:
-            starts = [ls if k == 0 else word_time(words, b.get("word", 0), ls) + float(b.get("offset", 0))
-                      for k, b in enumerate(plan_beats)]
+            starts = []
+            for k, b in enumerate(plan_beats):
+                if k == 0:
+                    starts.append(ls)
+                    continue
+                t = word_time(words, b.get("word", 0), ls) + float(b.get("offset", 0))
+                starts.append(snap_to_chunk(t, chunk_starts, ls, le, starts[-1]))
             for k, b in enumerate(plan_beats):
                 s, e = starts[k], (starts[k + 1] if k + 1 < len(starts) else le)
                 beat = {"start": s, "end": e, "line": i, "plan": b}
@@ -156,7 +171,12 @@ def build_beats(story, line_starts, total, words_by_line):
         if line.get("media_asset_2"):
             visuals.append({**(line.get("media_source_2") or {}), "local_path": line["media_asset_2"],
                             "kind": line.get("media_kind_2") or "image"})
-        for k, (s, e) in enumerate(auto_segments(ls, le, words)):
+        segs = auto_segments(ls, le, words)
+        cuts = [segs[0][0]]
+        for s0, _ in segs[1:]:
+            cuts.append(snap_to_chunk(s0, chunk_starts, ls, le, cuts[-1]))
+        segs = list(zip(cuts, cuts[1:] + [le]))
+        for k, (s, e) in enumerate(segs):
             beat = {"start": s, "end": e, "line": i, "plan": {}}
             if k < len(visuals) and (ROOT / visuals[k]["local_path"]).exists():
                 v = dict(visuals[k])
@@ -179,7 +199,7 @@ def credit(rec):
     return credit_of(rec)
 
 
-def crop_image(src, dst, w, h, focus=(0.5, 0.5), fit="cover"):
+def crop_image(src, dst, w, h, focus=(0.5, 0.5), fit="cover", zoom=1.0):
     from PIL import Image, ImageFilter, ImageEnhance
     im = Image.open(src).convert("RGB")
     if fit == "contain":
@@ -190,7 +210,7 @@ def crop_image(src, dst, w, h, focus=(0.5, 0.5), fit="cover"):
         bg.paste(fg, ((w - fg.width) // 2, (h - fg.height) // 2))
         out = bg
     else:
-        scale = max(w / im.width, h / im.height)
+        scale = max(w / im.width, h / im.height) * max(1.0, float(zoom))
         rs = im.resize((max(w, round(im.width * scale)), max(h, round(im.height * scale))), Image.LANCZOS)
         x = int((rs.width - w) * focus[0])
         y = int((rs.height - h) * focus[1])
@@ -244,13 +264,17 @@ def render_media(beats):
             kind = "video"
         else:
             dst = outdir / f"b{n:02}.jpg"
-            im = crop_image(src, dst, box["w"], box["h"], focus, fit)
+            im = crop_image(src, dst, box["w"], box["h"], focus, fit, plan.get("zoom", 1.0))
             kind = "image"
         bg = outdir / f"b{n:02}_bg.jpg"
         backdrop_from(im, bg)
+        third_party = bool(a.get("character")) or str(a.get("rights_status") or "").startswith(("review", "user_supplied")) \
+            or any(x in str(a.get("provider")) for x in ("anilist", "jikan", "local_vetted"))
         beat["media"] = {"src": str(dst.relative_to(PUBLIC)), "kind": kind, "fit": "cover",
                          "backdrop": str(bg.relative_to(PUBLIC)),
-                         "credit": plan.get("credit", a.get("credit"))}
+                         "credit": plan.get("credit", a.get("credit")),
+                         # anime images get the red media frame (handoff), stock/photos the white one
+                         "frame": "red" if third_party else "white"}
 
 
 # ---------------------------------------------------------------- captions
@@ -343,6 +367,28 @@ def prepare_sfx(narration_out):
     return events
 
 
+def voice_envelope(wav_path, total, fps=30):
+    """0-1 loudness per video frame from the mastered narration (drives the voice orb)."""
+    import numpy as np
+    with wave.open(str(wav_path), "rb") as f:
+        sr, ch, n = f.getframerate(), f.getnchannels(), f.getnframes()
+        data = np.frombuffer(f.readframes(n), dtype=np.int16).astype(np.float32) / 32768.0
+    if ch > 1:
+        data = data.reshape(-1, ch).mean(axis=1)
+    hop = sr / fps
+    env = []
+    for k in range(int(math.ceil(total * fps))):
+        seg = data[int(k * hop): int((k + 1) * hop)]
+        rms = float(np.sqrt(np.mean(seg ** 2))) if len(seg) else 0.0
+        db = 20 * math.log10(rms + 1e-9)
+        env.append(round(max(0.0, min(1.0, (db + 45) / 33)), 3))
+    smooth = []
+    for v in env:  # fast attack, slower release
+        prev = smooth[-1] if smooth else 0.0
+        smooth.append(round(v if v > prev else prev * 0.8 + v * 0.2, 3))
+    return smooth
+
+
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     if GENERATED.exists():
@@ -370,7 +416,9 @@ def main():
     for w in words:
         by_line.setdefault(w.get("line", 0), []).append(w)
 
-    beats = build_beats(story, starts, total, by_line)
+    captions = caption_chunks(words, total)
+    chunk_starts = [c["start"] for c in captions]
+    beats = build_beats(story, starts, total, by_line, chunk_starts)
     render_media(beats)
     props_beats = []
     for n, b in enumerate(beats):
@@ -402,10 +450,10 @@ def main():
         out["annotations"] = ann
         props_beats.append(out)
 
-    captions = caption_chunks(words, total)
     sfx = prepare_sfx(narration)
     props = {"durationSeconds": total, "theme": story.get("theme", "tech"), "beats": props_beats,
-             "captions": captions, "sfxEvents": sfx, "narration": "generated/narration.wav"}
+             "captions": captions, "sfxEvents": sfx, "narration": "generated/narration.wav",
+             "voiceEnv": voice_envelope(narration, total)}
     (REMOTION / "props.json").write_text(json.dumps(props, indent=2))
     (ROOT / "output/beats.json").write_text(json.dumps({"beats": props_beats, "captions": captions, "sfx": sfx,
                                                         "narration_lufs": lufs, "line_starts": starts}, indent=2))

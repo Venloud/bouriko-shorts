@@ -104,6 +104,10 @@ def render_lines(story):
     cfg = dict(CONFIG.get("elevenlabs", {}))
     # A story can ask for its own delivery (JJK = more energy) without touching the tech default.
     cfg["voice_settings"] = {**cfg.get("voice_settings", {}), **(story.get("voice_settings") or {})}
+    for k in ("model_id", "model_fallbacks"):  # a story may pin its model (JJK: eleven_v4 only)
+        if k in story.get("elevenlabs", {}):
+            cfg[k] = story["elevenlabs"][k]
+    allow_fallback = story.get("voice_fallback", True)
     engine = os.getenv("BOURIKO_VOICE_ENGINE", CONFIG.get("voice_engine", "elevenlabs")).lower()
     report = None
     if engine == "elevenlabs":
@@ -114,6 +118,8 @@ def render_lines(story):
                 f"credits_used={report.get('credits_used', 0)} cache_hit={report['cache_hit']}")
         except el.SkipElevenLabs as e:
             reason = str(e)
+            if not allow_fallback:
+                raise SystemExit(f"VOICE BLOCKED: {reason}")
             if "credits too low" in reason:
                 try:
                     from notify import notify_text
@@ -123,8 +129,12 @@ def render_lines(story):
             report = None
             words, report = kokoro(story, "ElevenLabs skipped: " + reason)
         except Exception as e:  # noqa: BLE001  any API/alignment failure -> still ship a voice
+            if not allow_fallback:
+                raise SystemExit(f"VOICE BLOCKED: {type(e).__name__}: {str(e)[:300]}")
             words, report = kokoro(story, f"ElevenLabs failed: {str(e)[:200]}")
     else:
+        if not allow_fallback:
+            raise SystemExit(f"VOICE BLOCKED: voice_engine={engine}, but this story requires ElevenLabs")
         words, report = kokoro(story, f"voice_engine={engine}")
 
     manifest = [f"file '{(AUDIO / f'{i:02}.wav').resolve()}'" for i in range(len(story["lines"]))]
