@@ -133,8 +133,8 @@ const BeatView: React.FC<{beat: Beat; theme: Theme}> = ({beat, theme}) => {
           <Annotations items={beat.annotations} t={t} w={box.w} h={box.h} theme={theme} />
         )}
         {beat.media?.credit && (
-          <div style={{position: 'absolute', left: 18, bottom: 14, padding: '4px 12px', borderRadius: 8,
-            background: 'rgba(0,0,0,.55)', color: 'rgba(255,255,255,.8)', fontFamily: FONT, fontWeight: 700, fontSize: 18}}>
+          <div style={{position: 'absolute', left: 16, bottom: 14, maxWidth: Math.min(260, box.w / 2 - 70), padding: '4px 10px', borderRadius: 8,
+            background: 'rgba(0,0,0,.6)', color: 'rgba(255,255,255,.85)', fontFamily: FONT, fontWeight: 700, fontSize: 16, lineHeight: 1.25}}>
             {beat.media.credit}
           </div>
         )}

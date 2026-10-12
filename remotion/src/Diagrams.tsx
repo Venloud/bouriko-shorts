@@ -200,15 +200,19 @@ const Methods: React.FC<Ctx> = ({w, h, p, theme, t, params}) => {
 // ---------- generic ----------
 const Keyword: React.FC<Ctx> = ({w, h, p, theme, params}) => {
   const lines: string[] = params?.lines || [params?.text || ''];
+  const size = params?.size || 96;
+  const gap = size * 1.25;
+  const top = h * 0.5 - ((lines.length - 1) * gap) / 2; // vertically centred in the box
+  const under = top + (lines.length - 1) * gap + size * 0.55;
   return (
     <g>
       {lines.map((l, i) => (
         <g key={i} opacity={p(i, 0.2)} transform={`translate(0 ${(1 - p(i, 0.25)) * 40})`}>
-          <Txt x={w / 2} y={h * 0.42 + i * 120 - (lines.length - 1) * 60} size={params?.size || 96} color={i === (params?.accentLine ?? -1) ? theme.accent : '#fff'}>{l}</Txt>
+          <Txt x={w / 2} y={top + i * gap} size={Math.min(size, (w * 0.92) / (Math.max(1, l.length) * 0.68))} color={i === (params?.accentLine ?? -1) ? theme.accent : '#fff'}>{l}</Txt>
         </g>
       ))}
-      <line x1={w * 0.18} y1={h * 0.42 + lines.length * 60 + 20} x2={w * 0.82} y2={h * 0.42 + lines.length * 60 + 20} stroke={params?.color || theme.accent} strokeWidth={14} strokeLinecap="round" {...stroke(w * 0.64, p(lines.length - 1 + 1, 0.4))} />
-      {params?.sub && <Txt x={w / 2} y={h * 0.42 + lines.length * 60 + 110} size={40} color={theme.muted} o={p(lines.length, 0.3)}>{params.sub}</Txt>}
+      <line x1={w * 0.18} y1={under} x2={w * 0.82} y2={under} stroke={params?.color || theme.accent} strokeWidth={14} strokeLinecap="round" {...stroke(w * 0.64, p(lines.length, 0.4))} />
+      {params?.sub && <Txt x={w / 2} y={under + 90} size={40} color={theme.muted} o={p(lines.length, 0.3)}>{params.sub}</Txt>}
     </g>
   );
 };
@@ -309,10 +313,10 @@ const Rule100: React.FC<Ctx> = ({w, h, p, on, theme, t, steps, params}) => {
   const k = on(0) ? clamp01((t - steps[0]) / 1.0) : 0;
   return (
     <g>
-      <Txt x={w / 2} y={h * 0.2} size={150} color="#fff" o={p(0, 0.2)}>{`${Math.round(100 * easeOut(k))}`}</Txt>
-      <Txt x={w / 2} y={h * 0.27} size={40} color={theme.accent} spacing={6} o={p(0, 0.2)}>POINTS SPENT</Txt>
-      <Card x={w * 0.1} y={h * 0.36} w={w * 0.8} h={h * 0.3} s={p(1, 0.3)} theme={theme}>
-        <Txt x={w * 0.4} y={h * 0.1} size={40} color={theme.accent} spacing={4}>NEW RULE</Txt>
+      <Txt x={w / 2} y={h * 0.17} size={150} color="#fff" o={p(0, 0.2)}>{`${Math.round(100 * easeOut(k))}`}</Txt>
+      <Txt x={w / 2} y={h * 0.23} size={40} color={theme.accent} spacing={6} o={p(0, 0.2)}>POINTS SPENT</Txt>
+      <Card x={w * 0.1} y={h * 0.3} w={w * 0.8} h={h * 0.34} s={p(1, 0.3)} theme={theme}>
+        <Txt x={w * 0.4} y={h * 0.09} size={44} color={theme.accent} spacing={4}>NEW RULE</Txt>
         {(params?.rule || ['PLAYERS MAY TRANSFER', 'POINTS TO EACH OTHER']).map((l: string, i: number) => (
           <Txt key={i} x={w * 0.4} y={h * (0.165 + i * 0.05)} size={38} weight={800} o={p(1, 0.3 + i * 0.15)}>{l}</Txt>
         ))}
