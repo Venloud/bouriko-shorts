@@ -397,7 +397,7 @@ const Loophole: React.FC<Ctx> = ({w, h, p, on, theme, params}) => {
       </Card>
       {on(1) && (
         <g opacity={p(1, 0.2)}>
-          <rect x={w * 0.07} y={h * (0.2 + hl * 0.088) - 46} width={w * 0.86} height={68} rx={14} fill="none" stroke={theme.warn} strokeWidth={7} {...stroke(2000, p(1, 0.5))} />
+          <rect x={w * 0.07} y={h * 0.04 + h * (0.2 + hl * 0.088) - 46} width={w * 0.86} height={68} rx={14} fill="none" stroke={theme.warn} strokeWidth={7} {...stroke(2000, p(1, 0.5))} />
         </g>
       )}
     </g>
