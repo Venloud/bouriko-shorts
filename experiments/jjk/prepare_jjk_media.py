@@ -203,7 +203,7 @@ def main():
                 spec = story["assets"].get(b["asset"], {})
                 rec = resolved.get(b["asset"])
                 if spec.get("fandom") or (rec or {}).get("reference"):
-                    row.update(kind="reference_image", reference=spec.get("label"))
+                    row.update(kind="reference_image", reference=spec.get("label") or (rec or {}).get("reference"))
                 else:
                     row.update(kind="character_image", character=spec.get("character") or (rec or {}).get("character"))
                 if rec:
@@ -243,11 +243,19 @@ def main():
     }
     (OUT / "jjk_media_plan.json").write_text(json.dumps(report, indent=2) + "\n")
     md = ["# JJK Culling Game: media plan", "", f"Script: {story.get('script_version')}", "",
-          "| line | beat | shows | source | sha256 | rights | status |", "|---|---|---|---|---|---|---|"]
+          "| line | beat | narration (starts at word) | shows | source | sha256 | rights | status |",
+          "|---|---|---|---|---|---|---|---|"]
     for r in plan:
         shows = r.get("character") or r.get("reference") or f"graphic: {r.get('diagram')}"
         src = r.get("source_url") or r.get("provider")
-        md.append(f"| {r['line']} | {r['beat']} | {shows} | {src} | {(r.get('sha256') or '')[:12]} | {r.get('rights_status')} | {r['status']} |")
+        sha = (r.get("sha256") or "")[:12]
+        if r.get("paired_with"):
+            shows += f" + {r['paired_with']['character']}"
+            src += f" + {r['paired_with']['source_url']}"
+            sha += f" + {(r['paired_with']['sha256'] or '')[:12]}"
+        words = r["narration"].split()
+        said = " ".join(words[r["starts_at_word"]:r["starts_at_word"] + 6])
+        md.append(f"| {r['line']} | {r['beat']} | {said}... | {shows} | {src} | {sha} | {r.get('rights_status')} | {r['status']} |")
     md += ["", "## Missing / flagged", *([f"- {m}" for m in missing] or ["- none"]),
            "", "## Footage", f"- {report['footage_note']}", "", "## Rights", f"- {report['rights_note']}"]
     if failures:
