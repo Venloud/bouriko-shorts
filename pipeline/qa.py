@@ -63,7 +63,7 @@ def visual_checks(story, d, hard, report):
     for a, b in zip(beats, beats[1:]):
         if a["key"] == b["key"]:
             hard.append(f"same shot twice in a row at {b['start']:.1f}s ({b['key'][:50]})")
-    long = [b for b in beats if b["end"] - b["start"] > bmax + 0.5]
+    long = [b for b in beats if b["end"] - b["start"] > bmax + 0.5 and not b.get("hold")]
     short = [b for b in beats if b["end"] - b["start"] < bmin - 0.6 and b is not beats[-1]]
     for b in long:
         hard.append(f"beat {b['start']:.1f}-{b['end']:.1f}s is {b['end'] - b['start']:.1f}s (> {bmax}s)")
@@ -89,8 +89,15 @@ def visual_checks(story, d, hard, report):
         crossed = [t for t in cuts if c["start"] + 0.06 < t < c["end"] - 0.06 and t < c["words"][-1]["end"]]
         if crossed:
             hard.append(f"caption '{' '.join(w['text'] for w in c['words'])}' spans a scene cut at {crossed[0]:.2f}s")
-    if len(sfx) > int(AU.get("max_sfx", 8)):
-        hard.append(f"{len(sfx)} SFX (max {AU.get('max_sfx', 8)})")
+    max_sfx = int(story.get("max_sfx", AU.get("max_sfx", 8)))
+    if len(sfx) > max_sfx:
+        hard.append(f"{len(sfx)} SFX (max {max_sfx})")
+    reactions = data.get("reactions", [])
+    if len(reactions) > int(story.get("max_reactions", 5)):
+        hard.append(f"{len(reactions)} meme/reaction stickers (max {story.get('max_reactions', 5)})")
+    for r in reactions:
+        if any(b.get("hold") for b in beats if b["start"] <= r["time"] < b["end"]):
+            hard.append("reaction sticker over the held final question")
     words = json.loads((ROOT / "output/word_timings.json").read_text())
     for e in sfx:
         s0, s1 = e["time"], e["time"] + e.get("length", 0.3)
@@ -115,6 +122,9 @@ def main():
     ]))
     lo, hi = CONFIG["target_seconds"]
     print(f"DURATION DATA: {d:.2f}s (target {lo}-{hi}s)")
+    story0 = json.loads((ROOT / "output/story.json").read_text())
+    if story0.get("max_seconds") and d > float(story0["max_seconds"]):
+        raise SystemExit(f"QA FAILED: {d:.2f}s is over this story's {story0['max_seconds']}s limit (YouTube Shorts < 180 s)")
     if not (lo <= d <= hi + 0.5):
         print(f"QA INFO: {d:.2f}s is outside the target window; continuing for visual review.")
 

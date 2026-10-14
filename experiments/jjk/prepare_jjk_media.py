@@ -106,6 +106,25 @@ def resolve_character(session, name, aliases, failures):
     return None
 
 
+def fandom_image(session, spec):
+    """Reference screenshot from a Fandom wiki (e.g. Fortnite, Squid Game). Review only."""
+    domain, title = spec.split("|", 1)
+    r = session.get(f"https://{domain}/api.php", params={"action": "query", "format": "json", "titles": title,
+                                                          "prop": "imageinfo", "iiprop": "url|mime"}, timeout=30)
+    r.raise_for_status()
+    page = next(iter(r.json()["query"]["pages"].values()))
+    info = (page.get("imageinfo") or [{}])[0]
+    if not info.get("url"):
+        raise RuntimeError(f"no file {title} on {domain}")
+    img = session.get(info["url"], timeout=60)
+    img.raise_for_status()
+    if not img.headers.get("content-type", "").startswith("image/"):
+        raise RuntimeError("not an image")
+    return img.content, {"provider": f"fandom:{domain}", "image_url": info["url"],
+                         "source_url": f"https://{domain}/wiki/{title.replace(' ', '_')}",
+                         "rights_status": "review_only_unlicensed"}
+
+
 def footage_index():
     """Owner-supplied clips only. Each needs a sidecar: {source, episode, start, end, shows, rights_status}."""
     clips = []
@@ -128,6 +147,22 @@ def main():
     failures, resolved = [], {}
 
     for key, spec in story.get("assets", {}).items():
+        if "fandom" in spec:
+            try:
+                raw, meta = fandom_image(session, spec["fandom"])
+            except Exception as e:  # noqa: BLE001
+                failures.append({"asset": key, "error": f"{type(e).__name__}: {str(e)[:200]}"})
+                print(f"MISSING: reference {key}: {e}")
+                continue
+            digest = hashlib.sha256(raw).hexdigest()
+            ext = ".png" if raw[:4] == b"\x89PNG" else ".jpg"
+            target = img_dir / f"{key}_{digest[:12]}{ext}"
+            target.write_bytes(raw)
+            resolved[key] = {"path": str(target.relative_to(ROOT)), "kind": "image", "reference": spec.get("label"),
+                             "sha256": digest, "credit": f"{spec.get('label', key)} · fandom · review only", **meta}
+            print(f"REFERENCE {key}: {meta['source_url']} sha256={digest[:12]}")
+            time.sleep(0.5)
+            continue
         if "character" not in spec:
             continue
         name = spec["character"]
@@ -158,16 +193,25 @@ def main():
         for k, b in enumerate(line.get("beats", [])):
             row = {"line": i, "beat": k, "starts_at_word": b.get("word", 0),
                    "narration": line["text"], "tts_text": line.get("tts_text")}
+            if b.get("asset2"):
+                rec2 = resolved.get(b["asset2"], {})
+                row["paired_with"] = {"character": rec2.get("character"), "source_url": rec2.get("source_url"),
+                                      "sha256": rec2.get("sha256"), "rights_status": rec2.get("rights_status")}
+                if not rec2:
+                    missing.append(f"line {i} beat {k}: no verified image for {b['asset2']}")
             if b.get("asset"):
                 spec = story["assets"].get(b["asset"], {})
                 rec = resolved.get(b["asset"])
-                row.update(kind="character_image", character=spec.get("character") or (rec or {}).get("character"))
+                if spec.get("fandom") or (rec or {}).get("reference"):
+                    row.update(kind="reference_image", reference=spec.get("label"))
+                else:
+                    row.update(kind="character_image", character=spec.get("character") or (rec or {}).get("character"))
                 if rec:
                     row.update(status="ok", provider=rec["provider"], source_url=rec["source_url"],
                                image_url=rec.get("image_url"), sha256=rec["sha256"], rights_status=rec["rights_status"])
                 else:
                     row.update(status="MISSING")
-                    missing.append(f"line {i} beat {k}: no verified image for {row['character']}")
+                    missing.append(f"line {i} beat {k}: no verified image for {row.get('character') or row.get('reference')}")
             else:
                 d = b.get("diagram", {})
                 row.update(kind="motion_graphic", diagram=d.get("name"), params=d.get("params"),
@@ -175,14 +219,15 @@ def main():
             plan.append(row)
 
     # Named characters that are spoken but have no image beat are flagged too.
-    names = {spec["character"]: key for key, spec in {**story.get("assets", {}), **{k: {"character": v["character"]} for k, v in resolved.items()}}.items() if "character" in spec}
+    names = {v["character"]: k for k, v in resolved.items() if v.get("character")}
     for i, line in enumerate(story["lines"]):
-        shown = {story["assets"].get(b.get("asset"), {}).get("character") or resolved.get(b.get("asset"), {}).get("character")
-                 for b in line.get("beats", []) if b.get("asset")}
+        shown = {resolved.get(b.get(k), {}).get("character")
+                 for b in line.get("beats", []) for k in ("asset", "asset2") if b.get(k)}
+        spoken = {re.sub(r"'s$", "", re.sub(r"[^A-Za-z']", "", w)) for w in line["text"].split()}
         for full in names:
-            first = full.split()[0]
-            if re.search(r"\b" + re.escape(first) + r"\b", line["text"]) and full not in shown:
-                missing.append(f"line {i}: '{first}' is spoken but no {full} image is on screen in this line")
+            hit = [tok for tok in full.split() if len(tok) > 3 and tok in spoken]
+            if hit and full not in shown:
+                missing.append(f"line {i}: '{hit[0]}' is spoken but no {full} image is on screen in this line")
 
     footage = footage_index()
     report = {
@@ -200,7 +245,7 @@ def main():
     md = ["# JJK Culling Game: media plan", "", f"Script: {story.get('script_version')}", "",
           "| line | beat | shows | source | sha256 | rights | status |", "|---|---|---|---|---|---|---|"]
     for r in plan:
-        shows = r.get("character") or f"diagram: {r.get('diagram')}"
+        shows = r.get("character") or r.get("reference") or f"graphic: {r.get('diagram')}"
         src = r.get("source_url") or r.get("provider")
         md.append(f"| {r['line']} | {r['beat']} | {shows} | {src} | {(r.get('sha256') or '')[:12]} | {r.get('rights_status')} | {r['status']} |")
     md += ["", "## Missing / flagged", *([f"- {m}" for m in missing] or ["- none"]),
@@ -210,7 +255,7 @@ def main():
     (OUT / "jjk_media_plan.md").write_text("\n".join(md) + "\n")
     story_path.write_text(json.dumps(story, indent=2) + "\n")
     print(f"JJK MEDIA PLAN: {len(plan)} beats, {len(resolved)} character images, {len(missing)} missing")
-    if any("no verified image" in m for m in missing):
+    if any("no verified image" in m or "is spoken but no" in m for m in missing):
         raise SystemExit("JJK MEDIA FAILED: a named-character beat has no verified image; see output/jjk_media_plan.md")
 
 

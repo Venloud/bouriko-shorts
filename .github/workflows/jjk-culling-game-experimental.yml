@@ -1,13 +1,9 @@
 name: JJK Culling Game Experimental Render
 # Manual only. Never publishes. Runs the branch you dispatch it on (Actions > Run workflow > branch).
+# V4: the owner-approved Young Jamal mp3 is used as-is (0 ElevenLabs credits); word timings come
+# from the committed forced alignment (experiments/jjk/v4_alignment.json).
 on:
   workflow_dispatch:
-    inputs:
-      stage:
-        description: "full = test line then full render; voice_test = only the 10-15 s name test"
-        type: choice
-        options: [full, voice_test]
-        default: full
 permissions:
   contents: read
 jobs:
@@ -27,55 +23,27 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg espeak-ng
+          sudo apt-get install -y -qq ffmpeg
           pip install -q requests numpy pillow
-      - name: Restore ElevenLabs audio cache
-        uses: actions/cache/restore@v4
-        with:
-          path: cache/tts
-          key: jjk-tts-${{ github.run_id }}
-          restore-keys: jjk-tts-
-      - name: Fact-locked JJK story (script v2) + fact ledger
+      - name: Script V4 + visual plan + fact ledger
         run: python experiments/jjk/jjk_story.py
-      - name: ElevenLabs 10-15 s name test (Kogane, Kenjaku, Megumi, Tsumiki, Yuji, Tengen, shikigami)
-        env:
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-          BOURIKO_ELEVENLABS_API_KEY: ${{ secrets.BOURIKO_ELEVENLABS_API_KEY }}
-        run: python experiments/jjk/voice_test.py
-      - name: JJK media director (character images + media plan, replaces pipeline/media.py)
-        if: ${{ inputs.stage != 'voice_test' }}
+      - name: Supplied narration (as-is) + forced-alignment word timings
+        run: python experiments/jjk/import_audio.py
+      - name: JJK media director (characters + references, media plan)
         run: python experiments/jjk/prepare_jjk_media.py
       - name: Apply visual plan
-        if: ${{ inputs.stage != 'voice_test' }}
         run: python pipeline/visual_plan.py --strict
-      - name: Narration (ElevenLabs eleven_v4, no fallback)
-        if: ${{ inputs.stage != 'voice_test' }}
-        env:
-          BOURIKO_ELEVENLABS_API_KEY: ${{ secrets.BOURIKO_ELEVENLABS_API_KEY }}
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-        run: python pipeline/voice.py
-      - name: Save ElevenLabs audio cache
-        if: ${{ always() }}
-        uses: actions/cache/save@v4
-        with:
-          path: cache/tts
-          key: jjk-tts-${{ github.run_id }}
-      - name: SFX
-        if: ${{ inputs.stage != 'voice_test' }}
+      - name: SFX (hits/whooshes on reveals, never on a word)
         run: python pipeline/sfx.py
-      - name: Prepare Remotion props (beats, captions, mastering)
-        if: ${{ inputs.stage != 'voice_test' }}
+      - name: Prepare Remotion props (beats, captions, music bed, mastering)
         run: python pipeline/remotion_prepare.py
       - name: Render
-        if: ${{ inputs.stage != 'voice_test' }}
         working-directory: remotion
         run: |
           npm install --no-audit --no-fund
           npm run render
-      - name: QA (+ 8 review frames)
-        if: ${{ inputs.stage != 'voice_test' }}
-        run: python pipeline/qa.py --frames 8
+      - name: QA (+ 10 review frames)
+        run: python pipeline/qa.py --frames 10
       - name: Upload review artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
@@ -92,6 +60,4 @@ jobs:
             output/voice_report.json
             output/beats.json
             output/word_timings.json
-            output/voice_test/voice_test.mp3
-            output/voice_test/report.json
           if-no-files-found: warn

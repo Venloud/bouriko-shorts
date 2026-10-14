@@ -186,7 +186,7 @@ def apply(story, plan):
 
 def resolve_all(story):
     specs = story.get("assets") or {}
-    used = {b.get("asset") for line in story["lines"] for b in line.get("beats", []) if b.get("asset")}
+    used = {b.get(k) for line in story["lines"] for b in line.get("beats", []) for k in ("asset", "asset2") if b.get(k)}
     resolved, failures = {}, []
     for name in sorted(used):
         if name not in specs:

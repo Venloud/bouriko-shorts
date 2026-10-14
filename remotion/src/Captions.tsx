@@ -3,12 +3,12 @@ import {useCurrentFrame, useVideoConfig} from 'remotion';
 import {CAPTION_LANE, FONT, SAFE, Theme} from './theme';
 
 export type CaptionWord = {text: string; start: number; end: number};
-export type CaptionChunk = {start: number; end: number; words: CaptionWord[]};
+export type CaptionChunk = {start: number; end: number; words: CaptionWord[]; whole_sentence?: boolean};
 
-// 3-5 words per chunk (built in pipeline/remotion_prepare.py from real word timings),
-// the word being spoken is highlighted. Always centred inside the caption lane, which sits
-// inside the TikTok safe box (x 120-960) and below the evidence box.
-export const Captions: React.FC<{chunks: CaptionChunk[]; theme: Theme}> = ({chunks, theme}) => {
+// Plain, clean captions: white text, 3-5 words (built in pipeline/remotion_prepare.py from real
+// word timings), the word being spoken gets a soft highlight. No bouncing, no colour cycling,
+// no bursts. Centred in the caption lane, inside the TikTok safe box, below the evidence box.
+export const Captions: React.FC<{chunks: CaptionChunk[]; theme: Theme}> = ({chunks}) => {
   const frame = useCurrentFrame();
   const {fps} = useVideoConfig();
   const t = frame / fps;
@@ -16,8 +16,7 @@ export const Captions: React.FC<{chunks: CaptionChunk[]; theme: Theme}> = ({chun
   if (!chunk) return null;
 
   const chars = chunk.words.reduce((n, w) => n + w.text.length + 1, 0);
-  const size = Math.round(Math.max(52, Math.min(74, 82 - Math.max(0, chars - 12) * 1.5)));
-  const enter = Math.min(1, (t - chunk.start) * fps / 4);
+  const size = Math.round(Math.max(50, Math.min(68, 76 - Math.max(0, chars - 12) * 1.4)));
   let active = -1;
   chunk.words.forEach((w, i) => {
     if (t >= w.start - 0.02) active = i;
@@ -37,42 +36,26 @@ export const Captions: React.FC<{chunks: CaptionChunk[]; theme: Theme}> = ({chun
         pointerEvents: 'none',
       }}
     >
-      <div
-        style={{
-          textAlign: 'center',
-          fontFamily: FONT,
-          fontWeight: 900,
-          fontSize: size,
-          lineHeight: 1.08,
-          letterSpacing: -1,
-          textTransform: 'uppercase',
-          transform: `scale(${0.92 + 0.08 * enter})`,
-          opacity: 0.4 + 0.6 * enter,
-        }}
-      >
-        {chunk.words.map((w, i) => {
-          const isActive = i === active;
-          // A real space after every word (the highlighted one too), so the scaled active word
-          // never touches its neighbour.
-          return (
-            <React.Fragment key={i}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  padding: '0 6px',
-                  color: isActive ? theme.accent : '#FFFFFF',
-                  WebkitTextStroke: '9px #05070A',
-                  paintOrder: 'stroke fill',
-                  textShadow: '0 6px 18px rgba(0,0,0,.7)',
-                  transform: isActive ? 'scale(1.06) translateY(-3px)' : 'none',
-                }}
-              >
-                {w.text}
-              </span>
-              {i < chunk.words.length - 1 ? ' ' : null}
-            </React.Fragment>
-          );
-        })}
+      <div style={{textAlign: 'center', fontFamily: FONT, fontWeight: 800, fontSize: size, lineHeight: 1.18, color: '#FFFFFF'}}>
+        {chunk.words.map((w, i) => (
+          <React.Fragment key={i}>
+            <span
+              style={{
+                padding: '0 8px',
+                borderRadius: 10,
+                background: i === active ? 'rgba(255,255,255,0.22)' : 'transparent',
+                WebkitTextStroke: '6px rgba(5,7,10,0.9)',
+                paintOrder: 'stroke fill',
+                textShadow: '0 4px 14px rgba(0,0,0,.6)',
+                boxDecorationBreak: 'clone',
+                WebkitBoxDecorationBreak: 'clone',
+              }}
+            >
+              {w.text}
+            </span>
+            {i < chunk.words.length - 1 ? ' ' : null}
+          </React.Fragment>
+        ))}
       </div>
     </div>
   );

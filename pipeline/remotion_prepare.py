@@ -130,7 +130,7 @@ def auto_segments(ls, le, words):
 
 def snap_to_chunk(t, chunk_starts, lo, hi, prev):
     """Move a scene cut onto the start of a caption chunk, so no caption phrase spans a cut."""
-    cands = [c for c in chunk_starts if lo <= c < hi and c > prev + 0.8]
+    cands = [c for c in chunk_starts if lo <= c < hi - 0.8 and c > prev + 0.8]
     if not cands:
         return t
     best = min(cands, key=lambda c: abs(c - t))
@@ -159,6 +159,9 @@ def build_beats(story, line_starts, total, words_by_line, chunk_starts=()):
                 if b.get("asset"):
                     beat["asset"] = resolved[b["asset"]]
                     beat["asset_name"] = b["asset"]
+                    if b.get("asset2") and b["asset2"] in resolved:  # two characters side by side
+                        beat["asset2"] = resolved[b["asset2"]]
+                        beat["asset_name"] += "+" + b["asset2"]
                 else:
                     beat["diagram"] = b["diagram"]
                 beats.append(beat)
@@ -262,14 +265,26 @@ def render_media(beats):
             im = Image.open(frame).convert("RGB")
             beat["video_start"] = round(start, 3)
             kind = "video"
+        elif "asset2" in beat:
+            from PIL import Image as _I
+            half = (box["w"] - 12) // 2
+            left = crop_image(src, outdir / f"b{n:02}_l.jpg", half, box["h"], focus, fit, plan.get("zoom", 1.0))
+            right = crop_image(ROOT / beat["asset2"]["local_path"], outdir / f"b{n:02}_r.jpg", half, box["h"],
+                               tuple(plan.get("focus2") or (0.5, 0.5)), plan.get("fit2", "cover"), plan.get("zoom2", 1.0))
+            im = _I.new("RGB", (box["w"], box["h"]), (255, 59, 107))
+            im.paste(left, (0, 0))
+            im.paste(right, (box["w"] - half, 0))
+            dst = outdir / f"b{n:02}.jpg"
+            im.save(dst, quality=92)
+            kind = "image"
         else:
             dst = outdir / f"b{n:02}.jpg"
             im = crop_image(src, dst, box["w"], box["h"], focus, fit, plan.get("zoom", 1.0))
             kind = "image"
         bg = outdir / f"b{n:02}_bg.jpg"
         backdrop_from(im, bg)
-        third_party = bool(a.get("character")) or str(a.get("rights_status") or "").startswith(("review", "user_supplied")) \
-            or any(x in str(a.get("provider")) for x in ("anilist", "jikan", "local_vetted"))
+        # red media frame = anime character art (handoff); references/stock keep the white frame
+        third_party = bool(a.get("character")) or any(x in str(a.get("provider")) for x in ("anilist", "jikan", "local_vetted"))
         beat["media"] = {"src": str(dst.relative_to(PUBLIC)), "kind": kind, "fit": "cover",
                          "backdrop": str(bg.relative_to(PUBLIC)),
                          "credit": plan.get("credit", a.get("credit")),
@@ -339,7 +354,47 @@ def caption_chunks(words, total):
 
 
 # ---------------------------------------------------------------- sfx
-def prepare_sfx(narration_out):
+def prepare_music(story, narration_out, total):
+    """Light music bed, looped to length, ~22 dB under the voice and ducked further while he talks."""
+    cfg = story.get("music") or {}
+    if not cfg.get("enabled"):
+        return None
+    src = ROOT / cfg.get("file", "assets/music/investigations_kevin_macleod.mp3")
+    if not src.exists():
+        log(f"MUSIC: {src} missing, no bed")
+        return None
+    meta_path = src.with_name(src.name + ".json")
+    meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    looped = GENERATED / "music_loop.wav"
+    length = media_dur(src)
+    reps = int(total // max(1.0, length - 2)) + 1
+    # loop with a 2 s crossfade between repeats, then fade in/out
+    inputs = []
+    for _ in range(reps):
+        inputs += ["-i", str(src)]
+    chain = "[0:a]"
+    filt = []
+    for k in range(1, reps):
+        filt.append(f"{chain}[{k}:a]acrossfade=d=2[a{k}]")
+        chain = f"[a{k}]"
+    filt.append(f"{chain}atrim=0:{total:.3f},afade=t=in:d=1.5,afade=t=out:st={max(0, total - 2.5):.3f}:d=2.5,aresample=48000,aformat=channel_layouts=stereo[m]")
+    ff(*inputs, "-filter_complex", ";".join(filt), "-map", "[m]", str(looped))
+    voice_mean = mean_volume(narration_out) or -24.0
+    music_mean = mean_volume(looped) or -20.0
+    gain = (voice_mean - float(cfg.get("below_voice_db", 22))) - music_mean
+    out = GENERATED / "music.wav"
+    # sidechain ducking: the narration pushes the bed down a further few dB while he speaks
+    ff("-i", str(looped), "-i", str(narration_out), "-filter_complex",
+       f"[0:a]volume={gain:.2f}dB[m];[1:a]apad,atrim=0:{total:.3f}[k];"
+       f"[m][k]sidechaincompress=threshold=0.03:ratio=4:attack=20:release=300[d]",
+       "-map", "[d]", "-ar", "48000", "-ac", "2", str(out))
+    looped.unlink(missing_ok=True)
+    log(f"MUSIC: {src.name} bed at {gain:.1f} dB gain (~{cfg.get('below_voice_db', 22)} dB under the voice), ducked")
+    return {"file": str(out.relative_to(PUBLIC)), "source": str(src.relative_to(ROOT)), "credit": meta.get("credit"),
+            "license": meta.get("license"), "gain_db": round(gain, 2)}
+
+
+def prepare_sfx(narration_out, max_sfx=None):
     path = ROOT / "output/sfx_events.json"
     if not path.exists():
         return []
@@ -348,7 +403,7 @@ def prepare_sfx(narration_out):
     outdir = GENERATED / "sfx"
     outdir.mkdir(parents=True, exist_ok=True)
     events = []
-    for n, e in enumerate(json.loads(path.read_text())[: int(AU.get("max_sfx", 8))]):
+    for n, e in enumerate(json.loads(path.read_text())[: int(max_sfx or AU.get("max_sfx", 8))]):
         src = ROOT / e["file"]
         if not src.exists():
             continue
@@ -404,7 +459,9 @@ def main():
         starts.append(round(cursor, 4))
         concat.append(f"file '{wav.resolve().as_posix()}'")
         cursor += wav_dur(wav)
-    total = round(cursor, 4)
+    audio_total = round(cursor, 4)
+    # optional hold after the last word (JJK: pause on the final question so viewers can read it)
+    total = round(audio_total + float(story.get("audio_tail_seconds", 0)), 4)
     concat_path = ROOT / "output/audio_concat.txt"
     concat_path.write_text("\n".join(concat) + "\n")
     narration = GENERATED / "narration.wav"
@@ -425,7 +482,8 @@ def main():
         plan = b["plan"]
         words_i = by_line.get(b["line"], [])
         out = {"start": round(b["start"], 3), "end": round(b["end"], 3), "line": b["line"],
-               "kind": "media" if "media" in b else "diagram", "tag": plan.get("tag")}
+               "kind": "media" if "media" in b else ("orb" if plan.get("orb") else "diagram"),
+               "tag": plan.get("tag"), "hold": bool(plan.get("hold"))}
         if "media" in b:
             out["media"] = b["media"]
             out["box"] = b["box"]
@@ -450,13 +508,25 @@ def main():
         out["annotations"] = ann
         props_beats.append(out)
 
-    sfx = prepare_sfx(narration)
+    sfx = prepare_sfx(narration, int(story.get("max_sfx", AU.get("max_sfx", 8))))
+
+    def at(cue):  # (line, word index) -> seconds
+        lw = by_line.get(cue["line"], [])
+        return round(lw[max(0, min(len(lw) - 1, int(cue.get("word", 0))))]["start"], 3) if lw else 0.0
+
+    effects = [{"type": e["type"], "time": at(e), "dur": e.get("dur", 0.8)} for e in story.get("effects", [])]
+    reactions = [{"text": r["text"], "time": at(r), "dur": float(r.get("dur", 1.4))} for r in story.get("reactions", [])]
+    music = prepare_music(story, narration, total)
     props = {"durationSeconds": total, "theme": story.get("theme", "tech"), "beats": props_beats,
              "captions": captions, "sfxEvents": sfx, "narration": "generated/narration.wav",
-             "voiceEnv": voice_envelope(narration, total)}
+             "voiceEnv": voice_envelope(narration, total), "effects": effects, "reactions": reactions}
+    if music:
+        props.update(music=music["file"], musicVolume=1)
     (REMOTION / "props.json").write_text(json.dumps(props, indent=2))
     (ROOT / "output/beats.json").write_text(json.dumps({"beats": props_beats, "captions": captions, "sfx": sfx,
-                                                        "narration_lufs": lufs, "line_starts": starts}, indent=2))
+                                                        "effects": effects, "reactions": reactions, "music": music,
+                                                        "narration_lufs": lufs, "line_starts": starts,
+                                                        "audio_seconds": audio_total, "total_seconds": total}, indent=2))
     log(f"Remotion prepared: {len(props_beats)} beats, {len(captions)} caption chunks, {len(sfx)} SFX, {total:.2f}s")
 
 

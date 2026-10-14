@@ -225,7 +225,7 @@ def main():
             if effect:
                 candidates.append((start, effect, "keyword rule"))
 
-    cap = int(CONFIG.get("audio", {}).get("max_sfx", 8))
+    cap = int(story.get("max_sfx", CONFIG.get("audio", {}).get("max_sfx", 8)))
     events = place(candidates, words, total, sources, max_events=cap)
     (ROOT / "output/sfx_events.json").write_text(json.dumps(events, indent=2))
     (ROOT / "output/sfx_sources.json").write_text(json.dumps(sources, indent=2))

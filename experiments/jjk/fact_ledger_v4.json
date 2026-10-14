@@ -1,0 +1,250 @@
+{
+ "script": "V4 (owner-approved)",
+ "checked": "2026-10-14",
+ "claims": [
+  {
+   "line": 1,
+   "claim": "Culling Game has no winner / not a tournament",
+   "status": "supported",
+   "evidence": "No victory condition; the game runs until players are dead and serves Kenjaku's ritual (Great Merger section; ch. 145 pp. 4-6, 11-12, ep. 50).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#About_the_Culling_Game",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 1,
+   "claim": "Camping can get you killed",
+   "status": "supported",
+   "evidence": "Rule 8: a score unchanged for 19 days = cursed technique removal, which Tengen confirms ends the player's life (ch. 146 pp. 4-5).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 2,
+   "claim": "After Shibuya the story moves to the Culling Game",
+   "status": "supported",
+   "evidence": "The Culling Game immediately follows the Shibuya Incident.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 3,
+   "claim": "Kenjaku absorbed Mahito",
+   "status": "supported",
+   "evidence": "Kenjaku absorbed Mahito with Cursed Spirit Manipulation at the end of Shibuya (ch. 136, ep. 47).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Kenjaku's_Preparations",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 4,
+   "claim": "He used Mahito's Idle Transfiguration to activate people he had prepared for years",
+   "status": "supported",
+   "evidence": "Extracted Idle Transfiguration and remotely activated non-sorcerers he had marked (ch. 136).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Kenjaku's_Preparations",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 5,
+   "claim": "Some ordinary humans awakened cursed techniques",
+   "status": "supported",
+   "evidence": "Second type: people who gained cursed techniques as new sorcerers (ch. 136).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Kenjaku's_Preparations",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 6,
+   "claim": "Others became vessels for ancient sorcerers turned into cursed objects centuries ago",
+   "status": "supported",
+   "evidence": "First type: vessels who ingested cursed objects, the remains of sorcerers Kenjaku contracted with over a thousand years ago (ch. 136).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Kenjaku's_Preparations",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 7,
+   "claim": "Think Yuji and Sukuna",
+   "status": "supported (analogy)",
+   "evidence": "The wiki compares the first type directly to Yuji Itadori (a vessel who ingested a cursed object).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Kenjaku's_Preparations",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 9,
+   "claim": "Japan divided into ten colonies surrounded by barriers",
+   "status": "supported",
+   "evidence": "Ten barrier colonies connected by barriers in a line down Japan (Hokkaido excluded).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Colonies",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 12,
+   "claim": "Kills generate cursed energy for Kenjaku's goal of merging humanity with Tengen",
+   "status": "supported (wording)",
+   "evidence": "Cursed energy generated inside the colonies feeds the ritual merging Tengen with the people of Japan (ch. 202 pp. 12-17). Script says 'humanity'; canon says the people of Japan (Kenjaku's aim is to evolve humanity).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Great_Merger",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 14,
+   "claim": "There are eight original rules",
+   "status": "supported",
+   "evidence": "Original rules 1-8.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 15,
+   "claim": "Awakened players have 19 days to declare participation",
+   "status": "supported",
+   "evidence": "Rule 1.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 16,
+   "claim": "Refusing = cursed technique removal, which can kill you",
+   "status": "supported",
+   "evidence": "Rule 2; Tengen confirms removal would end the player's life (ch. 146 pp. 4-5).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 17,
+   "claim": "Walking into a colony makes you a player",
+   "status": "supported",
+   "evidence": "Rule 3.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 18,
+   "claim": "Kogane is a shikigami that works like the game interface",
+   "status": "supported",
+   "evidence": "Shikigami known as Kogane serve as the game interface (ch. 146 pp. 2-8).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#About_the_Culling_Game",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 19,
+   "claim": "Kogane explains rules, tracks points, announces updates",
+   "status": "supported",
+   "evidence": "Kogane gives the rules/messages, shows player info and points (rule 9) and announces added rules (ch. 158).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Plan_to_Rescue_Tsumiki_Fushiguro",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 21,
+   "claim": "Points are earned by killing other players",
+   "status": "supported",
+   "evidence": "Rule 4.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 22,
+   "claim": "Sorcerer generally 5 points; non-sorcerer 1",
+   "status": "supported",
+   "evidence": "Rule 5 ('as a general rule').",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 24,
+   "claim": "100 points can be spent to propose a new rule",
+   "status": "supported",
+   "evidence": "Rule 6.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 27,
+   "claim": "Existing rules can't be deleted",
+   "status": "supported",
+   "evidence": "Rules cannot be subtracted (ch. 146 p. 8).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 27,
+   "claim": "Game master can reject rules that seriously interfere with the game's continuation",
+   "status": "supported (paraphrase)",
+   "evidence": "Rule 7: the game master must accept a new rule as long as it doesn't have a long-lasting effect on the game. On screen the card uses the canon wording 'long-lasting effect'.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 29,
+   "claim": "Score unchanged for 19 days = technique can be removed",
+   "status": "supported",
+   "evidence": "Rule 8.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 31,
+   "claim": "You can't win by being the last person alive",
+   "status": "supported (interpretation)",
+   "evidence": "There is no win condition in the rules; the game exists for the ritual.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Great_Merger",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 33,
+   "claim": "Every battle helps fuel Kenjaku's ritual",
+   "status": "supported",
+   "evidence": "Cursed energy from deaths in the colonies fills the ritual (ch. 202, 209-210).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Great_Merger",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 36,
+   "claim": "Yuji and Megumi get involved because of Tsumiki",
+   "status": "supported",
+   "evidence": "Megumi learns his sister is ensnared; he and Yuji form a plan to rescue her (ch. 144-146).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Plan_to_Rescue_Tsumiki_Fushiguro",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 37,
+   "claim": "They try to save her without killing innocent people",
+   "status": "supported",
+   "evidence": "Plan: pressure a 100-point player to add rules so they can avoid killing people (ch. 158).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Plan_to_Rescue_Tsumiki_Fushiguro",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 39,
+   "claim": "With Higuruma's help a rule allowing point transfers is added",
+   "status": "supported",
+   "evidence": "Rule 10, added by Hiromi Higuruma with 100 points (ch. 167 p. 1).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 40,
+   "claim": "Transfers let you keep your score changing without killing",
+   "status": "supported",
+   "evidence": "Offsetting rule 8 by exchanging points was the stated plan (ch. 158).",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Plan_to_Rescue_Tsumiki_Fushiguro",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 42,
+   "claim": "It doesn't end the ritual",
+   "status": "supported",
+   "evidence": "The merger could only be stopped later; rule 10 doesn't end the game.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Great_Merger",
+   "source_tier": "fan wiki citing manga chapter/page"
+  },
+  {
+   "line": 44,
+   "claim": "You can't simply cancel the game; a new rule must be accepted",
+   "status": "supported",
+   "evidence": "Rules can't be subtracted; rule 7 acceptance condition.",
+   "source": "https://jujutsu-kaisen.fandom.com/wiki/Culling_Game#Rules",
+   "source_tier": "fan wiki citing manga chapter/page"
+  }
+ ],
+ "notes": [
+  "Two wording notes, no factual errors: line 12 'humanity' vs canon 'people of Japan'; line 27 paraphrases rule 7 (screen shows canon wording).",
+  "Fortnite/Squid Game lines are analogies, not claims about JJK."
+ ]
+}

@@ -16,6 +16,7 @@ export type DiagramProps = {
 
 type Ctx = DiagramProps & {p: (i: number, d?: number) => number; on: (i: number) => boolean};
 
+const fit_ = (text: string, width: number, max: number) => Math.min(max, width / (Math.max(1, text.length) * 0.68));
 const stroke = (len: number, p: number) => ({strokeDasharray: len, strokeDashoffset: len * (1 - clamp01(p))});
 
 const Txt: React.FC<{x: number; y: number; size?: number; color?: string; children: React.ReactNode; anchor?: 'start' | 'middle' | 'end'; o?: number; weight?: number; spacing?: number}> = ({x, y, size = 40, color = '#fff', children, anchor = 'middle', o = 1, weight = 900, spacing = 0}) => (
@@ -324,9 +325,9 @@ const Rule100: React.FC<Ctx> = ({w, h, p, on, theme, t, steps, params}) => {
       </Card>
       {on(2) && (
         <g transform={`translate(${w / 2} ${h * 0.8}) rotate(-4) scale(${1.4 - 0.4 * p(2, 0.2)})`} opacity={p(2, 0.15)}>
-          <rect x={-w * 0.42} y={-70} width={w * 0.84} height={140} rx={16} fill="none" stroke={theme.warn} strokeWidth={8} />
-          <Txt x={0} y={-12} size={36} color={theme.warn}>ONLY IF IT HAS NO</Txt>
-          <Txt x={0} y={40} size={36} color={theme.warn}>LONG-LASTING EFFECT</Txt>
+          <rect x={-w * 0.42} y={-70} width={w * 0.84} height={140} rx={16} fill="none" stroke={params?.stamp ? theme.danger : theme.warn} strokeWidth={8} />
+          <Txt x={0} y={-12} size={36} color={params?.stamp ? theme.danger : theme.warn}>{(params?.stamp || ['ONLY IF IT HAS NO'])[0]}</Txt>
+          <Txt x={0} y={40} size={36} color={params?.stamp ? theme.danger : theme.warn}>{(params?.stamp || ['', 'LONG-LASTING EFFECT'])[1]}</Txt>
         </g>
       )}
     </g>
@@ -350,68 +351,58 @@ const ScoreFreeze: React.FC<Ctx> = (ctx) => {
   );
 };
 
+// Colonies feed cursed energy into the merger. No names written inside circles: labels sit beside.
 const EnergyMerge: React.FC<Ctx> = ({w, h, p, on, theme, t}) => {
-  const src = Array.from({length: 10}).map((_, i) => [w * 0.12, h * (0.08 + i * 0.09)] as [number, number]);
-  const hub: [number, number] = [w * 0.55, h * 0.5];
-  const out: [number, number] = [w * 0.86, h * 0.5];
+  const src = Array.from({length: 10}).map((_, i) => [w * 0.14, h * (0.12 + i * 0.075)] as [number, number]);
+  const hub: [number, number] = [w * 0.66, h * 0.46];
   return (
     <g>
+      <Txt x={w * 0.14} y={h * 0.07} size={30} color={theme.accent2} o={p(0)}>10 COLONIES</Txt>
       {src.map(([x, y], i) => (
         <g key={i} opacity={p(0, 0.3)}>
-          <circle cx={x} cy={y} r={16} fill={theme.accent2} />
+          <rect x={x - 26} y={y - 18} width={52} height={36} rx={8} fill={theme.panel} stroke={theme.accent2} strokeWidth={4} />
           {on(1) && (() => {
             const k = (t * 0.9 + i / 10) % 1;
             return (
               <g>
-                <line x1={x} y1={y} x2={hub[0]} y2={hub[1]} stroke={theme.accent2} strokeOpacity={0.35} strokeWidth={4} />
-                <circle cx={x + (hub[0] - x) * k} cy={y + (hub[1] - y) * k} r={8} fill={theme.warn} />
+                <line x1={x + 26} y1={y} x2={hub[0]} y2={hub[1]} stroke={theme.accent2} strokeOpacity={0.35} strokeWidth={4} />
+                <circle cx={x + 26 + (hub[0] - x - 26) * k} cy={y + (hub[1] - y) * k} r={8} fill={theme.warn} />
               </g>
             );
           })()}
         </g>
       ))}
-      <Txt x={w * 0.12} y={h * 0.99} size={30} color={theme.accent2} o={p(0)}>COLONIES</Txt>
-      <g opacity={p(1, 0.3)}>
-        <circle cx={hub[0]} cy={hub[1]} r={95} fill={theme.panel} stroke={theme.accent} strokeWidth={8} style={{filter: `drop-shadow(0 0 24px ${theme.accent})`}} />
-        <Txt x={hub[0]} y={hub[1] + 14} size={38}>TENGEN</Txt>
-        <Txt x={hub[0]} y={hub[1] - 120} size={30} color={theme.warn}>CURSED ENERGY</Txt>
+      <g opacity={p(1, 0.3)} transform={`translate(${hub[0]} ${hub[1]}) rotate(${t * 40})`}>
+        {[0, 60, 120].map((r) => <rect key={r} x={-80} y={-80} width={160} height={160} rx={18} fill="none" stroke={theme.accent} strokeWidth={6} transform={`rotate(${r})`} style={{filter: `drop-shadow(0 0 12px ${theme.accent})`}} />)}
       </g>
-      {on(2) && (
-        <g opacity={p(2, 0.3)}>
-          <line x1={hub[0] + 95} y1={hub[1]} x2={out[0] - 70} y2={out[1]} stroke={theme.accent} strokeWidth={10} {...stroke(300, p(2, 0.5))} />
-          <circle cx={out[0]} cy={out[1]} r={70} fill={theme.accent} />
-          <Txt x={out[0]} y={out[1] + 12} size={30} color="#06121F">JAPAN</Txt>
-          <Pill x={w * 0.62} y={h * 0.82} text="the merger" color={theme.accent} s={p(2, 0.3)} />
-        </g>
-      )}
+      <Txt x={hub[0]} y={hub[1] + 150} size={36} color={theme.warn} o={p(1, 0.3)}>CURSED ENERGY</Txt>
+      {on(2) && <Pill x={hub[0]} y={h * 0.86} text="merge humanity with tengen" color={theme.accent} s={p(2, 0.3)} size={28} />}
     </g>
   );
 };
 
 const Loophole: React.FC<Ctx> = ({w, h, p, on, theme, params}) => {
-  const rules: string[] = params?.rules || ['1  JOIN WITHIN 19 DAYS', '2  OR LOSE YOUR TECHNIQUE', '5  SORCERER 5 · NON-SORCERER 1', '6  100 POINTS = NEW RULE', '8  NO CHANGE IN 19 DAYS = REMOVAL'];
+  const rules: string[] = params?.rules || ['1  JOIN WITHIN 19 DAYS', '2  OR LOSE YOUR TECHNIQUE', '3  ENTER A COLONY = PLAYER', '4  SCORE BY KILLING PLAYERS',
+    '5  SORCERER 5 · NON-SORCERER 1', '6  100 POINTS = NEW RULE', '7  GM ACCEPTS UNLESS LONG-LASTING', '8  NO CHANGE IN 19 DAYS = REMOVAL'];
+  const hl: number = params?.highlight ?? (rules.length - 1);
   return (
     <g>
-      <Card x={w * 0.06} y={h * 0.05} w={w * 0.88} h={h * 0.86} s={p(0, 0.3)} theme={theme}>
-        <Txt x={w * 0.44} y={h * 0.11} size={44} color={theme.accent} spacing={6}>THE RULES</Txt>
+      <Card x={w * 0.04} y={h * 0.04} w={w * 0.92} h={h * 0.9} s={p(0, 0.3)} theme={theme}>
+        <Txt x={w * 0.46} y={h * 0.1} size={fit_(params?.title || 'THE RULES', w * 0.85, 46)} color={theme.accent} spacing={3}>{params?.title || 'THE RULES'}</Txt>
         {rules.map((r, i) => (
-          <g key={i} opacity={p(0, 0.3 + i * 0.12)}>
-            <Txt x={w * 0.06} y={h * (0.22 + i * 0.13)} size={34} anchor="start" weight={800}>{r}</Txt>
+          <g key={i} opacity={p(0, 0.25 + i * 0.08)}>
+            <Txt x={w * 0.05} y={h * (0.2 + i * 0.088)} size={fit_(r, w * 0.82, 32)} anchor="start" weight={800}>{r}</Txt>
           </g>
         ))}
       </Card>
       {on(1) && (
         <g opacity={p(1, 0.2)}>
-          <rect x={w * 0.08} y={h * (0.22 + (rules.length - 0.2) * 0.13) - 50} width={w * 0.84} height={80} rx={14} fill="none" stroke={theme.warn} strokeWidth={8} {...stroke(2000, p(1, 0.5))} />
-          <Pill x={w * 0.5} y={h * 0.95} text="find the loophole" color={theme.warn} s={p(1, 0.3)} />
+          <rect x={w * 0.07} y={h * (0.2 + hl * 0.088) - 46} width={w * 0.86} height={68} rx={14} fill="none" stroke={theme.warn} strokeWidth={7} {...stroke(2000, p(1, 0.5))} />
         </g>
       )}
     </g>
   );
 };
-
-// Font size that fits `text` in `width` (Montserrat 900 is ~0.68 em per character).
-const fit = (text: string, width: number, max: number) => Math.min(max, width / (Math.max(1, text.length) * 0.68));
 
 const FanProposal: React.FC<Ctx> = ({w, h, p, on, theme, params}) => {
   const tape = params?.tape || 'FAN PROPOSAL · NOT CANON';
@@ -423,17 +414,17 @@ const FanProposal: React.FC<Ctx> = ({w, h, p, on, theme, params}) => {
     <g>
       <g transform={`translate(${w / 2} ${h * 0.08}) rotate(-2)`} opacity={p(0, 0.15)}>
         <rect x={-w * 0.44} y={-44} width={w * 0.88} height={88} fill={theme.warn} />
-        <Txt x={0} y={14} size={fit(tape, w * 0.8, 40)} color="#111">{tape}</Txt>
+        <Txt x={0} y={14} size={fit_(tape, w * 0.8, 40)} color="#111">{tape}</Txt>
       </g>
       <Card x={w * 0.08} y={h * 0.18} w={cardW} h={h * 0.22} s={p(0, 0.3)} theme={theme} border={theme.accent2}>
-        {top.map((l, i) => <Txt key={i} x={cardW / 2} y={h * (0.09 + i * 0.07)} size={fit(l, cardW * 0.88, 46)}>{l}</Txt>)}
+        {top.map((l, i) => <Txt key={i} x={cardW / 2} y={h * (0.09 + i * 0.07)} size={fit_(l, cardW * 0.88, 46)}>{l}</Txt>)}
       </Card>
       <line x1={w / 2} y1={h * 0.42} x2={w / 2} y2={h * 0.5} stroke={theme.accent} strokeWidth={12} strokeLinecap="round" {...stroke(100, p(1, 0.3))} />
       {p(1, 0.3) > 0.9 && <polygon points={`${w / 2},${h * 0.53} ${w / 2 - 26},${h * 0.49} ${w / 2 + 26},${h * 0.49}`} fill={theme.accent} />}
       <Card x={w * 0.08} y={h * 0.55} w={cardW} h={h * 0.16} s={p(1, 0.3)} theme={theme}>
-        <Txt x={cardW / 2} y={h * 0.1} size={fit(bottom, cardW * 0.88, 48)} color={theme.accent}>{bottom}</Txt>
+        <Txt x={cardW / 2} y={h * 0.1} size={fit_(bottom, cardW * 0.88, 48)} color={theme.accent}>{bottom}</Txt>
       </Card>
-      {on(2) && <Txt x={w / 2} y={h * 0.86} size={fit(ask, w * 0.9, 60)} color={theme.warn} o={p(2, 0.2)}>{ask}</Txt>}
+      {on(2) && <Txt x={w / 2} y={h * 0.86} size={fit_(ask, w * 0.9, 60)} color={theme.warn} o={p(2, 0.2)}>{ask}</Txt>}
     </g>
   );
 };
@@ -446,7 +437,7 @@ const TitleCard: React.FC<Ctx> = ({w, h, p, theme, params}) => {
         const s = p(i, 0.18);
         return (
           <g key={i} transform={`translate(${w / 2} ${h * 0.4 + i * 130}) scale(${1.6 - 0.6 * s})`} opacity={s}>
-            <Txt x={0} y={0} size={params?.size || 110} color={i === (params?.accentLine ?? 0) ? theme.accent2 : '#fff'}>{l}</Txt>
+            <Txt x={0} y={0} size={fit_(l, w * 0.9, params?.size || 110)} color={i === (params?.accentLine ?? 0) ? theme.accent2 : '#fff'}>{l}</Txt>
           </g>
         );
       })}
@@ -455,7 +446,7 @@ const TitleCard: React.FC<Ctx> = ({w, h, p, theme, params}) => {
   );
 };
 
-const Awakening: React.FC<Ctx> = ({w, h, p, theme, t}) => {
+const Awakening: React.FC<Ctx> = ({w, h, p, theme, t, params}) => {
   const glow = 0.6 + 0.4 * Math.sin(t * 4);
   return (
     <g>
@@ -466,10 +457,63 @@ const Awakening: React.FC<Ctx> = ({w, h, p, theme, t}) => {
           <circle key={i} r={170 + i * 45 + (t * 60) % 45} fill="none" stroke={theme.accent} strokeWidth={6} opacity={(0.6 - i * 0.14) * p(1, 0.4) * glow} />
         ))}
       </g>
-      <Pill x={w / 2} y={h * 0.08} text="cursed technique: awakened" color={theme.accent} s={p(1, 0.25)} />
+      <Pill x={w / 2} y={h * 0.08} text={params?.pill || 'cursed technique: awakened'} color={theme.accent} s={p(1, 0.25)} size={30} />
     </g>
   );
 };
+
+
+// Gears = the ritual machine; battles feed it. Labels outside the gears, never inside.
+const Gear: React.FC<{x: number; y: number; r: number; teeth: number; rot: number; color: string; fill: string}> = ({x, y, r, teeth, rot, color, fill}) => {
+  const pts: string[] = [];
+  for (let i = 0; i < teeth * 2; i++) {
+    const a = (Math.PI * i) / teeth;
+    const rr = i % 2 === 0 ? r : r * 0.82;
+    pts.push(`${Math.cos(a) * rr},${Math.sin(a) * rr}`);
+  }
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${rot})`}>
+      <polygon points={pts.join(' ')} fill={fill} stroke={color} strokeWidth={6} strokeLinejoin="round" style={{filter: `drop-shadow(0 0 10px ${color})`}} />
+      <circle r={r * 0.28} fill="none" stroke={color} strokeWidth={6} />
+    </g>
+  );
+};
+
+const CogMachine: React.FC<Ctx> = ({w, h, p, on, theme, t, params}) => {
+  const spin = t * 50;
+  const you = params?.you && on(2);
+  return (
+    <g opacity={p(0, 0.3)}>
+      <Gear x={w * 0.38} y={h * 0.42} r={170} teeth={12} rot={spin} color={theme.accent} fill={theme.panel} />
+      <Gear x={w * 0.7} y={h * 0.3} r={110} teeth={9} rot={-spin * 1.5 + 10} color={theme.accent2} fill={theme.panel} />
+      <Gear x={w * 0.72} y={h * 0.6} r={90} teeth={8} rot={-spin * 1.9} color={you ? theme.warn : theme.accent} fill={theme.panel} />
+      {you && <Pill x={w * 0.72} y={h * 0.74} text="you" color={theme.warn} s={p(2, 0.25)} />}
+      {on(1) && Array.from({length: 6}).map((_, i) => {
+        const k = (t * 0.8 + i / 6) % 1;
+        return <circle key={i} cx={w * 0.05 + k * w * 0.2} cy={h * (0.42 + Math.sin(i) * 0.05)} r={10} fill={theme.danger} opacity={1 - k} />;
+      })}
+      {on(1) && <Txt x={w * 0.12} y={h * 0.3} size={28} color={theme.danger}>BATTLES</Txt>}
+      <Txt x={w / 2} y={h * 0.86} size={fit_(params?.label || 'THE RITUAL', w * 0.9, 50)} color="#fff">{params?.label || 'THE RITUAL'}</Txt>
+    </g>
+  );
+};
+
+// Final question: held on screen so viewers can read and think.
+const Question: React.FC<Ctx> = ({w, h, p, theme, params}) => {
+  const lines: string[] = params?.lines || ['WHAT WOULD YOU DO?'];
+  return (
+    <g>
+      {params?.chip && <Pill x={w / 2} y={h * 0.16} text={params.chip} color={theme.warn} s={p(0, 0.25)} size={36} />}
+      {lines.map((l, i) => (
+        <g key={i} opacity={p(i + 1, 0.25)}>
+          <Txt x={w / 2} y={h * (0.4 + i * 0.12)} size={fit_(l, w * 0.9, 84)} color={i === lines.length - 1 ? theme.accent : '#fff'}>{l}</Txt>
+        </g>
+      ))}
+    </g>
+  );
+};
+
+const OrbOnly: React.FC<Ctx> = () => null;
 
 const REGISTRY: Record<string, React.FC<Ctx>> = {
   hook_question: HookQuestion,
@@ -488,6 +532,9 @@ const REGISTRY: Record<string, React.FC<Ctx>> = {
   fan_proposal: FanProposal,
   title_card: TitleCard,
   awakening: Awakening,
+  cog_machine: CogMachine,
+  question: Question,
+  orb_only: OrbOnly,
 };
 
 export const DIAGRAM_NAMES = Object.keys(REGISTRY);
