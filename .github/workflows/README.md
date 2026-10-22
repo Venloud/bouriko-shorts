@@ -1,11 +1,11 @@
 # Bouriko workflows
 
-Audited 2026-10-22. Production publishing runs only from `daily.yml` and `breaking-tech.yml`.
+Audited 2026-10-22. **`daily.yml` builds and uploads an artifact but does not publish.** `breaking-tech.yml` can publish immediately if a qualifying news item is detected. The workflow documentation describes configured behavior, not a successful real-world post.
 
 | Workflow | Trigger | Role |
 |---|---|---|
-| `daily.yml` | schedule 15:00 UTC, manual | Production: script, media, voice, SFX, Remotion render, publish |
-| `breaking-tech.yml` | schedule every 5 min, manual | Production: breaking tech watch |
+| `daily.yml` | schedule 15:00 UTC, manual | Daily build, render, QA and artifact upload only, no publishing step |
+| `breaking-tech.yml` | schedule every 5 min, manual | Breaking tech watch; may generate, render and publish immediately when news is detected |
 | `build.yml` | manual | Build a video without the daily schedule |
 | `connect-tiktok.yml` | manual | One-time TikTok OAuth connection |
 | `yt_check.yml` | manual | YouTube refresh-token check |
@@ -18,3 +18,5 @@ The JJK experiment workflows stay isolated until the JJK video is approved. The 
 (ElevenLabs narrator, visual plans, diagram and caption components) is on `claude/inspiring-goodall-8iff31`.
 It is not merged because it makes ElevenLabs the only narrator, and `docs/JJK_PHASE1_STATUS.md` on that branch
 records an unresolved ElevenLabs HTTP 402 blocker. See the Vandam integration debt register.
+
+Safety note: Reviewing this README does not authorize altering these scheduled workflows or changing publishing behavior. Check each workflow source and current run evidence before any automation changes.
