@@ -275,23 +275,32 @@ def main():
         selection = None
         pillar, topic = pick()
     script_path = None
-    inbox_files = sorted((ROOT / "inbox").glob("*.txt"))
-    for p in inbox_files:
-        if "kairo" in p.name.lower():
+    if os.getenv("BOURIKO_USE_INBOX") == "1":
+        selection = None
+        files = sorted((ROOT / "inbox").glob("*.txt"))
+        candidates = []
+        for p in files:
+            content = p.read_text(encoding="utf-8", errors="replace").strip()
+            if content and not p.name.startswith("_"):
+                candidates.append((p, content))
+        if not candidates:
+            raise RuntimeError("Inbox requested, but no .txt submission exists in inbox/")
+        if len(candidates) != 1:
+            raise RuntimeError("Inbox must contain exactly one active .txt submission to avoid choosing the wrong video.")
+        p, content = candidates[0]
+        if content.splitlines()[0].strip().upper() == "SCRIPT":
             script_path = p
-            break
-    if not script_path:
-        for p in inbox_files:
-            lines = p.read_text(errors="ignore").splitlines()
-            if lines and lines[0].strip().upper() == "SCRIPT":
-                script_path = p
-                break
-            if lines and lines[0].strip().upper() == "TOPIC" and len(lines) > 1:
-                topic = lines[1].strip()
-
-    if rotation_index is not None:
-        # Explicit test rotation has priority over stale inbox scripts.
-        script_path = None
+        elif content.splitlines()[0].strip().upper() == "TOPIC":
+            topic = "\n".join(content.splitlines()[1:]).strip()
+            pillar = "explainer"
+            if not topic:
+                raise RuntimeError("TOPIC submission has no content")
+        else:
+            raise RuntimeError("Inbox files must start with SCRIPT or TOPIC on the first line")
+        log("INBOX REQUEST: " + p.name)
+    elif rotation_index is None:
+        # Keep normal topic rotation when inbox is not explicitly selected.
+        pass
     if script_path:
         story = exact_story(script_path)
     else:
