@@ -1,9 +1,8 @@
 name: JJK Culling Game Experimental Render
-on:
-  workflow_dispatch:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/jjk-culling-game-experimental.yml']
+# OWNER LOCK: workflow disabled; use build.yml for manual video tests.
+on: {}
+# previous triggers retained only in version history
+#  workflow_dispatch:
 permissions:
   contents: read
 jobs:
