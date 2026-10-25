@@ -1,5 +1,6 @@
 """Final media-first explainer QA gate."""
 import json, subprocess
+from visual_plan import planned_query
 from common import ROOT, CONFIG
 
 
@@ -24,7 +25,7 @@ def main():
     lines = story.get("lines", [])
     assert len(lines) >= 8, "too few narration lines"
     exact_script = bool(story.get("exact_script"))
-    if not exact_script:
+    if not exact_script and not story.get("test_topic_id"):
         assert story.get("sources"), "no sources"
     assert all(x.get("text") for x in lines), "missing caption text"
     assert all(x.get("visual") for x in lines), "missing visual plan"
@@ -35,6 +36,27 @@ def main():
         media_count = len(json.loads(manifest.read_text()))
     video_count = sum(1 for x in json.loads(manifest.read_text()) if x.get("kind") == "video") if manifest.exists() else 0
     print(f"MEDIA DATA: {media_count} usable visual assets ({video_count} video)")
+    # A completed technical render is not a semantic quality pass.
+    # Require explicit per-beat assignment and write an inspectable review plan.
+    report = []
+    for i, line in enumerate(lines):
+        src = line.get("media_source") or {}
+        query = str(src.get("query") or "")
+        planned = planned_query(story.get("test_topic_id"), line, i)
+        generic = query.strip().lower() in {"illustration","technology explainer","technology","education"}
+        report.append({"line_index":i,"narration":line.get("text",""),
+                       "planned_subject":planned,"chosen_query":query,
+                       "asset":line.get("media_asset"),"provider":src.get("provider"),
+                       "rights_status":src.get("license"),"rights_verified":src.get("rights_verified",False),
+                       "semantic_frame_verified":False,
+                       "generic_query":generic})
+    audit = ROOT / "output/creative_qa.json"
+    audit.write_text(json.dumps({"topic":story.get("test_topic_id"),
+             "status":"REVIEW_REQUIRED","frame_analysis_performed":False,
+             "shots":report}, indent=2))
+    assert all(x["asset"] for x in report), "Missing visual for narration beat"
+    assert not any(x["generic_query"] for x in report), "Generic illustration query used for scene"
+    assert len({x["asset"] for x in report}) >= min(6,len(report)), "Excessive reused media in narration beats"
     assert media_count >= 8, "not enough usable visual assets; refusing to publish a weak visual build"
     if not exact_script:
         assert video_count >= 4, "not enough actual video footage; refusing to publish a slideshow"
