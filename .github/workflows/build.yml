@@ -64,7 +64,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: output/story.json
-          key: bouriko-story-${{ runner.os }}-${{ hashFiles('pipeline/script.py', 'config.json', 'data/topics.json', 'prompts/**', 'inbox/**') }}
+          key: bouriko-story-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('pipeline/script.py', 'config.json', 'data/topics.json', 'prompts/**', 'inbox/**') }}
 
       - name: System packages
         run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
@@ -92,7 +92,10 @@ jobs:
         if: ${{ inputs.fresh || !hashFiles('output/story.json') }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python pipeline/script.py
+        run: |
+          export BOURIKO_TEST_TOPIC_INDEX=$(( (GITHUB_RUN_NUMBER - 1) % 6 ))
+          echo "Bouriko test rotation index: $BOURIKO_TEST_TOPIC_INDEX"
+          python pipeline/script.py
 
       - name: Save story checkpoint
         if: ${{ success() && hashFiles('output/story.json') }}
@@ -109,7 +112,7 @@ jobs:
             output/story.json
             output/media
             output/media_manifest.json
-          key: bouriko-media-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/media.py') }}
+          key: bouriko-media-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/media.py') }}
 
       - name: Download free photos and videos
         if: ${{ inputs.fresh || !hashFiles('output/media_manifest.json') }}
@@ -138,7 +141,7 @@ jobs:
             output/audio
             output/word_timings.json
             output/audio_concat.txt
-          key: bouriko-voice-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/voice.py', 'config.json') }}
+          key: bouriko-voice-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/voice.py', 'config.json') }}
 
       - name: Generate narrator voice
         if: ${{ inputs.fresh || !hashFiles('output/word_timings.json') }}
@@ -164,7 +167,7 @@ jobs:
             output/sfx
             output/sfx_events.json
             output/sfx_sources.json
-          key: bouriko-sfx-${{ runner.os }}-${{ hashFiles('output/story.json', 'output/word_timings.json', 'pipeline/sfx.py') }}
+          key: bouriko-sfx-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'output/word_timings.json', 'pipeline/sfx.py') }}
 
       - name: Generate real stock SFX
         if: ${{ inputs.fresh || !hashFiles('output/sfx_events.json') }}
@@ -189,7 +192,7 @@ jobs:
           path: |
             remotion/public/generated
             remotion/props.json
-          key: bouriko-remotion-prep-${{ runner.os }}-${{ hashFiles('output/story.json', 'output/word_timings.json', 'output/sfx_events.json', 'pipeline/remotion_prepare.py') }}
+          key: bouriko-remotion-prep-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'output/word_timings.json', 'output/sfx_events.json', 'pipeline/remotion_prepare.py') }}
 
       - name: Prepare Remotion assets
         if: ${{ inputs.fresh || !hashFiles('remotion/props.json') }}
