@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "repository": "Venloud/bouriko-shorts",
+  "skills": [
+    "manim-video",
+    "remotion-video-creation",
+    "video-editing"
+  ],
+  "restrictions": "Preserve the established educational and visual styles and owner-approved narration. No paid generation or publishing.",
+  "upstream": "v2.2.3",
+  "memory": "Vandam canonical; no automatic observation or separate memory store"
+}
