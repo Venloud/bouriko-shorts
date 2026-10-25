@@ -74,7 +74,8 @@ jobs:
 
       - name: Python packages
         run: |
-          pip install -q requests google-api-python-client google-auth "kokoro==0.9.4" "spacy>=3.8,<3.9" "en-core-web-sm==3.8.0" soundfile numpy pillow google-genai yt-dlp
+          pip install -q requests google-api-python-client google-auth "kokoro==0.9.4" "spacy>=3.8,<3.9" soundfile numpy pillow google-genai yt-dlp
+          python -m spacy download en_core_web_sm
           python -m pip check
           python - <<'PY'
           import spacy
