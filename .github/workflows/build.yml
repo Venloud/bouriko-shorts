@@ -142,6 +142,7 @@ jobs:
             output/story.json
             output/media
             output/media_manifest.json
+            output/creative_qa.json
           key: bouriko-media-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/media.py') }}
 
       - name: Download free photos and videos
@@ -161,6 +162,7 @@ jobs:
             output/story.json
             output/media
             output/media_manifest.json
+            output/creative_qa.json
           key: bouriko-media-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/media.py') }}
 
       - name: Restore voice checkpoint
@@ -264,3 +266,4 @@ jobs:
             output/story.json
             output/word_timings.json
             output/media_manifest.json
+            output/creative_qa.json
