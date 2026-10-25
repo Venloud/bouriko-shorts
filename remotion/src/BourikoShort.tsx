@@ -7,7 +7,6 @@ import {
   staticFile,
   useCurrentFrame,
   Video,
-  interpolate,
   spring,
 } from "remotion";
 
@@ -48,78 +47,8 @@ const STRONG_WORDS = new Set([
   "hack", "warning", "important", "boom", "but", "because", "really",
 ]);
 
-const CaptionBurst = ({
-  active,
-  color,
-  intensity,
-}: {
-  active: boolean;
-  color: string;
-  intensity: number;
-}) => {
-  const frame = useCurrentFrame();
-  if (!active) return null;
-
-  const burst = spring({
-    frame,
-    fps: 30,
-    config: { damping: 10, stiffness: 230, mass: 0.55 },
-  });
-  const fade = interpolate(frame, [0, 5, 15, 25], [0, 1, 0.7, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const scale = interpolate(burst, [0, 1], [0.35, 1.25 + intensity * 0.35]);
-  const rotation = interpolate(frame, [0, 25], [-5, 8]);
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        pointerEvents: "none",
-        opacity: fade,
-        transform: `scale(${scale}) rotate(${rotation}deg)`,
-      }}
-    >
-      {Array.from({ length: 10 }).map((_, i) => {
-        const angle = i * 36;
-        const length = 95 + intensity * 35;
-        return (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              width: length,
-              height: 7,
-              borderRadius: 99,
-              background: color,
-              boxShadow: `0 0 12px ${color}`,
-              transform: `rotate(${angle}deg) translateX(150px)`,
-              transformOrigin: "left center",
-            }}
-          />
-        );
-      })}
-      <div
-        style={{
-          width: 24 + intensity * 12,
-          height: 24 + intensity * 12,
-          borderRadius: "50%",
-          border: `7px solid ${color}`,
-          boxShadow: `0 0 24px ${color}`,
-        }}
-      />
-    </div>
-  );
-};
-
 const Caption = ({
   text,
-  visual,
   duration,
 }: {
   text: string;
@@ -127,136 +56,33 @@ const Caption = ({
   duration: number;
 }) => {
   const frame = useCurrentFrame();
-  const words = text.trim().split(/\s+/).filter(Boolean);
+  const words = text.trim().split(/\\s+/).filter(Boolean);
   const elapsed = frame / 30;
-  const safeDuration = Math.max(0.5, duration);
-  const wordIndex = Math.min(
-    Math.max(0, words.length - 1),
-    Math.floor((elapsed / safeDuration) * words.length),
-  );
-  const chunkSize = words.length > 11 ? 4 : 3;
+  const wordIndex = Math.min(Math.max(0, words.length - 1),
+    Math.floor((elapsed / Math.max(duration, 0.2)) * words.length));
+  const chunkSize = 4;
   const chunkIndex = Math.floor(wordIndex / chunkSize);
   const chunk = words.slice(chunkIndex * chunkSize, chunkIndex * chunkSize + chunkSize);
-  const activeIndex = wordIndex % chunkSize;
-  const activeWord = (words[wordIndex] || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const strong = STRONG_WORDS.has(activeWord);
-  const label = (visual || "TECH").toUpperCase();
-
-  const palettes = ["#FFFFFF", "#FFD23F", "#2EA8FF", "#FF6B6B", "#7FF0C5", "#FF9F43"];
-  const positions = [
-    { top: 185, left: 55, right: 55 },
-    { top: 390, left: 80, right: 80 },
-    { top: 610, left: 55, right: 55 },
-    { top: 820, left: 90, right: 90 },
-    { bottom: 520, left: 55, right: 55 },
-    { bottom: 360, left: 80, right: 80 },
-    { bottom: 230, left: 55, right: 55 },
-    { top: 1040, left: 70, right: 70 },
-  ];
-  const sizes = [88, 102, 116, 96, 108, 92];
-  const styleSeed = text.length * 17 + chunkIndex * 31;
-  const paletteIndex = Math.abs(styleSeed) % palettes.length;
-  const positionIndex = Math.abs(styleSeed * 7) % positions.length;
-  const size = sizes[Math.abs(styleSeed * 11) % sizes.length];
-  const position = positions[positionIndex];
-  const captionColor = palettes[paletteIndex];
-  const activeColor = palettes[(paletteIndex + 2) % palettes.length];
-  const font = FONT_STYLES[Math.abs(styleSeed * 13) % FONT_STYLES.length];
-
-  const chunkStart = (chunkIndex * chunkSize / Math.max(1, words.length)) * safeDuration;
-  const chunkElapsed = Math.max(0, elapsed - chunkStart);
-  const wordWindow = safeDuration / Math.max(1, words.length);
-  const activeWordElapsed = chunkElapsed - activeIndex * wordWindow;
-  const activeFrame = Math.max(0, Math.round(activeWordElapsed * 30));
-  const pop = spring({
-    frame: activeFrame,
-    fps: 30,
-    config: {
-      damping: strong ? 8 : 12,
-      stiffness: strong ? 300 : 220,
-      mass: 0.5,
-    },
-  });
-  const punch = interpolate(pop, [0, 1], [0.72, strong ? 1.2 : 1.08]);
-  const shake = strong
-    ? Math.sin(activeFrame * 1.7) * Math.max(0, 1 - activeFrame / 14) * 5
-    : 0;
-  const burstActive = activeFrame < (strong ? 18 : 11);
-
+  const activeWord = wordIndex % chunkSize;
+  const chunkStart = (chunkIndex * chunkSize / Math.max(1,words.length)) * Math.max(duration,0.2);
+  const entryFrame = Math.max(0,Math.floor((elapsed-chunkStart)*30));
+  const settle = spring({frame:entryFrame,fps:30,config:{damping:22,stiffness:150,mass:0.7}});
   return (
-    <AbsoluteFill style={{ pointerEvents: "none" }}>
-      <div
-        style={{
-          position: "absolute",
-          top: 150,
-          left: 56,
-          padding: "9px 16px",
-          borderRadius: 999,
-          background: "rgba(20,20,20,.78)",
-          color: "#fff",
-          fontFamily: '"Arial Black", "DejaVu Sans", sans-serif',
-          fontSize: 24,
-          fontWeight: 900,
-          letterSpacing: 1.2,
-        }}
-      >
-        {label}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          ...position,
-          display: "flex",
-          justifyContent: "center",
-          width: "calc(100% - 110px)",
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            maxWidth: 1020,
-            textAlign: "center",
-            fontFamily: font.family,
-            fontWeight: font.weight,
-            fontSize: size,
-            lineHeight: 0.94,
-            letterSpacing: font.spacing,
-            WebkitTextStroke: "3px rgba(0,0,0,.9)",
-            textShadow: "0 6px 18px rgba(0,0,0,.85)",
-            transform: `rotate(${((chunkIndex % 3) - 1) * 0.7}deg)`,
-          }}
-        >
-          <CaptionBurst
-            active={burstActive}
-            color={activeColor}
-            intensity={strong ? 1 : 0}
-          />
-
-          {chunk.map((word, i) => {
-            const isActive = i === activeIndex;
-            const isStrong = isActive && STRONG_WORDS.has(
-              word.replace(/[^a-z0-9]/gi, "").toLowerCase(),
-            );
-            return (
-              <span
-                key={`${chunkIndex}-${i}`}
-                style={{
-                  display: "inline-block",
-                  marginRight: 14,
-                  color: isActive ? activeColor : captionColor,
-                  transform: isActive
-                    ? `translateY(${-6 * pop}px) translateX(${shake}px) scale(${punch}) rotate(${isStrong ? shake * 0.7 : 0}deg)`
-                    : "scale(1)",
-                  transition: "none",
-                  filter: isActive && isStrong ? `drop-shadow(0 0 12px ${activeColor})` : "none",
-                }}
-              >
-                {word}
-              </span>
-            );
-          })}
-        </div>
+    <AbsoluteFill style={{pointerEvents:"none"}}>
+      <div style={{
+        position:"absolute",bottom:345,left:72,right:72,
+        display:"flex",justifyContent:"center",alignItems:"center",
+        gap:12,flexWrap:"wrap",textAlign:"center",
+        fontFamily:'"DejaVu Sans", Arial, sans-serif',
+        fontWeight:800,fontSize:74,lineHeight:1.16,
+        textShadow:"0 3px 12px rgba(0,0,0,.95), 0 2px 3px #000",
+        transform:`translateY(${(1-settle)*16}px)`,opacity:Math.min(1,entryFrame/5)
+      }}>
+        {chunk.map((word,i)=>(
+          <span key={i} style={{color:i===activeWord?"#FFE18A":"#FFFFFF"}}>
+            {word}
+          </span>
+        ))}
       </div>
     </AbsoluteFill>
   );
