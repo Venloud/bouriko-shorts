@@ -1,0 +1,16 @@
+SCRIPT
+TITLE: How GPS Knows Where You Are
+TOPIC: GPS location and estimated arrival time
+PILLAR: explainer
+NARRATOR: Your phone can show a blue dot on a map, but how does it actually know where you are?
+NARRATOR: GPS satellites constantly transmit their positions and very precise time signals.
+NARRATOR: Your phone listens and estimates how far away the satellites are from the travel time of those signals.
+NARRATOR: It usually needs signals from at least four satellites to calculate a three-dimensional position and correct its clock.
+NARRATOR: Buildings and reflected signals can make the dot drift even when you're standing still.
+NARRATOR: But knowing your position is only the first half of navigation.
+NARRATOR: The estimated arrival time, or E T A, comes from a different calculation.
+NARRATOR: Navigation apps combine the roads on your route with traffic conditions, expected speeds, and historical patterns.
+NARRATOR: An accident ahead can raise your E T A even though the GPS satellites haven't changed.
+NARRATOR: If you take a different exit, the app recalculates the remaining route.
+NARRATOR: So GPS answers where am I, while routing software predicts how long the rest of the trip might take.
+NARRATOR: The blue dot is a measurement. The arrival time is a forecast.
