@@ -73,7 +73,19 @@ jobs:
         run: python -m compileall -q pipeline
 
       - name: Python packages
-        run: pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
+        run: |
+          pip install -q requests google-api-python-client google-auth "kokoro==0.9.4" "spacy>=3.8,<3.9" "en-core-web-sm==3.8.0" soundfile numpy pillow google-genai yt-dlp
+          python -m pip check
+          python - <<'PY'
+          import spacy
+          import en_core_web_sm
+          print("spaCy:", spacy.__version__)
+          nlp = en_core_web_sm.load()
+          print("tokenizer probe:", [x.text for x in nlp("A car approaches the signal.")])
+          from kokoro import KPipeline
+          KPipeline(lang_code="a")
+          print("Kokoro initialization preflight PASS")
+          PY
 
       - name: Write story
         if: ${{ inputs.fresh || !hashFiles('output/story.json') }}
