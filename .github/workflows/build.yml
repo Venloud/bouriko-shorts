@@ -34,7 +34,12 @@ jobs:
                       artifacts = json.load(r).get("artifacts", [])
               except Exception as exc:
                   raise SystemExit(f"Buffer verification failed, aborting: {exc}")
-              empty = not any(a.get("name") == "bouriko-remotion-test" and not a.get("expired") and a.get("size_in_bytes", 0) > 0 for a in artifacts)
+              def successful_run(run_id):
+                  url = "https://api.github.com/repos/" + os.environ["GH_REPOSITORY"] + "/actions/runs/" + str(run_id)
+                  req = urllib.request.Request(url, headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"], "Accept": "application/vnd.github+json"})
+                  with urllib.request.urlopen(req, timeout=20) as response:
+                      return json.load(response).get("conclusion") == "success"
+              empty = not any(a.get("name") == "bouriko-remotion-test" and not a.get("expired") and a.get("size_in_bytes", 0) > 1000000 and a.get("workflow_run", {}).get("id") and successful_run(a["workflow_run"]["id"]) for a in artifacts)
           with open(os.environ["GITHUB_OUTPUT"],"a") as out:
               out.write("empty=" + str(empty).lower() + "\n")
           print("Buffer empty, render permitted" if empty else "Existing review artifact in buffer, render skipped")
