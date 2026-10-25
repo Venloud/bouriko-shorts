@@ -7,6 +7,15 @@ Started: 2026-10-25. Preserve until every item is verified using an actual MP4, 
 - Fail mechanism: spaCy tokenizer loading reached via misaki -> Kokoro KPipeline; investigate dependency incompatibility/version pins and repeated initialization, reproduce and test before checking this item.
 - These are two runs on **main**, not the same Git commit or workflow behavior.
 
+## Five-phase generalization roadmap
+These are separate acceptance gates alongside F01–F17. Check a phase only when its implementation and tests are verified, not when documentation is written.
+
+- [ ] **Phase 1: Universal scene planner.** Every scene records its purpose, narration, relevant footage, graphics, captions and audio cues. No topic-specific editing code. Verify with JJK, traffic lights, GPS and history fixture inputs.
+- [ ] **Phase 2: Upgraded footage selection.** Reuse validated Horror Shorts media discovery, relevance scoring, clip trimming and licensing checks. Verify every chosen clip matches what the narrator actually discusses.
+- [ ] **Phase 3: Integrated editing engine.** Add meaningful hard cuts, visual overlays, animated diagrams, caption styles, music mixing and contextual SFX to Bouriko's existing renderer. Follow Vandam's editorial rules and retain the owner publishing lock.
+- [ ] **Phase 4: Learn through testing.** Use JJK as the storytelling and visual-quality regression baseline. Test unrelated topics with the exact same engine, document failures and improve reusable components instead of one-off hardcoded edits.
+- [ ] **Phase 5: End-to-end validation.** Render complete videos, inspect frames, confirm narration/caption sync, verify media rights and repair findings. Acceptance requires actual MP4 evidence and a final report in Vandam.
+
 ## Tracked repairs
 - [ ] F01 Restore successful working single-build pipeline from last passing behavior, maintaining disabled social publishing and no extra test workflows. Verify relevant visual-plan and beat steps.
 - [ ] F02 Fix Kokoro spaCy tokenizer OverflowError with dependency pin/repro and instantiate synthesis pipeline once if appropriate. Prove real generated audio and successful full workflow.
