@@ -1,8 +1,9 @@
 name: Bouriko Breaking Tech Watch
-on:
-  schedule:
+# OWNER LOCK: workflow disabled; use build.yml for manual video tests.
+on: {}
+# previous triggers retained only in version history
+#  schedule:
     - cron: "*/5 * * * *"
-  workflow_dispatch:
 permissions:
   contents: write
 jobs:
@@ -38,7 +39,7 @@ jobs:
       - name: QA
         if: steps.news.outputs.breaking == 'true'
         run: python pipeline/qa.py
-      - name: Publish immediately
+      - name: Publish blocked by owner
         if: steps.news.outputs.breaking == 'true'
         env:
           TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
@@ -48,7 +49,7 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           VIDEO: output/bouriko.mp4
-        run: python pipeline/publish.py
+        run: echo 'Publishing locked. No upload.'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
