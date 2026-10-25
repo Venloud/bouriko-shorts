@@ -40,7 +40,7 @@ def main():
             else:
                 result=ydl.extract_info(SEARCH,download=False)
                 entries=[e for e in result.get("entries",[]) if e and e.get("id")]
-                candidates=[{"title":e.get("title"),"id":e.get("id"),"url":e.get("url") or f"https://www.youtube.com/watch?v={e['id']}"} for e in entries]
+                candidates=[{"title":e.get("title"),"id":e.get("id"),"url":f"https://www.youtube.com/watch?v={e['id']}"} for e in entries]
                 (OUT/"candidates.json").write_text(json.dumps(candidates,indent=2))
                 if not candidates: raise RuntimeError("No search candidates")
                 chosen=candidates[0]
