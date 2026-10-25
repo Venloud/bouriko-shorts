@@ -17,6 +17,7 @@ from pathlib import Path
 import requests
 
 from common import ROOT
+from visual_plan import planned_query, approved_assets
 
 MEDIA_DIR = ROOT / "output/media"
 MANIFEST = ROOT / "output/media_manifest.json"
@@ -669,33 +670,44 @@ def main():
         print(f"Exact-script visual production: {len(sections)} sections, {len(records)} original visual assets")
         return
 
-    # First pass: use the story's exact visual intent.
+    # The script is authoritative. A generic visual label is NOT a media query.
+    # Use any real, committed, topic-specific reference asset for its mapped beats.
+    local = approved_assets(story)
+    for i, (entry, path) in local.items():
+        if i >= len(story.get("lines", [])):
+            continue
+        rec = {"index":i,"query":planned_query(story.get("test_topic_id"),story["lines"][i],i),
+               "kind":"video" if path.suffix.lower() in {".mp4",".webm"} else "image",
+               "provider":"owner_reference","url":None,
+               "source_url":None,"title":entry.get("description") or entry.get("id"),
+               "license":entry.get("rights_status","owner_provided_unverified"),
+               "rights_verified":entry.get("rights_status") == "verified",
+               "local_path":str(path.relative_to(ROOT))}
+        story["lines"][i]["media_asset"] = rec["local_path"]
+        story["lines"][i]["media_source"] = rec
+        records.append(rec)
+
+    # First pass: use script-grounded queries, never generic labels.
     for i, line in enumerate(story.get("lines", [])):
-        for action in line.get("visual_actions", []) or []:
-            if str(action.get("type","")).lower() != "media":
-                continue
-            rec = ensure_asset(action, i, used_urls)
-            if rec:
-                line["media_asset"] = rec["local_path"]
-                line["media_source"] = rec
-                records.append(rec)
+        if line.get("media_asset"):
+            continue
+        query = planned_query(story.get("test_topic_id"), line, i)
+        rec = ensure_asset({"type":"media", "kind":"video", "query":query}, i, used_urls)
+        if rec:
+            line["media_asset"] = rec["local_path"]
+            line["media_source"] = rec
+            records.append(rec)
+            if rec.get("url"):
                 used_urls.add(rec["url"])
-                break
 
     # Second pass: fill failed scenes with broad, still-relevant stock footage.
     # Derive the fallback from the scene itself so the pipeline is reusable
     # outside the original traffic-light test.
-    fallback_queries = []
-    for line in story.get("lines", []):
-        query = str(line.get("visual") or "").strip()
-        if query and query not in fallback_queries:
-            fallback_queries.append(query)
-    if not fallback_queries:
-        fallback_queries = ["technology explainer", "technology", "education"]
+    fallback_queries = []  # never borrow another scene's generic visual label
     for i, line in enumerate(story.get("lines", [])):
         if line.get("media_asset"):
             continue
-        for query in fallback_queries:
+        for query in [planned_query(story.get("test_topic_id"), line, i)]:
             rec = ensure_asset({"kind": "video", "query": query}, i, used_urls)
             if not rec:
                 continue
@@ -720,7 +732,7 @@ def main():
             if line.get("media_asset"):
                 continue
             diagram = generate_local_diagram(
-                line.get("visual") or line.get("text", "technology"), i
+                planned_query(story.get("test_topic_id"), line, i), i
             )
             if diagram:
                 line["media_asset"] = diagram["local_path"]
@@ -754,7 +766,7 @@ def main():
                 break
             if not line.get("media_asset") or line.get("media_asset_2"):
                 continue
-            query = line.get("visual") or line.get("text") or "technology explainer"
+            query = planned_query(story.get("test_topic_id"), line, i)
             diagram = generate_local_diagram(query, 100 + i)
             if diagram:
                 line["media_asset_2"] = diagram["local_path"]
