@@ -1,0 +1,41 @@
+{
+  "purpose": "Six topic rotating, nonpublishing Bouriko video quality tests",
+  "topics": [
+    {
+      "id": "jjk",
+      "pillar": "explainer",
+      "topic": "Jujutsu Kaisen Culling Game rules explained",
+      "requirements": "Canon sourced and visually meaningful character/map/rule examples; unlicensed anime frames cannot be represented as cleared for publishing."
+    },
+    {
+      "id": "gps",
+      "pillar": "explainer",
+      "topic": "How GPS finds you and navigation apps estimate ETA",
+      "requirements": "Explain satellites versus ETA model, map route and traffic evidence."
+    },
+    {
+      "id": "traffic_light",
+      "pillar": "explainer",
+      "topic": "How traffic lights detect a waiting car using inductive loops cameras radar and timers",
+      "requirements": "Use accurate loop diagram and appropriate traffic light footage, verify mechanisms."
+    },
+    {
+      "id": "beauty",
+      "pillar": "explainer",
+      "topic": "How beauty products are formulated and tested for safety",
+      "requirements": "Treat beauty as a science explainer; verified cosmetic science references and relevant product/method footage."
+    },
+    {
+      "id": "iphone",
+      "pillar": "news",
+      "topic": "Most recent verified iPhone news and features",
+      "requirements": "Confirm newest announcement date and facts using Apple primary sources, use authentic rights-cleared footage of the relevant iPhone model; fail instead of unrelated generic phone B-roll."
+    },
+    {
+      "id": "faceless_youtube",
+      "pillar": "explainer",
+      "topic": "How a faceless YouTube Shorts channel like Night Files creates its videos",
+      "requirements": "Ground the explanation in the actual Venloud/horror-shorts workflow: topic research, narration, clips, diagrams, rendering, QA and disabled Bouriko social posting. Do not show credentials, secrets or incorrectly claim public uploads."
+    }
+  ]
+}
