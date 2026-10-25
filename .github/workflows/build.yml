@@ -101,6 +101,9 @@ jobs:
       - name: Syntax check all pipeline Python
         run: python -m compileall -q pipeline
 
+      - name: Validate shot selection and persistent assets
+        run: python tools/test_visual_plan.py
+
       - name: Python packages and Night Files-compatible Kokoro model
         run: |
           python -m pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
