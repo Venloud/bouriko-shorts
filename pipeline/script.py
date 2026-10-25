@@ -275,8 +275,15 @@ def main():
         selection = None
         pillar, topic = pick()
     script_path = None
+    if selection is not None:
+        authored = sorted((ROOT / "inbox/rotation").glob("*.txt"))
+        if len(authored) != len(rotation):
+            raise RuntimeError("Authored-script rotation incomplete: expected one script per test topic")
+        script_path = authored[int(rotation_index) % len(authored)]
+        log("USING AUTHORED INBOX SCRIPT: " + script_path.name)
     if os.getenv("BOURIKO_USE_INBOX") == "1":
         selection = None
+        script_path = None
         files = sorted((ROOT / "inbox").glob("*.txt"))
         candidates = []
         for p in files:
