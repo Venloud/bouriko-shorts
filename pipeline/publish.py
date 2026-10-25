@@ -15,6 +15,9 @@ def tiktok_draft(path,token):
         u=requests.put(d["upload_url"],headers={"Content-Range":f"bytes 0-{size-1}/{size}","Content-Type":"video/mp4"},data=f,timeout=120)
     u.raise_for_status(); return "TikTok draft uploaded"
 def main():
+    # OWNER LOCK: no TikTok/YouTube posting until explicit authorized code review.
+    raise SystemExit('BOURIKO PUBLISHING DISABLED BY OWNER. No social uploads permitted.')
+
     mp4=Path(os.getenv("VIDEO","output/bouriko.mp4"))
     if not mp4.exists(): raise SystemExit("No video to publish")
     token=refresh_tiktok(); log(tiktok_draft(mp4,token))
