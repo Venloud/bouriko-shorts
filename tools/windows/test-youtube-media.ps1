@@ -3,13 +3,13 @@ param(
     [string]$Url = "",
     [ValidateRange(1,20)][int]$Results = 8,
     [switch]$Download,
-    [string]$OutputDir = "output/youtube_media_test"
+    [string]$OutputDir = "$env:USERPROFILE\homebeacon\media\youtube\downloads"
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-$folder = Join-Path $root $OutputDir
+$folder = if ([System.IO.Path]::IsPathRooted($OutputDir)) { $OutputDir } else { Join-Path $root $OutputDir }
 New-Item -ItemType Directory -Force -Path $folder | Out-Null
 $report = Join-Path $folder "youtube_test_report.json"
 $resultsFile = Join-Path $folder "youtube_search_results.json"
