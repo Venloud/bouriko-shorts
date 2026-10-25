@@ -1,8 +1,9 @@
 name: Bouriko Daily
-on:
-  schedule:
+# OWNER LOCK: workflow disabled; use build.yml for manual video tests.
+on: {}
+# previous triggers retained only in version history
+#  schedule:
     - cron: "0 15 * * *"
-  workflow_dispatch:
 permissions:
   contents: write
 jobs:
