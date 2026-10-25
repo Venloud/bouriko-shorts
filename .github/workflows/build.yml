@@ -101,20 +101,21 @@ jobs:
       - name: Syntax check all pipeline Python
         run: python -m compileall -q pipeline
 
-      - name: Python packages
+      - name: Python packages and Night Files-compatible Kokoro model
         run: |
-          pip install -q requests google-api-python-client google-auth "kokoro==0.9.4" "spacy==3.7.5" soundfile numpy pillow google-genai yt-dlp
-          python -m spacy download en_core_web_sm
+          python -m pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai yt-dlp
+          python -m pip install -q "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
           python -m pip check
           python - <<'PY'
           import spacy
-          import en_core_web_sm
-          print("spaCy:", spacy.__version__)
-          nlp = en_core_web_sm.load()
-          print("tokenizer probe:", [x.text for x in nlp("A car approaches the signal.")])
           from kokoro import KPipeline
-          KPipeline(lang_code="a")
-          print("Kokoro initialization preflight PASS")
+          print("spaCy:", spacy.__version__)
+          pipe = KPipeline(lang_code="a")
+          result = next(iter(pipe("A car approaches the signal.", voice="am_adam", speed=1.1)))
+          audio = result.audio if hasattr(result, "audio") else result[-1]
+          if audio is None or len(audio) == 0:
+              raise RuntimeError("Kokoro produced no test audio")
+          print("Kokoro narration smoke test PASS")
           PY
 
       - name: Write story
