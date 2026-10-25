@@ -1,0 +1,16 @@
+SCRIPT
+TITLE: What Makes a Beauty Product Work?
+TOPIC: Cosmetic formulation stability and safety testing
+PILLAR: explainer
+NARRATOR: Two skin creams can look almost identical, but behave completely differently when you put them on.
+NARRATOR: That's because a beauty product isn't just a list of fancy ingredients. It's a carefully designed formula.
+NARRATOR: Water-based ingredients and oils normally separate, so formulators often use emulsifiers to keep them mixed.
+NARRATOR: Humectants such as glycerin help attract and hold water in the outer layer of skin.
+NARRATOR: Other ingredients change texture, spreadability, color, or how long a product lasts on the shelf.
+NARRATOR: Preservatives can help prevent harmful microbial growth, especially in products that contain water.
+NARRATOR: A good formula also needs stability testing, because heat and time can change its performance.
+NARRATOR: Safety assessment considers ingredient concentration, how people use the product, and where it's applied.
+NARRATOR: And the amount of an ingredient matters, not just its name on a label.
+NARRATOR: A product can feel amazing without proving every marketing claim on the package.
+NARRATOR: So when a beauty product works, the science is often in how all its ingredients work together.
+NARRATOR: The formula matters as much as the headline ingredient.
