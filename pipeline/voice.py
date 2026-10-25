@@ -3,11 +3,8 @@ import json, os, re
 import numpy as np
 from common import ROOT, CONFIG
 
-def synthesize(text, voice, out):
+def synthesize(text, voice, out, pipe):
     import soundfile as sf
-    from kokoro import KPipeline
-    lang_code = voice[0] if voice and voice[0] in {"a", "b", "e", "f", "h", "i", "j", "p", "z"} else CONFIG.get("voices", {}).get("lang", "a")
-    pipe = KPipeline(lang_code=lang_code)
     chunks = []
     for _, _, audio in pipe(
         text,
@@ -40,9 +37,17 @@ def render_lines(story):
     voice = os.getenv("NIGHTFILES_VOICE") or CONFIG["voices"]["narrator"]
     print(f"Narrator voice: {voice} | speed={CONFIG['voices'].get('speed', 0.94)}")
 
+    # Initialize once per render, rather than loading spaCy model for every line.
+    from kokoro import KPipeline
+    lang_code = voice[0] if voice and voice[0] in {"a", "b", "e", "f", "h", "i", "j", "p", "z"} else CONFIG.get("voices", {}).get("lang", "a")
+    try:
+        pipe = KPipeline(lang_code=lang_code)
+    except OverflowError as exc:
+        raise RuntimeError("Kokoro spaCy tokenizer initialization failed. Check pinned spaCy and model versions.") from exc
+
     for i, line in enumerate(story["lines"]):
         wav = od / f"{i:02}.wav"
-        words = synthesize(line["text"], voice, wav)
+        words = synthesize(line["text"], voice, wav, pipe)
         import soundfile as sf
         frames, sr = sf.read(str(wav), always_2d=False)
         for w in words:
