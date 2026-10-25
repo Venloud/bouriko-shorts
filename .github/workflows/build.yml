@@ -10,18 +10,6 @@ on:
         options:
           - media_only
           - full_video
-      source:
-        description: "Choose rotating test or inbox request"
-        required: true
-        type: choice
-        default: rotation
-        options:
-          - rotation
-          - inbox
-      fresh:
-        description: "Fresh build, ignore all saved checkpoints"
-        required: false
-        type: boolean
 permissions:
   contents: write
   actions: read
@@ -61,7 +49,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
-          FORCE_FRESH: ${{ inputs.fresh || inputs.source == 'inbox' }}
+          FORCE_FRESH: true
         run: |
           python - <<'PY'
           import json, os, urllib.request
@@ -101,7 +89,7 @@ jobs:
         with: {node-version: "20"}
 
       - name: Restore story checkpoint
-        if: ${{ !inputs.fresh && inputs.source != 'inbox' }}
+        if: false
         uses: actions/cache/restore@v4
         with:
           path: output/story.json
@@ -130,17 +118,12 @@ jobs:
           PY
 
       - name: Write story
-        if: ${{ inputs.fresh || inputs.source == 'inbox' || !hashFiles('output/story.json') }}
+        if: ${{ true || !hashFiles('output/story.json') }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          if [ "${{ inputs.source }}" = "inbox" ]; then
-            export BOURIKO_USE_INBOX=1
-            echo "Bouriko inbox selected"
-          else
-            export BOURIKO_TEST_TOPIC_INDEX=$(( (GITHUB_RUN_NUMBER - 1) % 6 ))
-            echo "Bouriko test rotation index: $BOURIKO_TEST_TOPIC_INDEX"
-          fi
+          export BOURIKO_TEST_TOPIC_INDEX=$(( (GITHUB_RUN_NUMBER - 1) % 6 ))
+          echo "Bouriko test rotation index: $BOURIKO_TEST_TOPIC_INDEX"
           python pipeline/script.py
 
       - name: Save story checkpoint
@@ -151,7 +134,7 @@ jobs:
           key: bouriko-story-${{ runner.os }}-${{ hashFiles('pipeline/script.py', 'config.json', 'data/topics.json', 'prompts/**', 'inbox/**') }}
 
       - name: Restore media checkpoint
-        if: ${{ !inputs.fresh && inputs.source != 'inbox' && hashFiles('output/story.json') }}
+        if: ${{ false && hashFiles('output/story.json') }}
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -161,7 +144,7 @@ jobs:
           key: bouriko-media-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/media.py') }}
 
       - name: Download free photos and videos
-        if: ${{ inputs.fresh || inputs.source == 'inbox' || !hashFiles('output/media_manifest.json') }}
+        if: ${{ true || !hashFiles('output/media_manifest.json') }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
@@ -180,7 +163,7 @@ jobs:
           key: bouriko-media-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/media.py') }}
 
       - name: Restore voice checkpoint
-        if: ${{ !inputs.fresh && inputs.source != 'inbox' && hashFiles('output/story.json') }}
+        if: ${{ false && hashFiles('output/story.json') }}
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -190,7 +173,7 @@ jobs:
           key: bouriko-voice-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/voice.py', 'config.json') }}
 
       - name: Generate narrator voice
-        if: ${{ inputs.fresh || inputs.source == 'inbox' || !hashFiles('output/word_timings.json') }}
+        if: ${{ true || !hashFiles('output/word_timings.json') }}
         env:
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
         run: python pipeline/voice.py
@@ -206,7 +189,7 @@ jobs:
           key: bouriko-voice-${{ runner.os }}-${{ hashFiles('output/story.json', 'pipeline/voice.py', 'config.json') }}
 
       - name: Restore SFX checkpoint
-        if: ${{ !inputs.fresh && inputs.source != 'inbox' && hashFiles('output/story.json', 'output/word_timings.json') }}
+        if: ${{ false && hashFiles('output/story.json', 'output/word_timings.json') }}
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -216,7 +199,7 @@ jobs:
           key: bouriko-sfx-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'output/word_timings.json', 'pipeline/sfx.py') }}
 
       - name: Generate real stock SFX
-        if: ${{ inputs.fresh || inputs.source == 'inbox' || !hashFiles('output/sfx_events.json') }}
+        if: ${{ true || !hashFiles('output/sfx_events.json') }}
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python pipeline/sfx.py
@@ -232,7 +215,7 @@ jobs:
           key: bouriko-sfx-${{ runner.os }}-${{ hashFiles('output/story.json', 'output/word_timings.json', 'pipeline/sfx.py') }}
 
       - name: Restore Remotion preparation checkpoint
-        if: ${{ !inputs.fresh && inputs.source != 'inbox' && hashFiles('output/story.json', 'output/word_timings.json', 'output/sfx_events.json') }}
+        if: ${{ false && hashFiles('output/story.json', 'output/word_timings.json', 'output/sfx_events.json') }}
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -241,7 +224,7 @@ jobs:
           key: bouriko-remotion-prep-${{ github.run_number }}-${{ runner.os }}-${{ hashFiles('output/story.json', 'output/word_timings.json', 'output/sfx_events.json', 'pipeline/remotion_prepare.py') }}
 
       - name: Prepare Remotion assets
-        if: ${{ inputs.fresh || inputs.source == 'inbox' || !hashFiles('remotion/props.json') }}
+        if: ${{ true || !hashFiles('remotion/props.json') }}
         run: python pipeline/remotion_prepare.py
 
       - name: Save Remotion preparation checkpoint
