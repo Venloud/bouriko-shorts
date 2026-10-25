@@ -39,7 +39,7 @@ try {
         if ($Url -notmatch '^https://(www\.|m\.)?(youtube\.com|youtu\.be)/') {
             throw "Use a YouTube watch URL, or omit -Url and let the bot search."
         }
-        $selected = [ordered]@{ title = "Owner-supplied YouTube URL"; url = $Url; score = 0; duration = $null }
+        $selected = [pscustomobject]@{ id = ""; title = "Owner-supplied YouTube URL"; url = $Url; score = 0; duration = $null }
     }
     else {
         Write-Host "Searching YouTube: $Query"
