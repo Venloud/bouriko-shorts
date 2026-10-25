@@ -1,8 +1,8 @@
 # Run once from the Bouriko checkout. Non-destructive: copies tools/media, never removes WinGet yt-dlp.
 $ErrorActionPreference = "Stop"
-$home = Join-Path $env:USERPROFILE 'homebeacon'
-$toolDir = Join-Path $home 'tools\youtube'
-$mediaDir = Join-Path $home 'media\youtube\downloads'
+$homeBeaconRoot = Join-Path $env:USERPROFILE 'homebeacon'
+$toolDir = Join-Path $homeBeaconRoot 'tools\youtube'
+$mediaDir = Join-Path $homeBeaconRoot 'media\youtube\downloads'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 New-Item -ItemType Directory -Force -Path $toolDir, $mediaDir | Out-Null
 $source = Join-Path $PSScriptRoot 'test-youtube-media.ps1'
