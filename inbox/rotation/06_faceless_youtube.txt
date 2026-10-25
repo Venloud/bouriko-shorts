@@ -1,0 +1,16 @@
+SCRIPT
+TITLE: How a Faceless YouTube Short Gets Made
+TOPIC: How a faceless educational video pipeline works
+PILLAR: explainer
+NARRATOR: Have you wondered how an entire YouTube Short can be made without anyone appearing on camera?
+NARRATOR: Start with an idea and a script that explains one thing clearly.
+NARRATOR: Next, break that script into short visual beats, so every sentence has something meaningful to show.
+NARRATOR: A narration engine turns the approved words into a voice track.
+NARRATOR: Then a media finder searches for footage that actually matches the narration.
+NARRATOR: The editor cuts away unused seconds, crops footage for a vertical screen, and removes unwanted source audio.
+NARRATOR: Diagrams can explain invisible systems when ordinary stock footage isn't enough.
+NARRATOR: Captions are timed to the words, and sound effects are added only where they help the story.
+NARRATOR: A rendering engine combines the visual track, voice, captions, and graphics into one video.
+NARRATOR: Quality checks look for missing footage, clipping, strange silences, and captions that leave the screen.
+NARRATOR: In our Night Files workflow, these stages are separate so errors can be caught before delivery.
+NARRATOR: A faceless channel isn't magic. It's a repeatable production line, with a human reviewing the result.
