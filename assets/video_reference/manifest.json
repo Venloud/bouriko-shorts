@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "topic_folders": [
+    "jjk",
+    "gps",
+    "traffic_light",
+    "beauty",
+    "iphone",
+    "faceless_youtube"
+  ],
+  "asset_naming": "NN_subject_action.ext",
+  "assets": [
+    {
+      "id": "gps_satellite_phone_map_01",
+      "topic_id": "gps",
+      "path": "assets/video_reference/gps/01_satellite_phone_map_blue_dot.png",
+      "script_line_indices": [
+        0,
+        1,
+        2
+      ],
+      "role": "hero_explainer",
+      "owner_supplied": true,
+      "rights_verified": false,
+      "repository_file_committed": false
+    }
+  ]
+}
