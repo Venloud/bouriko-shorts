@@ -36,14 +36,50 @@ def main():
     try:
         with yt_dlp.YoutubeDL({"quiet":True,"no_warnings":True,"extract_flat":True,"skip_download":True}) as ydl:
             if requested:
-                chosen={"url":requested,"title":"Explicit candidate"}
+                candidates=[{"url":requested,"title":"Explicit candidate","description":"","license":"","score":0}]
             else:
-                result=ydl.extract_info(SEARCH,download=False)
-                entries=[e for e in result.get("entries",[]) if e and e.get("id")]
-                candidates=[{"title":e.get("title"),"id":e.get("id"),"url":f"https://www.youtube.com/watch?v={e['id']}"} for e in entries]
+                searches=[
+                    "ytsearch8:traffic light intersection stock footage royalty free no watermark",
+                    "ytsearch8:car traffic light red green road creative commons free footage",
+                ]
+                seen={}
+                for search in searches:
+                    result=ydl.extract_info(search,download=False)
+                    for e in result.get("entries",[]):
+                        if not e or not e.get("id"):continue
+                        key=e["id"]
+                        if key not in seen:seen[key]={"title":e.get("title") or "","id":key,"url":f"https://www.youtube.com/watch?v={key}"}
+                candidates=list(seen.values())
+                if not candidates:raise RuntimeError("No search candidates")
+                # Flat search doesn't reliably provide descriptions or license data:
+                # query each candidate for explicit usage signals.
+                enriched=[]
+                for item in candidates:
+                    try:
+                        with yt_dlp.YoutubeDL({"quiet":True,"no_warnings":True,"skip_download":True,"noplaylist":True}) as details:
+                            info=details.extract_info(item["url"],download=False)
+                        item["description"]=str(info.get("description") or "")[:2500]
+                        item["license"]=str(info.get("license") or "")
+                        item["duration"]=info.get("duration")
+                    except Exception as exc:
+                        item["description"]=""
+                        item["license"]=""
+                        item["metadata_error"]=str(exc)[:250]
+                    signal=(item["title"]+" "+item["description"]+" "+item["license"]).lower()
+                    positive=["creative commons","cc by","copyright free","copyright-free","royalty free","royalty-free","free to use","free for commercial use","no copyright","public domain"]
+                    negative=["all rights reserved","do not reupload","do not redistribute","not for commercial use","no permission to reuse"]
+                    item["permission_signal"]=any(x in signal for x in positive)
+                    item["restriction_signal"]=any(x in signal for x in negative)
+                    item["branding_risk"]=any(x in signal for x in ["watermarked","watermark included","logo overlay","branded footage"])
+                    # A statement 'no watermark' is positive rather than evidence of a watermark.
+                    item["score"]=5*int(item["permission_signal"])-50*int(item["restriction_signal"])-10*int(item["branding_risk"])+sum(1 for s in ["traffic light","intersection","car","footage"] if s in signal)
+                    if "no watermark" in signal or "without watermark" in signal:item["score"]+=3
+                    enriched.append(item)
+                candidates=sorted(enriched,key=lambda x:x["score"],reverse=True)
                 (OUT/"candidates.json").write_text(json.dumps(candidates,indent=2))
-                if not candidates: raise RuntimeError("No search candidates")
-                chosen=candidates[0]
+                candidates=[x for x in candidates if x["permission_signal"] and not x["restriction_signal"] and not x["branding_risk"]]
+                if not candidates:raise RuntimeError("No candidates with explicit reuse-positive metadata and no stated restrictions; cannot auto-select.")
+        chosen=candidates[0]
         status("DISCOVERED",candidate=chosen)
         if not SOURCE.exists() or SOURCE.stat().st_size<100000:
             opts={"outtmpl":str(OUT/"download.%(ext)s"),"format":"bv*[height<=720]+ba/b[height<=720]/best","merge_output_format":"mp4",
