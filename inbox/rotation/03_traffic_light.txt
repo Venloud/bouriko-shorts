@@ -1,0 +1,16 @@
+SCRIPT
+TITLE: How Traffic Lights Detect Your Car
+TOPIC: Traffic signal induction loops cameras radar and timers
+PILLAR: explainer
+NARRATOR: You stop at an empty intersection. Somehow, the traffic light seems to know your car is there.
+NARRATOR: At many intersections, a loop of wire is installed just under the pavement.
+NARRATOR: An electrical signal runs through the loop, creating an electromagnetic field.
+NARRATOR: When a metal vehicle enters that field, the electrical behavior of the loop changes.
+NARRATOR: A detector notices the change and signals to the traffic controller that a vehicle is waiting.
+NARRATOR: The detector doesn't directly turn your light green. The controller follows its programmed timing and safety rules.
+NARRATOR: Other intersections use cameras or radar sensors to detect vehicles instead.
+NARRATOR: And some lights use fixed timing plans without detecting individual cars at all.
+NARRATOR: Here is the sequence to watch: a car arrives, the signal changes, green appears, and the car leaves.
+NARRATOR: But the order and timing depend on the intersection and which direction has the right of way.
+NARRATOR: A bicycle or smaller vehicle may be harder for some detectors to register.
+NARRATOR: So the street isn't reading your mind. It's using sensors and carefully controlled timing.
