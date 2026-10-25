@@ -265,7 +265,15 @@ def write(pillar, topic, sources):
     return story
 
 def main():
-    pillar, topic = pick()
+    rotation_index = os.getenv("BOURIKO_TEST_TOPIC_INDEX")
+    if rotation_index is not None:
+        rotation = json.loads((ROOT / "data/test_topic_rotation.json").read_text())["topics"]
+        selection = rotation[int(rotation_index) % len(rotation)]
+        pillar, topic = selection["pillar"], selection["topic"]
+        log("ROTATING TEST TOPIC: " + selection["id"])
+    else:
+        selection = None
+        pillar, topic = pick()
     script_path = None
     inbox_files = sorted((ROOT / "inbox").glob("*.txt"))
     for p in inbox_files:
@@ -281,6 +289,9 @@ def main():
             if lines and lines[0].strip().upper() == "TOPIC" and len(lines) > 1:
                 topic = lines[1].strip()
 
+    if rotation_index is not None:
+        # Explicit test rotation has priority over stale inbox scripts.
+        script_path = None
     if script_path:
         story = exact_story(script_path)
     else:
@@ -289,6 +300,9 @@ def main():
             raise RuntimeError("No source found for " + topic)
         story = write(pillar, topic, sources)
         story["topic"] = topic
+    if selection:
+        story["test_topic_id"] = selection["id"]
+        story["test_requirements"] = selection["requirements"]
 
     out = ROOT / "output/story.json"
     out.parent.mkdir(exist_ok=True)
