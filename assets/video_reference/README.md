@@ -1,9 +1,11 @@
-# Bouriko topic-specific assets
+# Bouriko reference assets
 
-Folders correspond to the six IDs in `data/test_topic_rotation.json`: `jjk/`, `gps/`, `traffic_light/`, `beauty/`, `iphone/`, `faceless_youtube/`.
+Six folders match IDs in `data/test_topic_rotation.json`.
 
-Name files `NN_subject_action.ext`. Record each asset in `manifest.json` with its exact script beat indices, source and reuse rights. Prefer approved local reference assets over generic stock search results. Reject `illustration` as a search term. Never infer that owner-supplied art is copyright cleared.
-
-The owner-provided GPS image is distributed in the conversation's downloadable asset pack. The binary has **not** yet been added to GitHub; `repository_file_committed=false` records that explicitly. After importing the pack to the repository root, the image will be at `assets/video_reference/gps/01_satellite_phone_map_blue_dot.png`.
-
-This file layout does not itself change the production renderer's asset selection. Wire the media planner to consult this manifest before claiming automatic reuse.
+- `jjk/`, `gps/`, `traffic_light/`, `beauty/`, `iphone/`, `faceless_youtube/`
+- Name each file `NN_description.ext` and record it in `manifest.json`.
+- The GPS picture supplied by the owner is `gps/01_satellite_phone_map_blue_dot.png`.
+- Use script beat IDs, not arbitrary stock media order.
+- Owner-supplied does not mean copyright cleared. Verify rights before public reuse.
+- Image text/route details are stylized and must not be treated as factual map evidence.
+- This package is an asset library, not evidence that the runtime automatically prioritizes it.
