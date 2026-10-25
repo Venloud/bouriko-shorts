@@ -16,6 +16,19 @@ These are separate acceptance gates alongside F01–F17. Check a phase only when
 - [ ] **Phase 4: Learn through testing.** Use JJK as the storytelling and visual-quality regression baseline. Test unrelated topics with the exact same engine, document failures and improve reusable components instead of one-off hardcoded edits.
 - [ ] **Phase 5: End-to-end validation.** Render complete videos, inspect frames, confirm narration/caption sync, verify media rights and repair findings. Acceptance requires actual MP4 evidence and a final report in Vandam.
 
+## Owner-requested YouTube media acceptance test (NOT PASSED)
+- [ ] Y01 Obtain a permitted real video source showing a car approaching a traffic signal. Record source URL and permission/license; personal ownership of a YouTube page is not by itself permission to reuse every third-party clip.
+- [ ] Y02 Extract and store real `01_car_arrives.mp4` showing one car arriving, duration >0 and <=3.0 seconds.
+- [ ] Y03 Extract and store real `02_light_turns_red.mp4` showing the light turning red, duration >0 and <=3.0 seconds.
+- [ ] Y04 Extract and store real `03_light_turns_green.mp4` showing the light turning green, duration >0 and <=3.0 seconds.
+- [ ] Y05 Extract and store real `04_car_leaves.mp4` showing car departure, duration >0 and <=3.0 seconds.
+- [ ] Y06 Commit four verified clips to `assets/video_reference/traffic_light_detector/clips/`, with `review.json` recording actual visual confirmation, source and permission for every clip. Run `python tools/verify_traffic_light_clips.py`. **No partial success**.
+- [ ] Y07 Validate optional Windows media retrieval worker with explicit user-side execution, authorized sources only, no cookies/secrets in GitHub and no uploads to social platforms.
+
+## Current attempted fixes, not yet accepted
+- 2026-10-25: `pipeline/voice.py` now initializes Kokoro once instead of once per line; the existing build adds pinned dependency and tokenizer preflight. **F02 is still unchecked** until complete workflow and audio are verified.
+- 2026-10-25: `tools/verify_traffic_light_clips.py` added for four real videos and metadata. No clips were extracted from YouTube and no success is claimed.
+
 ## Tracked repairs
 - [ ] F01 Restore successful working single-build pipeline from last passing behavior, maintaining disabled social publishing and no extra test workflows. Verify relevant visual-plan and beat steps.
 - [ ] F02 Fix Kokoro spaCy tokenizer OverflowError with dependency pin/repro and instantiate synthesis pipeline once if appropriate. Prove real generated audio and successful full workflow.
