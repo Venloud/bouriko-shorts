@@ -1,113 +1,127 @@
 name: Bouriko Home YouTube to Hosted Render
+run-name: Bouriko ${{ inputs.mode }} ${{ inputs.topic_index || inputs.private_run_id }}
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: "Plan and request download, or render a verified private artifact"
+        type: choice
+        required: true
+        default: plan
+        options: [plan, render]
       topic_index:
-        description: "Script test topic index (0-5)"
+        description: "Topic index, used only for plan mode"
         type: choice
         required: true
         default: "0"
         options: ["0", "1", "2", "3", "4", "5"]
+      private_run_id:
+        description: "Private acquisition run ID, populated automatically for render"
+        type: string
+        required: false
+      public_sha:
+        description: "Pinned source revision, populated automatically for render"
+        type: string
+        required: false
+      plan_sha:
+        description: "Original story checksum, populated automatically for render"
+        type: string
+        required: false
+
 permissions:
   contents: read
+
 concurrency:
-  group: bouriko-home-youtube-render
+  group: bouriko-home-youtube-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
   plan:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.mode == 'plan'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with: {persist-credentials: false}
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
+      - name: Check private runner dispatch configuration
+        env:
+          PRIVATE_RUNNER_TOKEN: ${{ secrets.BOURIKO_PRIVATE_RUNNER_TOKEN }}
+        run: |
+          if [ -z "$PRIVATE_RUNNER_TOKEN" ]; then
+            echo "::error::Add BOURIKO_PRIVATE_RUNNER_TOKEN under Bouriko repository Actions secrets."
+            exit 1
+          fi
       - name: Install script dependencies
         run: python -m pip install -q requests
-      - name: Generate one canonical script and scene plan
+      - name: Generate one canonical Bouriko script
         env:
           BOURIKO_TEST_TOPIC_INDEX: ${{ inputs.topic_index }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python pipeline/script.py
-      - name: Upload exact story for both later jobs
+      - name: Archive planned story for inspection
         uses: actions/upload-artifact@v4
         with:
-          name: bouriko-home-story
+          name: bouriko-dispatched-story
           path: output/story.json
           if-no-files-found: error
           retention-days: 5
-
-  youtube_acquisition:
-    needs: plan
-    runs-on: [self-hosted, Windows, X64, bouriko-youtube]
-    timeout-minutes: 45
-    defaults:
-      run:
-        shell: powershell
-    steps:
-      - uses: actions/checkout@v4
-        with: {persist-credentials: false}
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.11"}
-      - uses: actions/setup-node@v4
-        with: {node-version: "22"}
-      - uses: actions/download-artifact@v4
-        with:
-          name: bouriko-home-story
-          path: output
-      - name: Validate home-runner prerequisites
-        run: |
-          python --version
-          node --version
-          ffmpeg -version | Select-Object -First 1
-          ffprobe -version | Select-Object -First 1
-      - name: Install acquisition tools
-        run: |
-          python -m pip install -q -U requests pillow google-genai 'yt-dlp[default]' bgutil-ytdlp-pot-provider
-      - name: Acquire licensed YouTube footage and topic-specific visuals at home
+      - name: Send pinned plan to the private Windows acquisition worker
         env:
-          BOURIKO_HOME_YOUTUBE_ACQUISITION: "1"
-        run: python pipeline/media.py
-      - name: Verify all media streams and at least one real YouTube CC clip
-        run: python tools/verify_home_media.py --mode create --min-youtube 1
-      - name: Upload acquired assets and hash receipt for hosted renderer
-        uses: actions/upload-artifact@v4
-        with:
-          name: bouriko-home-media
-          path: output/
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 5
+          BOURIKO_PRIVATE_RUNNER_TOKEN: ${{ secrets.BOURIKO_PRIVATE_RUNNER_TOKEN }}
+        run: python tools/dispatch_private_media.py
 
-  hosted_render:
-    needs: [plan, youtube_acquisition]
+  render:
+    if: github.ref == 'refs/heads/main' && inputs.mode == 'render'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
+      - name: Validate handoff parameters before starting render
+        env:
+          PRIVATE_RUNNER_TOKEN: ${{ secrets.BOURIKO_PRIVATE_RUNNER_TOKEN }}
+          PRIVATE_RUN_ID: ${{ inputs.private_run_id }}
+          PINNED_SHA: ${{ inputs.public_sha }}
+          STORY_SHA: ${{ inputs.plan_sha }}
+        run: |
+          test -n "$PRIVATE_RUNNER_TOKEN" || { echo "::error::Private repo token missing"; exit 1; }
+          [[ "$PRIVATE_RUN_ID" =~ ^[1-9][0-9]{0,16}$ ]] || { echo "::error::Invalid private run ID"; exit 1; }
+          [[ "$PINNED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::Invalid source SHA"; exit 1; }
+          [[ "$STORY_SHA" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::Invalid story checksum"; exit 1; }
       - uses: actions/checkout@v4
-        with: {persist-credentials: false}
+        with:
+          ref: ${{ inputs.public_sha }}
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
       - uses: actions/setup-node@v4
         with: {node-version: "22"}
-      - uses: actions/download-artifact@v4
+      - name: Download private verified media from Windows acquisition
+        uses: actions/download-artifact@v4
         with:
-          name: bouriko-home-media
+          repository: Venloud/van02utuberunner
+          run-id: ${{ inputs.private_run_id }}
+          github-token: ${{ secrets.BOURIKO_PRIVATE_RUNNER_TOKEN }}
+          name: bouriko-acquired-media
           path: output
-      - name: System video and narration packages
+      - name: System video and narration dependencies
         run: sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
-      - name: Install render dependencies
+      - name: Install Bouriko render packages
         run: |
           python -m pip install -q requests google-api-python-client google-auth "kokoro>=0.9.4" soundfile numpy pillow google-genai 'yt-dlp[default]' bgutil-ytdlp-pot-provider
           python -m pip install -q "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
           python -m pip check
-      - name: Verify transferred home-video hashes and playable streams
-        run: python tools/verify_home_media.py --mode check --min-youtube 1
-      - name: Validate narration and graphics plan
+      - name: Confirm private artifact matches pinned public plan
+        env:
+          PUBLIC_SHA: ${{ inputs.public_sha }}
+          STORY_SHA: ${{ inputs.plan_sha }}
+        run: |
+          python tools/verify_private_handoff.py --public-sha "$PUBLIC_SHA" --plan-sha "$STORY_SHA"
+          python tools/verify_home_media.py --mode check --min-youtube 1
+      - name: Verify visual rules and narration assets
         run: python tools/test_visual_plan.py
-      - name: Generate narration
+      - name: Generate narrator
         env:
           NIGHTFILES_VOICE: ${{ vars.NIGHTFILES_VOICE }}
         run: python pipeline/voice.py
@@ -115,17 +129,17 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python pipeline/sfx.py
-      - name: Prepare imported YouTube footage and voice for Remotion
+      - name: Prepare Remotion scenes and audio
         run: python pipeline/remotion_prepare.py
       - name: Install Remotion
         working-directory: remotion
         run: npm install --no-audit --no-fund
-      - name: Render video
+      - name: Render Bouriko review video
         working-directory: remotion
         run: npm run render
-      - name: Verify finished MP4 and creative review manifest
+      - name: Validate completed MP4
         run: python pipeline/qa.py
-      - name: Upload video and scene evidence (no publication)
+      - name: Upload review video and provenance (never auto-publish)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -135,6 +149,7 @@ jobs:
             output/story.json
             output/media_manifest.json
             output/home_media_receipt.json
+            output/handoff_metadata.json
             output/creative_qa.json
           if-no-files-found: warn
           retention-days: 7
