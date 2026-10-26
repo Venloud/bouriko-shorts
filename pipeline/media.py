@@ -17,7 +17,7 @@ from pathlib import Path
 import requests
 
 from common import ROOT
-from visual_plan import planned_query, approved_assets
+from visual_plan import planned_query, approved_assets, requires_diagram, diagram_beat
 
 MEDIA_DIR = ROOT / "output/media"
 MANIFEST = ROOT / "output/media_manifest.json"
@@ -692,7 +692,14 @@ def main():
         if line.get("media_asset"):
             continue
         query = planned_query(story.get("test_topic_id"), line, i)
-        rec = ensure_asset({"type":"media", "kind":"video", "query":query}, i, used_urls)
+        # The mechanism needs an accurate explanatory diagram, not random traffic B-roll.
+        if requires_diagram(story.get("test_topic_id"), line):
+            rec = generate_local_diagram(diagram_beat(line), i)
+            if rec:
+                rec["semantic_role"] = "technical_explainer"
+                rec["subject_verified_by"] = "explicit local diagram rule"
+        else:
+            rec = ensure_asset({"type":"media", "kind":"video", "query":query}, i, used_urls)
         if rec:
             line["media_asset"] = rec["local_path"]
             line["media_source"] = rec
@@ -708,13 +715,15 @@ def main():
         if line.get("media_asset"):
             continue
         for query in [planned_query(story.get("test_topic_id"), line, i)]:
-            rec = ensure_asset({"kind": "video", "query": query}, i, used_urls)
+            rec = (generate_local_diagram(diagram_beat(line), i) if requires_diagram(story.get("test_topic_id"), line)
+                   else ensure_asset({"kind": "video", "query": query}, i, used_urls))
             if not rec:
                 continue
             line["media_asset"] = rec["local_path"]
             line["media_source"] = rec
             records.append(rec)
-            used_urls.add(rec["url"])
+            if rec.get("url"):
+                used_urls.add(rec["url"])
             print(f"Fallback media assigned: scene={i} query='{query}' provider={rec['provider']}")
             break
 
