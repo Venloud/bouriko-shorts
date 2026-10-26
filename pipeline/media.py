@@ -422,7 +422,13 @@ def generate_local_diagram(query, index):
     q = str(query).lower()
     title = "HOW THE SENSOR WORKS"
     if "traffic" in q or "intersection" in q or "road" in q or "loop" in q:
-        title = "HIDDEN ROAD SENSOR"
+        beats = {"BICYCLE DETECTION": "BICYCLE DETECTION",
+                 "CAMERA AND RADAR": "CAMERA OR RADAR",
+                 "SIGNAL TIMING": "CONTROLLER TIMING",
+                 "SENSOR TO CONTROLLER": "SIGNAL TO CONTROLLER",
+                 "MAGNETIC FIELD CHANGE": "MAGNETIC FIELD CHANGE",
+                 "VEHICLE SENSOR LOOP": "INDUCTION LOOP"}
+        title = beats.get(query, "HIDDEN ROAD SENSOR")
 
         # Road
         d.rounded_rectangle((90, 470, 990, 1450), radius=35, fill=(65, 65, 65))
@@ -433,7 +439,14 @@ def generate_local_diagram(query, index):
         loop = (260, 900, 820, 1110)
         d.rounded_rectangle(loop, radius=28, outline=blue, width=18)
         d.text((110, 300), title, font=f(66, True), fill=ink)
-        d.text((110, 380), "Induction loop detects a vehicle", font=f(38), fill=ink)
+        caption = {
+            "BICYCLE DETECTION": "Small metal objects can be harder to sense",
+            "CAMERA AND RADAR": "Other systems observe approaching traffic",
+            "SIGNAL TIMING": "The controller decides when to change",
+            "SENSOR TO CONTROLLER": "The loop reports detection to the controller",
+            "MAGNETIC FIELD CHANGE": "Metal changes the loop's electrical response",
+        }.get(query, "The road loop responds to nearby metal")
+        d.text((110, 380), caption, font=f(30), fill=ink)
 
         # Car
         d.rounded_rectangle((360, 780, 720, 930), radius=30, fill=(215, 215, 215), outline=ink, width=6)
@@ -458,7 +471,7 @@ def generate_local_diagram(query, index):
         d.line((705, 665, 585, 665), fill=blue, width=10)
         d.polygon([(545, 665), (605, 635), (605, 695)], fill=blue)
 
-        d.text((120, 1530), "CAR → LOOP → CONTROLLER → SIGNAL", font=f(42, True), fill=ink)
+        d.text((120, 1530), "CAR  >  LOOP  >  CONTROLLER  >  LIGHT", font=f(36, True), fill=ink)
     else:
         title = "TECHNICAL EXPLAINER"
         d.text((90, 300), title, font=f(66, True), fill=ink)
