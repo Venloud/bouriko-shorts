@@ -137,7 +137,7 @@ def read_subtitles(candidate):
         return [], "unavailable"
     url, ext, origin = track
     try:
-        response = requests.get(url, timeout=25,
+        response = requests.get(url, timeout=25, allow_redirects=False,
                                 headers={"User-Agent": "Bouriko scene research/1.0"})
         response.raise_for_status()
         if len(response.content) > 2_000_000:
