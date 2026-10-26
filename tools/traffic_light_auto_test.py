@@ -34,7 +34,7 @@ def main():
     chosen=None
     requested=os.getenv("BOURIKO_YOUTUBE_URL","").strip()
     try:
-        with yt_dlp.YoutubeDL({"quiet":True,"no_warnings":True,"extract_flat":True,"skip_download":True}) as ydl:
+        with yt_dlp.YoutubeDL({"quiet":True,"no_warnings":True,"extract_flat":True,"skip_download":True,"js_runtimes":{"node":{}}}) as ydl:
             if requested:
                 candidates=[{"url":requested,"title":"Explicit candidate","description":"","license":"","score":0}]
             else:
@@ -56,7 +56,7 @@ def main():
                 enriched=[]
                 for item in candidates:
                     try:
-                        with yt_dlp.YoutubeDL({"quiet":True,"no_warnings":True,"skip_download":True,"noplaylist":True}) as details:
+                        with yt_dlp.YoutubeDL({"quiet":True,"no_warnings":True,"skip_download":True,"noplaylist":True,"js_runtimes":{"node":{}}}) as details:
                             info=details.extract_info(item["url"],download=False)
                         item["description"]=str(info.get("description") or "")[:2500]
                         item["license"]=str(info.get("license") or "")
@@ -83,7 +83,8 @@ def main():
         status("DISCOVERED",candidate=chosen)
         if not SOURCE.exists() or SOURCE.stat().st_size<100000:
             opts={"outtmpl":str(OUT/"download.%(ext)s"),"format":"bv*[height<=720]+ba/b[height<=720]/best","merge_output_format":"mp4",
-                  "noplaylist":True,"quiet":True,"no_warnings":True,"retries":2,"fragment_retries":2}
+                  "noplaylist":True,"quiet":True,"no_warnings":True,"retries":2,"fragment_retries":2,
+                  "js_runtimes":{"node":{}}}
             with yt_dlp.YoutubeDL(opts) as ydl: ydl.download([chosen["url"]])
             files=sorted([p for p in OUT.glob("download.*") if p.suffix in {".mp4",".webm",".mkv"}])
             if not files:raise RuntimeError("No downloaded media")
