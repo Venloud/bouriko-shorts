@@ -1,0 +1,36 @@
+name: Bouriko Media Quality Smoke
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/media-quality-smoke.yml'
+      - 'pipeline/media.py'
+      - 'tools/test_media_validation.py'
+      - 'tools/traffic_light_auto_test.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-media-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "22"}
+      - name: Install ffprobe and lightweight test dependencies
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q requests pillow
+      - name: Validate Python syntax
+        run: python -m compileall -q pipeline tools/test_media_validation.py tools/traffic_light_auto_test.py
+      - name: Check media stream acceptance and stock search relevance
+        run: python tools/test_media_validation.py
+      - name: Verify supported Node runtime
+        run: |
+          node --version
+          node -e 'if (Number(process.versions.node.split(".")[0]) < 22) process.exit(1)'
