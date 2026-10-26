@@ -37,6 +37,7 @@ def filtered_lines(log):
 def run_ytdlp(*args):
     command = [sys.executable, '-m', 'yt_dlp', '--verbose', '--no-playlist',
                '--extractor-args', 'youtube:player_client=mweb,tv,web_safari',
+               '--js-runtimes', 'node',
                '--socket-timeout', '20', '--retries', '1',
                '--fragment-retries', '1', *args, TEST_URL]
     try:
