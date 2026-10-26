@@ -132,6 +132,7 @@ def youtube_cc(query, kind):
         "extract_flat": False,
         "playlistend": 8,
         "noplaylist": False,
+        "extractor_args": {"youtube": {"player_client": ["mweb", "tv", "web_safari"]}},
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -342,8 +343,7 @@ def choose(query, kind):
             ("pixabay", pixabay),
             ("pexels", pexels),
             ("mixkit", mixkit),
-            # Hosted CI commonly gets YouTube anti-bot challenges; keep it opt-in.
-            *((("youtube_cc", youtube_cc),) if os.getenv("BOURIKO_ALLOW_YOUTUBE_DOWNLOADS") == "1" else ()),
+            ("youtube_cc", youtube_cc),
         ):
             try:
                 found = fn(variant, kind)
@@ -608,6 +608,7 @@ def ensure_asset(action, index, used_urls=None):
                     "merge_output_format": "mp4",
                     "outtmpl": str(path.with_suffix(".%(ext)s")),
                     "noplaylist": True,
+                    "extractor_args": {"youtube": {"player_client": ["mweb", "tv", "web_safari"]}},
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([chosen["url"]])
