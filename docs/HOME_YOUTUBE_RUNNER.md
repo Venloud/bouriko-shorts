@@ -1,81 +1,70 @@
-# Bouriko home YouTube acquisition (Windows) -> hosted render
+# Bouriko, private Windows downloader and free public render
 
-## Why this lane exists
-GitHub-hosted datacenter IPs are being challenged on YouTube video pages **before**
-a PO token is requested. This workflow keeps YouTube acquisition on a Windows
-machine on an owner-controlled network. GitHub-hosted Ubuntu handles script
-planning, narration, SFX, Remotion and final video QA.
+## Design
 
-**This does not guarantee YouTube access or content rights.** The YouTube
-metadata must explicitly report Creative Commons Attribution. Assets remain
-provisional until a human checks scene relevance and reuse conditions.
-Other Bouriko workflows, publishers and Horror Shorts are unchanged.
+Bouriko stays **public**, retaining its standard GitHub-hosted workflows.
+The Windows YouTube downloader belongs only to the separate **private** repo
+[Venloud/van02utuberunner](https://github.com/Venloud/van02utuberunner).
+Kindled Iron and Kindled Voice are separate projects, not involved.
 
-## Important security warning: this repo is public
-As of October 25, 2026, `Venloud/bouriko-shorts` is **public**.
-GitHub warns that self-hosted runners are unsafe for public repositories
-because untrusted PR/workflow code could run on the machine. Do not connect a
-runner running with your daily Windows administrator identity, personal data,
-browser cookies, or other credentials. **Prefer making the repo private**
-before attaching a home PC, or use a disposable, isolated Windows VM with a
-restricted account and no personal files or secrets.
+Manual trigger in Bouriko > generate script > dispatch private Windows runner >
+download verifiable YouTube CC BY media > upload private artifact >
+dispatch Bouriko hosted render > validate files, render and upload test MP4.
+**There is no automatic publishing**.
 
-The new workflow is manual-dispatch-only, reads `main` exclusively, checks
-out with `persist-credentials: false`, and has `contents: read` permissions.
-These mitigations do **not** remove GitHub's broader public-runner risks.
+The two repositories are not automatically connected just by existing.
+Tokens and runner registration are required once.
 
-## Register the runner (one-time owner action)
-1. On GitHub open **Bouriko > Settings > Actions > Runners > New self-hosted runner**.
-2. Choose **Windows x64** and follow the *exact GitHub-generated instructions*
-   to download and configure the runner. The registration token is short-lived.
-   Never paste runner tokens, GitHub PATs, browser cookies or secrets into chat.
-3. When the GitHub configuration prompt asks for additional labels, enter
-   **`bouriko-youtube`**. The runner also needs its usual GitHub-provided
-   `self-hosted`, `Windows` and `X64` labels.
-4. On that Windows environment, install FFmpeg once, and reopen the terminal:
-   ```powershell
-   winget install -e --id Gyan.FFmpeg
-   ffmpeg -version
-   ffprobe -version
-   ```
-   The workflow installs Python 3.11, Node 22 and Python packages via
-   GitHub Actions. The GitHub runner service account must see FFmpeg on PATH.
-5. From the runner installation folder, start `run.cmd` and leave it online
-   for the test. Wait until GitHub shows the runner as **Idle**. Do not install
-   it as an elevated Windows service on a personal PC.
+## Owner setup
 
-Official guidance:
-- https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
-- https://docs.github.com/en/actions/reference/security/secure-use
+1. In the **private** repo open
+   [Runners](https://github.com/Venloud/van02utuberunner/settings/actions/runners),
+   select **New self-hosted runner**, Windows x64, and follow GitHub's generated
+   download and configure commands. Register it with custom label
+   `bouriko-youtube`. Use an isolated Windows VM or restricted user,
+   not a daily-use administrator session. Never paste the short-lived runner
+   registration token in chat or commit it to GitHub.
+2. On the Windows runner install FFmpeg and make sure `ffmpeg` and `ffprobe`
+   work from its actual PowerShell account. Run `run.cmd` from the runner
+   installation folder. The private repo should show **Idle**.
+3. Under **Bouriko > Settings > Secrets and variables > Actions**, add secret
+   `BOURIKO_PRIVATE_RUNNER_TOKEN`, a fine-grained token restricted to
+   `Venloud/van02utuberunner` with **Contents: read/write** (to trigger
+   `repository_dispatch`) and **Actions: read** (to download its artifacts).
+4. Under **van02utuberunner > Settings > Secrets and variables > Actions**, add
+   `BOURIKO_PUBLIC_RENDER_TOKEN`, a fine-grained token restricted to
+   `Venloud/bouriko-shorts` with **Actions: write** (to trigger its render).
+   Give both short expirations and minimum permissions. Do not commit,
+   display or share either secret.
+5. Open Bouriko's
+   [Home YouTube to Hosted Render](https://github.com/Venloud/bouriko-shorts/actions/workflows/home-youtube-render.yml),
+   select **Run workflow**, choose **mode: plan** and a topic index. The
+   private workflow should then start automatically; a successful acquisition
+   triggers **mode: render** automatically in Bouriko.
 
-## Run the workflow
-1. Open **Actions > Bouriko Home YouTube to Hosted Render > Run workflow**.
-2. Select `main`, then topic index `0` for an initial nonpublishing run.
-3. Follow the three separate jobs:
-   - **plan** (GitHub hosted): generate `output/story.json`.
-   - **youtube_acquisition** (Windows `bouriko-youtube`): search metadata
-     for **CC BY** clips, download on your network, inspect files with FFprobe,
-     and upload `bouriko-home-media`. This step **fails** if no usable
-     YouTube CC asset is found, rather than pretending a stock substitute is YouTube.
-   - **hosted_render** (GitHub hosted): retrieve that exact story and its media,
-     verify SHA-256 hashes, generate voice and SFX, render and QA the MP4.
-4. If the render succeeds, the run artifact is **`bouriko-home-youtube-render`**.
-   No YouTube or TikTok posting occurs.
+## What counts as tested
 
-### Troubleshooting
-- **Waiting for runner:** runner is offline, missing label `bouriko-youtube`,
-  or unavailable. The job cannot start until it is connected.
-- **ffmpeg/ffprobe not recognized:** reopen the runner session after installing
-  FFmpeg; confirm both commands work under its actual Windows user.
-- **YouTube "sign in to confirm":** residential IP or account may still be
-  challenged. Review the yt-dlp output. A PO token alone cannot guarantee
-  access, and personal-account browser cookies are not automatically consumed.
-- **No YouTube CC clips:** the strict license filter found nothing usable for
-  that story. The workflow fails closed, it does not license random uploads.
-- **Mismatch on hosted renderer:** `tools/verify_home_media.py` rejects missing,
-  corrupt, unsupported or modified media, including SHA-256 mismatches.
-- **Visual relevance:** the handoff validation proves formats and provenance,
-  not that footage illustrates narration. Review `creative_qa.json` and the MP4.
+- A GitHub Actions event accepted by the private repository is NOT a download pass.
+- A running Windows runner is NOT a proof that YouTube allows downloads from the home IP.
+- The private worker must save at least one legitimate CC BY candidate, verify
+  the actual playable video with FFprobe, and record source/license metadata.
+- The public hosted renderer verifies SHA-256 hashes, the original script
+  checksum, and the source code revision before producing an MP4.
+- Review resulting shot relevance and source attribution before publication.
 
-This is a **manual, isolated test lane**. It does not activate background
-publishing or alter the existing Bouriko Build workflow.
+## Security considerations
+
+The private runner executes a script checked out from **Bouriko's pinned
+commit**. Public repo code can still contain unintended or malicious changes.
+An isolated VM and least-privilege Windows account are required safety
+boundaries. Do not expose personal browser cookies, workstation files,
+administrator privileges, or production credentials to runner code.
+
+This setup preserves free public hosted render minutes. The private side
+consumes self-hosted compute, not GitHub-hosted video-render minutes.
+A computer must remain online to run the private download stage.
+
+GitHub reference: https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/add-runners
+
+**Current acceptance:** Offline architecture tests only; end-to-end YouTube
+download and MP4 render remain unverified until secrets and runner are set up.
