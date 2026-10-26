@@ -9,7 +9,9 @@ on:
       - 'tools/traffic_light_auto_test.py'
       - 'tools/verify_home_media.py'
       - 'tools/test_home_media_handoff.py'
-      - '.github/workflows/media-quality-smoke.yml'
+      - 'tools/dispatch_private_media.py'
+      - 'tools/verify_private_handoff.py'
+      - 'tools/test_private_dispatch.py'
       - '.github/workflows/home-youtube-render.yml'
   workflow_dispatch:
 
@@ -31,24 +33,29 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           python -m pip install -q requests pillow pyyaml
       - name: Validate Python syntax
-        run: python -m compileall -q pipeline tools/test_media_validation.py tools/traffic_light_auto_test.py tools/test_home_media_handoff.py tools/verify_home_media.py
+        run: python -m compileall -q pipeline tools/test_media_validation.py tools/traffic_light_auto_test.py tools/test_home_media_handoff.py tools/verify_home_media.py tools/dispatch_private_media.py tools/verify_private_handoff.py tools/test_private_dispatch.py
       - name: Check media stream acceptance and stock search relevance
         run: python tools/test_media_validation.py
       - name: Check home-media artifact integrity and license gates
         run: python tools/test_home_media_handoff.py
-      - name: Parse isolated home-runner workflow and verify stage wiring
+      - name: Check cross-repository compressed story and provenance verification
+        run: python tools/test_private_dispatch.py
+      - name: Parse public dispatch and hosted-render workflow
         run: |
           python - <<'PY'
           import yaml
           from pathlib import Path
-          workflow = yaml.load(Path('.github/workflows/home-youtube-render.yml').read_text(), Loader=yaml.BaseLoader)
-          jobs = workflow['jobs']
-          assert list(jobs) == ['plan', 'youtube_acquisition', 'hosted_render']
-          assert 'bouriko-youtube' in jobs['youtube_acquisition']['runs-on']
-          assert jobs['hosted_render']['needs'] == ['plan', 'youtube_acquisition']
+          file = Path('.github/workflows/home-youtube-render.yml')
+          contents = file.read_text()
+          workflow = yaml.load(contents, Loader=yaml.BaseLoader)
+          assert list(workflow['jobs']) == ['plan', 'render']
           assert workflow['permissions']['contents'] == 'read'
           assert list(workflow['on']) == ['workflow_dispatch']
-          print('PASS: home acquisition -> hosted render workflow graph')
+          assert 'runs-on: [self-hosted' not in contents
+          assert 'repository: Venloud/van02utuberunner' in contents
+          assert 'tools/dispatch_private_media.py' in contents
+          assert 'tools/verify_private_handoff.py' in contents
+          print('PASS: public Bouriko plans and renders hosted, private runner owns acquisition')
           PY
       - name: Verify supported Node runtime
         run: |
