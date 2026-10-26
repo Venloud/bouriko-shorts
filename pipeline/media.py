@@ -339,10 +339,11 @@ def choose(query, kind):
 
     for variant in variants:
         for name, fn in (
-            ("youtube_cc", youtube_cc),
             ("pixabay", pixabay),
             ("pexels", pexels),
             ("mixkit", mixkit),
+            # Hosted CI commonly gets YouTube anti-bot challenges; keep it opt-in.
+            *((("youtube_cc", youtube_cc),) if os.getenv("BOURIKO_ALLOW_YOUTUBE_DOWNLOADS") == "1" else ()),
         ):
             try:
                 found = fn(variant, kind)
