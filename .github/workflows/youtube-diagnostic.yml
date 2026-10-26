@@ -1,0 +1,61 @@
+name: YouTube download diagnostic
+# Nonpublishing. Reports which stage fails (search / metadata per client / PO token / download)
+# and validates any downloaded MP4 with ffprobe. Optional secret YOUTUBE_COOKIES (Netscape
+# cookies.txt of a throwaway account) is written to a 0600 temp file, never echoed.
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/inspiring-goodall-8iff31]
+    paths:
+      - .github/workflows/youtube-diagnostic.yml
+      - tools/youtube_diagnostic.py
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install yt-dlp, bgutil plugin, ffmpeg
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -m pip install -q -U 'yt-dlp[default]' bgutil-ytdlp-pot-provider
+          python -m pip show yt-dlp bgutil-ytdlp-pot-provider | grep -E '^(Name|Version)'
+          echo "Runner public IP owner (no IP printed):"
+          curl -s --max-time 10 https://ipinfo.io/org || true; echo
+      - name: Start PO-token provider (Docker) and wait for it
+        run: |
+          docker run --rm -d --init --name bouriko-youtube-pot -p 127.0.0.1:4416:4416 brainicism/bgutil-ytdlp-pot-provider:2.0.2
+          for i in $(seq 1 25); do curl -s --max-time 2 http://127.0.0.1:4416/ping && break; sleep 1; done; echo
+      - name: Write optional cookies secret to a private temp file
+        env:
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+        run: |
+          if [ -n "$YOUTUBE_COOKIES" ]; then
+            umask 077
+            printf '%s\n' "$YOUTUBE_COOKIES" > "$RUNNER_TEMP/yt_cookies.txt"
+            echo "YT_COOKIES_FILE=$RUNNER_TEMP/yt_cookies.txt" >> "$GITHUB_ENV"
+            echo "cookies secret present ($(wc -l < "$RUNNER_TEMP/yt_cookies.txt") lines)"
+          else
+            echo "cookies secret YOUTUBE_COOKIES not set; testing anonymous clients only"
+          fi
+      - name: Diagnose and download one video, validate with ffprobe
+        run: python tools/youtube_diagnostic.py
+      - name: Provider log tail
+        if: ${{ always() }}
+        run: docker logs --tail 40 bouriko-youtube-pot 2>&1 | sed -E 's/(po_?token|visitor_?data)[^ ]*/\1=[REDACTED]/Ig' || true
+      - name: Remove cookies file
+        if: ${{ always() }}
+        run: rm -f "$RUNNER_TEMP/yt_cookies.txt"
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: youtube-diagnostic
+          path: output/youtube_diagnostic/report.json
+          if-no-files-found: warn
