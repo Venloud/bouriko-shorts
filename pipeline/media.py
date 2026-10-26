@@ -525,7 +525,7 @@ def generate_local_diagram(query, index):
         "title": f"Technical explainer diagram: {query}",
         "license": "Original locally generated Bouriko artwork",
         "license_url": None,
-        "local_path": str(path.relative_to(ROOT)),
+        "local_path": path.relative_to(ROOT).as_posix(),
     }
 
 def generate_ai_image(query, index, exact_visual=False):
@@ -579,7 +579,7 @@ def generate_ai_image(query, index, exact_visual=False):
             "title": f"AI-generated realistic image: {query}",
             "license": "AI-generated; subject to Google Gemini API terms",
             "license_url": "https://ai.google.dev/gemini-api/terms",
-            "local_path": str(path.relative_to(ROOT)),
+            "local_path": path.relative_to(ROOT).as_posix(),
         }
     except Exception as exc:
         print(f"AI image fallback failed: {exc}")
@@ -704,7 +704,7 @@ def ensure_asset(action, index, used_urls=None):
         "source_url": chosen.get("source_url"), "creator": chosen.get("creator"),
         "title": chosen.get("title"), "license": chosen.get("license"),
         "license_url": chosen.get("license_url"),
-        "local_path": str(path.relative_to(ROOT))
+        "local_path": path.relative_to(ROOT).as_posix()
     }
 
 def main():
@@ -759,7 +759,7 @@ def main():
                "source_url":None,"title":entry.get("description") or entry.get("id"),
                "license":entry.get("rights_status","owner_provided_unverified"),
                "rights_verified":entry.get("rights_status") == "verified",
-               "local_path":str(path.relative_to(ROOT))}
+               "local_path":path.relative_to(ROOT).as_posix()}
         story["lines"][i]["media_asset"] = rec["local_path"]
         story["lines"][i]["media_source"] = rec
         records.append(rec)
