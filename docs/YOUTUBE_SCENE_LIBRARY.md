@@ -9,9 +9,11 @@ The first JJK run assembled unrelated mushroom-house, video-essay and Creative C
 3. Check captions or auto-captions for **concrete word overlap with the narration**. Find an actual timed caption span (not a guessed random timestamp).
 4. Save suggested source URL, exact start/end seconds, caption excerpt and provenance in a reusable private metadata index.
 5. Use yt-dlp section download and FFmpeg (no full-video cache) to fetch the short excerpt; verify it plays.
-6. Write the complete source/trim record into story.json and media_manifest.json for the private-to-public SHA-256 verification.
-7. If any scene is missing or irrelevant under the strict home YouTube lane, fail loudly instead of substituting unrelated content or the blue-circle fallback.
-8. Public hosted Remotion render stays review-only, **never automatically publishes**.
+6. Inspect 4 pixel frames throughout the actual excerpt with a local CLIP visual-text model. Contrast the intended visual subject against talking-head commentary, browser windows, placeholder diagrams, and unrelated scenery. Require 2+ credible frames, otherwise reject and try another YouTube candidate. For specifically named people/characters, additionally require two frame-to-reference-image matches.
+7. Persist frame similarity scores, positive/negative margins, required visual identities and rejection reasons in the private library and artifact metadata.
+8. Write the complete source/trim record into story.json and media_manifest.json for the private-to-public SHA-256 verification.
+9. If no frame-verified scene matches under the strict home YouTube lane, fail loudly instead of substituting unrelated content or the blue-circle fallback.
+10. Public hosted Remotion render stays review-only, **never automatically publishes**.
 
 This is topic-agnostic and works with anime, games, technology, geography, education, documentary subjects and more **when** relevant Creative Commons source metadata and timecoded captions exist.
 
@@ -25,15 +27,33 @@ Set BOURIKO_SCENE_LIBRARY to choose the private metadata folder. Default:
 
 This file stores prior clip source URLs, time ranges, caption excerpts, topic relevance metadata and licence notes, never tokens, whole episodes, or ephemeral subtitle URLs. Captions and clip files are not a replacement for frame inspection.
 
+## Local frame intelligence
+The private Windows runner must install the pinned public-repo requirements:
+
+    python -m pip install -r bouriko/requirements-scene-vision.txt
+
+The companion PR in van02utuberunner makes this dependency available when the two changes are deliberately integrated. This downloads an open-weight CLIP model (approximately hundreds of MB) into the local model cache, then reuses it. The model executes locally on CPU and does not call a paid vision API. The runner must have sufficient disk/RAM and outbound model access on its first run.
+
+**Named identity reference folder**, for example:
+
+    C:\Users\<WindowsUser>\Videos\BourikoSceneLibrary\references\index.json
+
+Use a local JSON mapping like:
+
+    {"entities": {"examplecharacter": ["examplecharacter-front.jpg", "examplecharacter-side.png"]}}
+
+The referenced images must reside *inside the same references folder*, and should be source-verified, permitted image examples of the actual identity. When narration names the target, a clip must visually match its reference images. If the references are missing or the model cannot identify it, the candidate is rejected, **not falsely approved**. This mechanism is generic for anime characters, known people and recognizable products, not JJK-specific. A narration line can explicitly set `visual_entities` to identify the required subjects. CLIP similarities are heuristic, not identity proof. Review borderline results and provide reference images only if you have the rights to do so.
+
 ## IMPORTANT limits
 - A matching transcript does not guarantee the video **visually shows** the claimed scene. Source titles can be misleading, footage edited out of context, or copyrighted material incorrectly labeled CC BY. Metadata licensing is **not independent rights verification**.
 - Only YouTube videos with CC BY metadata and recognized English-language captions are currently supported in this lane. If a clip cannot be matched reliably, the pipeline stops; it does not pretend to understand scenes it has not inspected.
 - Season/episode numbers inferred from the uploader title are hints, not authoritative facts. No invented timestamps.
 - The private Windows runner, public artifacts and reviewer access should be protected. Avoid passing credentials/browser cookies to downloads.
-- This is the first working core of a reusable scene library. Frame-embedding semantic recognition, verified canonical episode catalogs, on-screen character/action identification, clip previews, scene-boundary detection, rights review and complete automated approval are future extensions, not completed functionality.
+- Local CLIP frame embeddings are implemented in this PR, but character recognition still needs accurate reference images. This cannot certify exact anime character IDs without references, on-screen actions, verified canonical episode catalogs, scene-boundary detection, or downstream reuse rights. Full multimodal video understanding remains a future, independently evaluated improvement.
 - Publishing remains disabled and the final creative_qa.json must remain REVIEW_REQUIRED until footage and rights are manually checked.
 
 ## Offline regression
     python -m unittest discover -s tools -p "test_scene_library.py" -v
+    python -m unittest discover -s tools -p "test_frame_vision.py" -v
 
 Then test on the Windows self-hosted runner with a story from multiple unrelated topics. Inspect every selected segment, its original source, exact caption timecode, soundtrack, visual relevance and the final rendered MP4. Do not merge as fully accepted on unit tests alone.

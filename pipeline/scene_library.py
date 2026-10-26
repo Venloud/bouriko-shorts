@@ -25,7 +25,7 @@ STOP = {"about", "after", "also", "and", "are", "before", "because", "been",
         "much", "only", "other", "over", "same", "some", "that", "them", "then",
         "there", "these", "this", "those", "through", "very", "what", "when",
         "where", "which", "while", "with", "would", "your", "their", "they"}
-ALIASES = {"jjk": "jujutsu", "kaisen": "jujutsu", "culling": "culling",
+ALIASES = {"culling": "culling",
            "colonies": "colony", "players": "player", "rules": "rule",
            "sorcerers": "sorcerer", "satellites": "satellite",
            "phones": "phone", "controllers": "controller",
@@ -156,7 +156,7 @@ def query_score(candidate, subject):
     return len(source & target)
 
 
-def choose_segment(candidates, narration, subject, used=None):
+def rank_segments(candidates, narration, subject, used=None):
     """Return a caption-located candidate, or None. Never invent an offset."""
     used = used or set()
     matches = []
@@ -209,9 +209,13 @@ def choose_segment(candidates, narration, subject, used=None):
         result["scene_start_seconds"] = start
         result["scene_end_seconds"] = round(hit["end"], 1)
         matches.append((hit["score"] + 0.02 * query_score(candidate, subject), result))
-    if not matches:
-        return None
-    return max(matches, key=lambda x: x[0])[1]
+    return [item for _, item in sorted(matches, key=lambda x: x[0], reverse=True)]
+
+
+def choose_segment(candidates, narration, subject, used=None):
+    """Compatibility wrapper; rank_segments permits visual rejection and retry."""
+    matches = rank_segments(candidates, narration, subject, used)
+    return matches[0] if matches else None
 
 
 def download_exact_excerpt(scene, index):
@@ -259,7 +263,7 @@ def download_exact_excerpt(scene, index):
     return path
 
 
-def record_segment(scene, path, index, subject):
+def record_segment(scene, path, index, subject, visual_evidence=None):
     """Store reusable scene metadata and source provenance, never auth/caption URLs."""
     ref = {"index": index, "kind": "video", "provider": "youtube_cc_scene",
            "query": subject, "title": scene.get("title"),
@@ -273,6 +277,10 @@ def record_segment(scene, path, index, subject):
            "caption_origin": scene["caption_origin"],
            "semantic_status": scene["semantic_status"],
            "rights_status": scene["rights_status"], "rights_verified": False,
+           "visual_evidence": visual_evidence or {},
+           "semantic_status": ("FRAME_SIMILARITY_PASS_REVIEW_REQUIRED"
+                               if (visual_evidence or {}).get("accepted")
+                               else "TRANSCRIPT_MATCH_FRAME_REVIEW_REQUIRED"),
            **episode_hints(scene.get("title"))}
     LIBRARY.mkdir(parents=True, exist_ok=True)
     index_data = {"version": 1, "scenes": []}
@@ -285,10 +293,14 @@ def record_segment(scene, path, index, subject):
     if not isinstance(entries, list):
         entries = []
     identity = (ref["source_url"], ref["scene_start_seconds"], ref["scene_end_seconds"])
-    if not any((i.get("source_url"), i.get("scene_start_seconds"),
-                i.get("scene_end_seconds")) == identity for i in entries):
-        entries.append({k: v for k, v in ref.items()
-                        if k not in {"local_path", "index"}})
+    stored = {k: v for k, v in ref.items() if k not in {"local_path", "index"}}
+    for existing in entries:
+        if (existing.get("source_url"), existing.get("scene_start_seconds"),
+                existing.get("scene_end_seconds")) == identity:
+            existing.update(stored)  # Upgrade older transcript-only cache entries.
+            break
+    else:
+        entries.append(stored)
     new_path = INDEX.with_suffix(".tmp")
     entries = entries[-2000:]  # Bound persistent metadata size.
     new_path.write_text(json.dumps({"version": 1, "scenes": entries},

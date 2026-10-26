@@ -48,7 +48,12 @@ def audit(min_youtube=1):
         for i, rec in enumerate(manifest):
             if (rec.get("index") != i
                     or rec.get("provider") != "youtube_cc_scene"
-                    or rec.get("semantic_status") != "TRANSCRIPT_MATCH_FRAME_REVIEW_REQUIRED"
+                    or rec.get("semantic_status") != "FRAME_SIMILARITY_PASS_REVIEW_REQUIRED"
+                    or not isinstance(rec.get("visual_evidence"), dict)
+                    or rec["visual_evidence"].get("accepted") is not True
+                    or rec["visual_evidence"].get("source") != "sampled_video_frames"
+                    or rec["visual_evidence"].get("passing_frame_count", 0) < 2
+                    or rec["visual_evidence"].get("sampled_frames", 0) < 3
                     or not rec.get("transcript_excerpt")
                     or not isinstance(rec.get("scene_start_seconds"), (int, float))
                     or not isinstance(rec.get("scene_end_seconds"), (int, float))

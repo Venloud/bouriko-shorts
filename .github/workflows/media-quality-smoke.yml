@@ -13,6 +13,17 @@ on:
       - 'tools/verify_private_handoff.py'
       - 'tools/test_private_dispatch.py'
       - '.github/workflows/home-youtube-render.yml'
+  pull_request:
+    paths:
+      - 'pipeline/scene_library.py'
+      - 'pipeline/frame_vision.py'
+      - 'pipeline/media.py'
+      - 'pipeline/visual_plan.py'
+      - 'tools/test_scene_library.py'
+      - 'tools/test_frame_vision.py'
+      - 'tools/verify_home_media.py'
+      - 'pipeline/qa.py'
+      - '.github/workflows/media-quality-smoke.yml'
   workflow_dispatch:
 
 permissions:
@@ -38,6 +49,8 @@ jobs:
         run: python tools/test_media_validation.py
       - name: Test reusable YouTube scene selection (offline)
         run: python -m unittest discover -s tools -p 'test_scene_library.py' -v
+      - name: Test visual frame gate with synthetic evidence and real FFmpeg frames
+        run: python -m unittest discover -s tools -p 'test_frame_vision.py' -v
       - name: Check home-media artifact integrity and license gates
         run: python tools/test_home_media_handoff.py
       - name: Check cross-repository compressed story and provenance verification

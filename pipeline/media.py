@@ -714,9 +714,10 @@ def ensure_asset(action, index, used_urls=None):
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     if os.getenv("BOURIKO_HOME_YOUTUBE_ACQUISITION") == "1":
-        # Generic, narration-anchored YouTube scene selection across ALL topics.
-        # Only subtitle-located scenes are accepted; no filler diagrams.
-        from scene_library import choose_segment, download_exact_excerpt, record_segment
+        # No uninspected stock substitutions. Rank caption-aligned cuts, then
+        # verify the ACTUAL excerpt frames, with reference-backed name checks.
+        from scene_library import rank_segments, download_exact_excerpt, record_segment
+        from frame_vision import inspect_clip
         topic = str(story.get("topic") or story.get("title") or "subject")
         lines = story.get("lines") or []
         if not lines:
@@ -724,25 +725,50 @@ def main():
         records, used, discovery_cache = [], set(), {}
         for i, line in enumerate(lines):
             query = planned_query(story.get("test_topic_id"), line, i, topic)
-            search_queries = [query]
-            if query.lower() != topic.lower():
-                search_queries.append(topic)
-            segment = None
+            search_queries = list(dict.fromkeys((query, topic)))
+            selected = None
+            failures = []
             for search_query in search_queries:
                 if search_query not in discovery_cache:
                     discovery_cache[search_query] = youtube_cc(search_query, "video")
-                segment = choose_segment(discovery_cache[search_query], line["text"], topic, used)
-                if segment:
+                possibilities = rank_segments(
+                    discovery_cache[search_query], line["text"], topic, used)
+                for segment in possibilities[:3]:
+                    key = (segment.get("youtube_id") or segment["url"],
+                           segment["scene_start_seconds"])
+                    if key in used:
+                        continue
+                    path = None
+                    try:
+                        path = download_exact_excerpt(segment, i)
+                        if not usable_media_file(path, "video"):
+                            raise ValueError("Downloaded excerpt is not playable")
+                        verdict = inspect_clip(
+                            path, line["text"], topic,
+                            visual_hint=line.get("visual_prompt") or line.get("visual") or query,
+                            required_names=line.get("visual_entities"))
+                        if not verdict.get("accepted"):
+                            failures.append({
+                                "url": segment["url"], "reason": verdict.get("reason"),
+                                "entities": verdict.get("identity_missing")})
+                            path.unlink(missing_ok=True)
+                            continue
+                        selected = (segment, path, verdict)
+                        break
+                    except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
+                        failures.append({"url": segment["url"], "reason": str(exc)[:180]})
+                        if path is not None:
+                            path.unlink(missing_ok=True)
+                if selected:
                     break
-            if segment is None:
+            if selected is None:
                 raise RuntimeError(
-                    f"No transcript-matched, CC-labelled YouTube scene for beat {i}: "
-                    f"{line['text'][:100]}. Stopping rather than inserting unrelated footage."
+                    f"No frame-verified YouTube scene for beat {i}: "
+                    f"{line['text'][:100]}; attempts={json.dumps(failures[:6])}. "
+                    "No irrelevant footage or placeholder graphics will be used."
                 )
-            path = download_exact_excerpt(segment, i)
-            if not usable_media_file(path, "video"):
-                raise RuntimeError(f"Downloaded excerpt for beat {i} is not a playable video")
-            rec = record_segment(segment, path, i, topic)
+            segment, path, verdict = selected
+            rec = record_segment(segment, path, i, topic, visual_evidence=verdict)
             line["media_asset"] = rec["local_path"]
             line["media_kind"] = "video"
             line["media_source"] = rec
@@ -751,7 +777,8 @@ def main():
                       segment["scene_start_seconds"]))
             print(f"Scene {i}: {rec['source_url']} "
                   f"{rec['scene_start_seconds']:.1f}-{rec['scene_end_seconds']:.1f}s "
-                  f"caption={rec['caption_origin']}; visual relevance REVIEW_REQUIRED")
+                  f"frame-pass={verdict['passing_frame_count']}/{verdict['sampled_frames']} "
+                  "human review still required")
         story["media_strategy"] = "youtube_scene_library"
         MANIFEST.parent.mkdir(parents=True, exist_ok=True)
         MANIFEST.write_text(json.dumps(records, indent=2), encoding="utf-8")

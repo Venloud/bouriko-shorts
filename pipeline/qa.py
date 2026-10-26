@@ -45,7 +45,10 @@ def main():
                 f"Scene {i} used a generic or misleading fallback")
             assert source.get("transcript_excerpt") and source.get("scene_end_seconds", 0) > source.get("scene_start_seconds", 0), (
                 f"Scene {i} missing narrated moment/timecode evidence")
-            assert source.get("semantic_status") == "TRANSCRIPT_MATCH_FRAME_REVIEW_REQUIRED", (
+            evidence = source.get("visual_evidence") or {}
+            assert evidence.get("accepted") and evidence.get("passing_frame_count", 0) >= 2, (
+                f"Scene {i} lacks real pixel-based visual verification")
+            assert source.get("semantic_status") == "FRAME_SIMILARITY_PASS_REVIEW_REQUIRED", (
                 f"Scene {i} failed the scene library provenance gate")
     report = []
     for i, line in enumerate(lines):
