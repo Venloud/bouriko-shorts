@@ -177,8 +177,10 @@ def choose_segment(candidates, narration, subject, used=None):
                     if old.get("source_url") != candidate["url"]:
                         continue
                     span = best_caption_span([{
-                        "start": old.get("scene_start_seconds", 0),
-                        "end": old.get("scene_end_seconds", 0),
+                        # Stored range already includes +/-0.3s padding.
+                        # Undo padding before rescoring so reuse never drifts.
+                        "start": float(old.get("scene_start_seconds", 0)) + 0.3,
+                        "end": float(old.get("scene_end_seconds", 0)) - 0.3,
                         "text": old.get("transcript_excerpt", ""),
                     }], narration)
                     if span:
