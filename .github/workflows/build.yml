@@ -19,6 +19,43 @@ permissions:
   actions: read
 
 jobs:
+  youtube_diagnostic:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: Install diagnostic tools
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          python -m pip install -U 'yt-dlp[default]' bgutil-ytdlp-pot-provider
+          python -m yt_dlp --version
+      - name: Start local token provider and verify socket
+        run: |
+          docker run --rm -d --init --name bouriko-youtube-pot -p 127.0.0.1:4416:4416 brainicism/bgutil-ytdlp-pot-provider:2.0.2
+          python - <<'PY'
+          import socket, time
+          for _ in range(25):
+              try:
+                  with socket.create_connection(("127.0.0.1", 4416), timeout=2):
+                      print("PO-provider socket reachable")
+                      break
+              except OSError:
+                  time.sleep(1)
+          else:
+              raise SystemExit("PO-provider never became reachable")
+          PY
+      - name: Verify actual YouTube download and MP4 with ffprobe
+        run: python tools/youtube_diagnostic.py
+      - name: Upload detailed YouTube diagnostic even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bouriko-youtube-diagnostic
+          path: output/youtube_diagnostic/report.json
+          if-no-files-found: warn
   media_test:
     if: inputs.test_mode == 'media_only'
     runs-on: ubuntu-latest
