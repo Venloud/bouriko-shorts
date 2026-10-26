@@ -665,7 +665,7 @@ def ensure_asset(action, index, used_urls=None):
                     "outtmpl": str(path.with_suffix(".%(ext)s")),
                     "noplaylist": True,
                     "extractor_args": {"youtube": {"player_client": ["mweb", "tv", "web_safari"]}},
-        "js_runtimes": {"node": {}},
+                    "js_runtimes": {"node": {}},
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([chosen["url"]])
