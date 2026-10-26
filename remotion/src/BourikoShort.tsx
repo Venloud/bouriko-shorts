@@ -56,11 +56,11 @@ const Caption = ({
   duration: number;
 }) => {
   const frame = useCurrentFrame();
-  const words = text.trim().split(/\\s+/).filter(Boolean);
+  const words = text.trim().split(/\s+/).filter(Boolean);
   const elapsed = frame / 30;
   const wordIndex = Math.min(Math.max(0, words.length - 1),
     Math.floor((elapsed / Math.max(duration, 0.2)) * words.length));
-  const chunkSize = 4;
+  const chunkSize = 3;
   const chunkIndex = Math.floor(wordIndex / chunkSize);
   const chunk = words.slice(chunkIndex * chunkSize, chunkIndex * chunkSize + chunkSize);
   const activeWord = wordIndex % chunkSize;
@@ -70,11 +70,11 @@ const Caption = ({
   return (
     <AbsoluteFill style={{pointerEvents:"none"}}>
       <div style={{
-        position:"absolute",bottom:345,left:72,right:72,
+        position:"absolute",bottom:380,left:100,right:100,
         display:"flex",justifyContent:"center",alignItems:"center",
         gap:12,flexWrap:"wrap",textAlign:"center",
         fontFamily:'"DejaVu Sans", Arial, sans-serif',
-        fontWeight:800,fontSize:74,lineHeight:1.16,
+        fontWeight:800,fontSize:58,lineHeight:1.2,
         textShadow:"0 3px 12px rgba(0,0,0,.95), 0 2px 3px #000",
         transform:`translateY(${(1-settle)*16}px)`,opacity:Math.min(1,entryFrame/5)
       }}>
