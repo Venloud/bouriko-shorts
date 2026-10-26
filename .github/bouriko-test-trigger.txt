@@ -1,2 +1,2 @@
-Run full-video nonpublishing Bouriko test against latest main.
-Requested 2026-10-25.
+Run nonpublishing Bouriko full-video and YouTube stage diagnostic on main.
+2026-10-25 verification trigger B.
