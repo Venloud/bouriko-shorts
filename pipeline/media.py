@@ -400,6 +400,11 @@ def choose(query, kind):
         if len(candidates) >= 12:
             break
 
+    # Only the dedicated home-runner acquisition lane prefers YouTube CC assets.
+    # Normal hosted builds retain their existing provider ordering.
+    if os.getenv("BOURIKO_HOME_YOUTUBE_ACQUISITION") == "1":
+        candidates.sort(key=lambda item: (item.get("provider") != "youtube_cc",
+                                          -(item.get("score") or 0)))
     return candidates[:30]
 
 
