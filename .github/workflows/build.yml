@@ -27,6 +27,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "22"}
       - name: Install diagnostic tools
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
@@ -65,6 +67,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with: {node-version: "22"}
       - name: Install media tools
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
@@ -136,7 +140,7 @@ jobs:
         with: {python-version: "3.11"}
 
       - uses: actions/setup-node@v4
-        with: {node-version: "20"}
+        with: {node-version: "22"}
 
       - name: Restore story checkpoint
         if: false
@@ -170,6 +174,9 @@ jobs:
               raise RuntimeError("Kokoro produced no test audio")
           print("Kokoro narration smoke test PASS")
           PY
+
+      - name: Validate downloaded-media acceptance and stock-page relevance
+        run: python tools/test_media_validation.py
 
       - name: Write story
         if: ${{ true || !hashFiles('output/story.json') }}
