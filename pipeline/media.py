@@ -86,6 +86,23 @@ def mixkit(query, kind):
         if not r.ok:
             return []
         html = r.text
+        # Mixkit occasionally redirects an invalid search path to an unrelated
+        # category (for example, 'cars'). Never label those clips as the query.
+        from urllib.parse import urlsplit
+        from html import unescape
+        if urlsplit(r.url).path.rstrip("/") != urlsplit(url).path.rstrip("/"):
+            print(f"  mixkit: rejected redirect for '{query}' -> {r.url}")
+            return []
+        title_match = re.search(r"<title[^>]*>(.*?)</title>", html, re.I | re.S)
+        page_title = unescape(re.sub(r"<[^>]+>", "", title_match.group(1))).strip() if title_match else ""
+        common_words = {"stock", "video", "videos", "footage", "free", "the", "that",
+                        "this", "with", "from", "into", "and", "about", "relevant"}
+        query_words = {w for w in re.findall(r"[a-z]{4,}", query.lower()) if w not in common_words}
+        title_words = set(re.findall(r"[a-z]{4,}", page_title.lower()))
+        # Invalid dynamically generated paths may serve generic/other categories.
+        if query_words and not (query_words & title_words):
+            print(f"  mixkit: page title irrelevant to '{query}': {page_title!r}")
+            return []
     except requests.RequestException:
         return []
 
@@ -108,7 +125,7 @@ def mixkit(query, kind):
             "url": media_url,
             "source_url": url,
             "creator": None,
-            "title": query,
+            "title": page_title,
             "license": "Mixkit Stock Video Free License (verify per clip)",
             "license_url": "https://mixkit.co/license/",
         })
