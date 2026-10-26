@@ -709,6 +709,12 @@ def ensure_asset(action, index, used_urls=None):
 
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
+    if story.get("test_topic_id") == "jjk":
+        # Episode- and timestamp-aware clips only. Never substitute random stock,
+        # generic blue-circle diagrams, or purported CC BY uploads.
+        from anime_scene_library import populate_jjk
+        populate_jjk(story)
+        return
     records = []
     used_urls = set()
 

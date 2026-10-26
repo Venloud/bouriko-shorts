@@ -42,6 +42,20 @@ def audit(min_youtube=1):
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if not isinstance(manifest, list) or not manifest:
         raise ValueError("Media manifest is empty or invalid")
+    if story.get("test_topic_id") == "jjk":
+        # Actual episode clips from owner-approved local sources replace the
+        # general-purpose Creative Commons stock-video minimum.
+        if len(manifest) != len(story.get("lines", [])):
+            raise ValueError("Every JJK narration beat needs its own reviewed scene")
+        for rec in manifest:
+            if (rec.get("provider") != "anime_scene_library"
+                    or not rec.get("scene_reviewed")
+                    or not rec.get("rights_reference")
+                    or not rec.get("episode")
+                    or rec.get("trim_start_seconds") is None
+                    or rec.get("trim_end_seconds") is None):
+                raise ValueError("JJK scene lacks exact episode, timecode or review metadata")
+        min_youtube = 0
     index = {}
     files = {}
     for record in manifest:

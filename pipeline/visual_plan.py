@@ -9,7 +9,13 @@ SHOTS = {
  "car stops at traffic signal junction", "road pavement induction loop sensor", "traffic detection electromagnetic loop diagram", "car driving over road detection sensor", "traffic signal controller cabinet", "traffic signal changes green at junction", "traffic camera radar intersection", "traffic light timer diagram"],
  "beauty": [
  "skin cream skincare bottle closeup", "cosmetics lab emulsion blending", "oil water emulsifier laboratory closeup", "glycerin moisture skincare cosmetic demonstration", "skincare ingredient mixing production", "cosmetic preservative microbiology test", "beauty product temperature stability laboratory", "cosmetic scientist skin safety testing"],
- "jjk": ["original stylized fantasy competition rules diagram", "original illustrated fantasy colony map", "original fantasy scoring points graphic"],
+ "jjk": [
+ "JJK Culling Game dangerous ritual original opening","Kenjaku orchestrates the Culling Game",
+ "JJK Japan colonies and barrier locations","Culling Game sorcerer five points non-sorcerer one point",
+ "Culling Game 100 points rule addition", "Culling Game new rule restrictions",
+ "Culling Game participation cursed technique removal", "Culling Game scoreboard rewards violence",
+ "Yuji Itadori and Megumi Fushiguro plan rescue", "Culling Game alliances and colonies",
+ "JJK Culling Game not a fair tournament", "Kenjaku overarching ritual plan"],
  "iphone": ["smartphone official product photo comparison", "smartphone display closeup", "smartphone camera lens technical closeup"],
  "faceless_youtube": ["vertical short video editing timeline", "script storyboard workstation", "voiceover audio waveform editing", "stock footage trimming on editing timeline", "animated captions short form vertical video"]
 }
