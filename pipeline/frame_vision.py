@@ -15,6 +15,8 @@ from pathlib import Path
 from common import ROOT
 
 MODEL_ID = "openai/clip-vit-base-patch32"
+# Immutable revision with reviewed safe tensor weights, rather than the mutable main.
+MODEL_REVISION = "b527df4b30e5cc18bde1cc712833a741d2d8c362"
 NEGATIVE_PROMPTS = (
     "A talking head presenting a video essay, podcast or commentary.",
     "A computer desktop, browser window or video editor with text on screen.",
@@ -112,9 +114,12 @@ def model_bundle():
         raise RuntimeError(
             "Frame QA requires torch and transformers on the private Windows runner"
         ) from exc
-    model = CLIPModel.from_pretrained(MODEL_ID, trust_remote_code=False)
+    model = CLIPModel.from_pretrained(
+        MODEL_ID, revision=MODEL_REVISION, trust_remote_code=False,
+        use_safetensors=True)
     model.eval()
-    processor = CLIPProcessor.from_pretrained(MODEL_ID, trust_remote_code=False)
+    processor = CLIPProcessor.from_pretrained(
+        MODEL_ID, revision=MODEL_REVISION, trust_remote_code=False)
     return torch, model, processor
 
 
@@ -127,6 +132,11 @@ def score_images(frames, prompts, references):
         image_embeddings = model.get_image_features(**image_inputs)
         texts = processor(text=list(prompts), return_tensors="pt", padding=True, truncation=True)
         text_embeddings = model.get_text_features(**texts)
+        # Transformers 4.x returns tensors; newer releases may return outputs.
+        if hasattr(image_embeddings, "pooler_output"):
+            image_embeddings = image_embeddings.pooler_output
+        if hasattr(text_embeddings, "pooler_output"):
+            text_embeddings = text_embeddings.pooler_output
         image_embeddings = torch.nn.functional.normalize(image_embeddings, dim=-1)
         text_embeddings = torch.nn.functional.normalize(text_embeddings, dim=-1)
         scores = (image_embeddings @ text_embeddings.T).tolist()
@@ -140,6 +150,8 @@ def score_images(frames, prompts, references):
                     reference_imgs.append(image.convert("RGB"))
             reference_embeddings = model.get_image_features(
                 **processor(images=reference_imgs, return_tensors="pt"))
+            if hasattr(reference_embeddings, "pooler_output"):
+                reference_embeddings = reference_embeddings.pooler_output
             reference_embeddings = torch.nn.functional.normalize(reference_embeddings, dim=-1)
             refs[name] = (image_embeddings @ reference_embeddings.T).tolist()
     return scores, refs
