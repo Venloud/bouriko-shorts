@@ -38,17 +38,15 @@ def main():
     print(f"MEDIA DATA: {media_count} usable visual assets ({video_count} video)")
     # A completed technical render is not a semantic quality pass.
     # Require explicit per-beat assignment and write an inspectable review plan.
-    if story.get("test_topic_id") == "jjk":
+    if story.get("media_strategy") == "youtube_scene_library":
         for i, line in enumerate(lines):
             source = line.get("media_source") or {}
-            assert source.get("provider") == "anime_scene_library", (
-                f"JJK beat {i} used a generic or unverified media provider")
-            assert source.get("scene_reviewed") and source.get("rights_reference"), (
-                f"JJK beat {i} requires reviewed episode clip and source-rights documentation")
-            assert source.get("season") and source.get("episode"), (
-                f"JJK beat {i} has no verified season or episode")
-            assert source.get("trim_end_seconds", 0) > source.get("trim_start_seconds", 0), (
-                f"JJK beat {i} has no actual in-episode trim range")
+            assert source.get("provider") == "youtube_cc_scene", (
+                f"Scene {i} used a generic or misleading fallback")
+            assert source.get("transcript_excerpt") and source.get("scene_end_seconds", 0) > source.get("scene_start_seconds", 0), (
+                f"Scene {i} missing narrated moment/timecode evidence")
+            assert source.get("semantic_status") == "TRANSCRIPT_MATCH_FRAME_REVIEW_REQUIRED", (
+                f"Scene {i} failed the scene library provenance gate")
     report = []
     for i, line in enumerate(lines):
         src = line.get("media_source") or {}

@@ -42,20 +42,19 @@ def audit(min_youtube=1):
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if not isinstance(manifest, list) or not manifest:
         raise ValueError("Media manifest is empty or invalid")
-    if story.get("test_topic_id") == "jjk":
-        # Actual episode clips from owner-approved local sources replace the
-        # general-purpose Creative Commons stock-video minimum.
+    if story.get("media_strategy") == "youtube_scene_library":
         if len(manifest) != len(story.get("lines", [])):
-            raise ValueError("Every JJK narration beat needs its own reviewed scene")
-        for rec in manifest:
-            if (rec.get("provider") != "anime_scene_library"
-                    or not rec.get("scene_reviewed")
-                    or not rec.get("rights_reference")
-                    or not rec.get("episode")
-                    or rec.get("trim_start_seconds") is None
-                    or rec.get("trim_end_seconds") is None):
-                raise ValueError("JJK scene lacks exact episode, timecode or review metadata")
-        min_youtube = 0
+            raise ValueError("Scene library did not match every narration beat")
+        for i, rec in enumerate(manifest):
+            if (rec.get("index") != i
+                    or rec.get("provider") != "youtube_cc_scene"
+                    or rec.get("semantic_status") != "TRANSCRIPT_MATCH_FRAME_REVIEW_REQUIRED"
+                    or not rec.get("transcript_excerpt")
+                    or not isinstance(rec.get("scene_start_seconds"), (int, float))
+                    or not isinstance(rec.get("scene_end_seconds"), (int, float))
+                    or not 0 <= rec["scene_start_seconds"] < rec["scene_end_seconds"]
+                    or rec["scene_end_seconds"] - rec["scene_start_seconds"] > 10):
+                raise ValueError(f"Missing scene evidence/timecode for beat {i}")
     index = {}
     files = {}
     for record in manifest:
@@ -76,7 +75,7 @@ def audit(min_youtube=1):
         if line.get("media_asset_2") and line["media_asset_2"] not in index:
             raise ValueError(f"Scene {scene_number} secondary media absent from manifest")
 
-    youtube = [r for r in manifest if r.get("provider") == "youtube_cc"]
+    youtube = [r for r in manifest if r.get("provider") in {"youtube_cc", "youtube_cc_scene"}]
     for item in youtube:
         if "creative commons attribution" not in str(item.get("license", "")).lower():
             raise ValueError("YouTube clip missing explicit CC BY metadata")

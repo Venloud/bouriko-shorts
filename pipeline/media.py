@@ -182,6 +182,10 @@ def youtube_cc(query, kind):
             "license": license_name,
             "license_url": "https://support.google.com/youtube/answer/2797468",
             "youtube_id": item.get("id"),
+            # Ephemeral subtitle URLs used for ranking, not persisted in artifacts.
+            "subtitles": item.get("subtitles") or {},
+            "automatic_captions": item.get("automatic_captions") or {},
+            "description": (item.get("description") or "")[:800],
         })
     return out
 
@@ -709,11 +713,50 @@ def ensure_asset(action, index, used_urls=None):
 
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
-    if story.get("test_topic_id") == "jjk":
-        # Episode- and timestamp-aware clips only. Never substitute random stock,
-        # generic blue-circle diagrams, or purported CC BY uploads.
-        from anime_scene_library import populate_jjk
-        populate_jjk(story)
+    if os.getenv("BOURIKO_HOME_YOUTUBE_ACQUISITION") == "1":
+        # Generic, narration-anchored YouTube scene selection across ALL topics.
+        # Only subtitle-located scenes are accepted; no filler diagrams.
+        from scene_library import choose_segment, download_exact_excerpt, record_segment
+        topic = str(story.get("topic") or story.get("title") or "subject")
+        lines = story.get("lines") or []
+        if not lines:
+            raise RuntimeError("Cannot acquire scenes for an empty story")
+        records, used, discovery_cache = [], set(), {}
+        for i, line in enumerate(lines):
+            query = planned_query(story.get("test_topic_id"), line, i, topic)
+            search_queries = [query]
+            if query.lower() != topic.lower():
+                search_queries.append(topic)
+            segment = None
+            for search_query in search_queries:
+                if search_query not in discovery_cache:
+                    discovery_cache[search_query] = youtube_cc(search_query, "video")
+                segment = choose_segment(discovery_cache[search_query], line["text"], topic, used)
+                if segment:
+                    break
+            if segment is None:
+                raise RuntimeError(
+                    f"No transcript-matched, CC-labelled YouTube scene for beat {i}: "
+                    f"{line['text'][:100]}. Stopping rather than inserting unrelated footage."
+                )
+            path = download_exact_excerpt(segment, i)
+            if not usable_media_file(path, "video"):
+                raise RuntimeError(f"Downloaded excerpt for beat {i} is not a playable video")
+            rec = record_segment(segment, path, i, topic)
+            line["media_asset"] = rec["local_path"]
+            line["media_kind"] = "video"
+            line["media_source"] = rec
+            records.append(rec)
+            used.add((segment.get("youtube_id") or segment["url"],
+                      segment["scene_start_seconds"]))
+            print(f"Scene {i}: {rec['source_url']} "
+                  f"{rec['scene_start_seconds']:.1f}-{rec['scene_end_seconds']:.1f}s "
+                  f"caption={rec['caption_origin']}; visual relevance REVIEW_REQUIRED")
+        story["media_strategy"] = "youtube_scene_library"
+        MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+        MANIFEST.write_text(json.dumps(records, indent=2), encoding="utf-8")
+        (ROOT / "output/story.json").write_text(json.dumps(story, indent=2), encoding="utf-8")
+        print(f"Transcript-located YouTube scenes: {len(records)}/{len(lines)} (review-only)")
         return
     records = []
     used_urls = set()
