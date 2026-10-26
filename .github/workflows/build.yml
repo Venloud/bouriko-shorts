@@ -1,5 +1,9 @@
 name: Bouriko Build
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/bouriko-test-trigger.txt'
   workflow_dispatch:
     inputs:
       test_mode:
@@ -84,7 +88,7 @@ jobs:
           PY
   build:
     needs: buffer
-    if: inputs.test_mode == 'full_video' && needs.buffer.outputs.empty == 'true'
+    if: (github.event_name == 'push' || inputs.test_mode == 'full_video') && needs.buffer.outputs.empty == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
