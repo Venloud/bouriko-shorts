@@ -241,10 +241,47 @@ def populate_jjk(story):
     print(f"JJK library: {len(records)} precise, reviewed trims; publication rights remain review-required")
 
 
+def online_candidates(query, limit=10):
+    """Discover JJK clip titles and source URLs, never download or assert reuse rights."""
+    try:
+        import yt_dlp
+    except ImportError as exc:
+        raise RuntimeError("Install yt-dlp to search public clip metadata") from exc
+    search_text = "Jujutsu Kaisen " + query
+    options = {"quiet": True, "no_warnings": True, "skip_download": True,
+               "extract_flat": "in_playlist", "ignoreerrors": True,
+               "playlistend": limit}
+    with yt_dlp.YoutubeDL(options) as ydl:
+        data = ydl.extract_info("ytsearch" + str(limit) + ":" + search_text, download=False)
+    results = []
+    for item in (data or {}).get("entries", []):
+        if not item:
+            continue
+        title = str(item.get("title") or "")
+        overlap = len(terms(query) & terms(title))
+        if overlap < 1 or not ({"jujutsu", "kaisen", "jjk"} & terms(title)):
+            continue
+        video_id = str(item.get("id") or "")
+        url = item.get("webpage_url") or (f"https://www.youtube.com/watch?v={video_id}" if video_id else "")
+        results.append({"title": title, "url": url, "channel": item.get("channel") or item.get("uploader"),
+                        "duration": item.get("duration"), "query": search_text,
+                        "keyword_overlap": overlap, "rights_status": "unverified",
+                        "episode_and_scene_timestamps_verified": False})
+    results.sort(key=lambda item: item["keyword_overlap"], reverse=True)
+    LIBRARY.mkdir(parents=True, exist_ok=True)
+    (LIBRARY / "discovery.json").write_text(json.dumps({
+        "query": search_text, "review_only": True, "candidates": results
+    }, indent=2), encoding="utf-8")
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description="Private JJK episode scene index, no streaming-site scraping")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("episodes")
+    discover = sub.add_parser("discover", help="Search public JJK clip metadata, no automatic downloading")
+    discover.add_argument("query")
+    discover.add_argument("--limit", type=int, default=10)
     listing = sub.add_parser("suggest")
     listing.add_argument("text")
     reg = sub.add_parser("add")
@@ -273,6 +310,10 @@ def main():
     if args.command == "episodes":
         for e in episodes():
             print(f"S{e['season']:02}E{e['episode']:02} (overall {e['overall_episode']}): {e['title']}")
+    elif args.command == "discover":
+        for row in online_candidates(args.query, max(1, min(20, args.limit))):
+            print(json.dumps(row, ensure_ascii=False))
+        print("DISCOVERY ONLY: public visibility does not prove permission to reuse or episode timing")
     elif args.command == "suggest":
         for i, e in enumerate(BEATS):
             score = len(terms(args.text) & terms(e[1]))

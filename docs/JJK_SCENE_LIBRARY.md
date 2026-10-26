@@ -26,6 +26,12 @@ Add a real clip from a locally supplied episode after watching it:
 
 IMPORTANT: The above timestamps are format examples, NOT verified JJK scene positions. Review your footage and use actual in-file times. An approval means the owner checked the scene frames. It does not, by itself, prove a license or fair-use case.
 
+For a rights-unverified online *discovery list* of JJK clips (metadata only, not downloads):
+
+    python pipeline/anime_scene_library.py discover "Culling Game Kenjaku rule explanation" --limit 10
+
+This searches public video titles and saves candidates in the private BourikoAnime/discovery.json, marked unverified. It DOES NOT automatically download, claim an exact episode/timestamp, or approve the footage. Use an authorized source before indexing real excerpts.
+
 For subtitle-assisted scene proposals:
 
     python pipeline/anime_scene_library.py subtitles --file C:\path\to\episode.srt
