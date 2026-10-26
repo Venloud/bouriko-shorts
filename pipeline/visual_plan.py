@@ -39,3 +39,26 @@ def approved_assets(story):
             if isinstance(index,int) and index >= 0:
                 chosen.setdefault(index, (record,path))
     return chosen
+
+# Mechanism narration requires explanatory art, not arbitrary traffic B-roll.
+TECHNICAL_CUES = ("loop", "magnetic", "induct", "electromagnetic", "sensor", "controller",
+                  "radar", "camera", "timer", "detect", "bicycle", "bike")
+def requires_diagram(topic_id, line):
+    if topic_id != "traffic_light":
+        return False
+    text = str(line.get("text") or "").lower()
+    return any(token in text for token in TECHNICAL_CUES)
+
+def diagram_beat(line):
+    text = str(line.get("text") or "").lower()
+    if "bike" in text or "bicycle" in text:
+        return "BICYCLE DETECTION"
+    if "camera" in text or "radar" in text:
+        return "CAMERA AND RADAR"
+    if "timer" in text:
+        return "SIGNAL TIMING"
+    if "controller" in text:
+        return "SENSOR TO CONTROLLER"
+    if "magnetic" in text or "induct" in text or "electromagnetic" in text:
+        return "MAGNETIC FIELD CHANGE"
+    return "VEHICLE SENSOR LOOP"
