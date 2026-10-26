@@ -9,6 +9,7 @@ on:
       - 'tools/traffic_light_auto_test.py'
       - 'tools/verify_home_media.py'
       - 'tools/test_home_media_handoff.py'
+      - '.github/workflows/media-quality-smoke.yml'
       - '.github/workflows/home-youtube-render.yml'
   workflow_dispatch:
 
