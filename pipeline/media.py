@@ -133,6 +133,7 @@ def youtube_cc(query, kind):
         "playlistend": 8,
         "noplaylist": False,
         "extractor_args": {"youtube": {"player_client": ["mweb", "tv", "web_safari"]}},
+        "js_runtimes": {"node": {}},
     }
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:
@@ -259,7 +260,7 @@ def commons(query, kind):
         mime = (info.get("mime") or "").lower()
         title = page.get("title") or ""
         if kind == "video":
-            if not (mime.startswith("video/") or any(title.lower().endswith(x) for x in (".webm",".mp4",".ogv"))):
+            if not (mime in {"video/webm", "video/mp4"} or title.lower().endswith((".webm", ".mp4"))):
                 continue
         else:
             if not mime.startswith("image/"):
@@ -562,6 +563,46 @@ def generate_ai_image(query, index, exact_visual=False):
         print(f"AI image fallback failed: {exc}")
         return None
 
+
+
+def usable_media_file(path, kind):
+    """Reject corrupt, audio-only and unsupported media before Remotion sees it."""
+    import subprocess
+    path = Path(path)
+    if not path.is_file() or path.stat().st_size == 0:
+        return False
+    if kind == "video":
+        # Remotion/Chrome cannot directly play Ogg/Theora (.ogv) files.
+        if path.suffix.lower() not in {".mp4", ".webm"}:
+            return False
+        try:
+            probe = subprocess.run([
+                "ffprobe", "-v", "error", "-show_streams", "-show_format",
+                "-of", "json", str(path)
+            ], text=True, capture_output=True, timeout=25)
+            if probe.returncode:
+                return False
+            data = json.loads(probe.stdout)
+            video_streams = [s for s in data.get("streams", [])
+                             if s.get("codec_type") == "video"
+                             and int(s.get("width") or 0) > 0
+                             and int(s.get("height") or 0) > 0]
+            duration = float((data.get("format") or {}).get("duration") or 0)
+            return bool(video_streams) and duration >= 0.5
+        except (OSError, ValueError, TypeError, KeyError, TimeoutError):
+            return False
+        except subprocess.TimeoutExpired:
+            return False
+    if kind == "image":
+        try:
+            from PIL import Image
+            with Image.open(path) as im:
+                im.verify()
+            return True
+        except (OSError, ValueError, ImportError):
+            return False
+    return False
+
 def ensure_asset(action, index, used_urls=None):
     query = str(action.get("query") or action.get("search") or "").strip()
     kind = str(action.get("kind") or "video").lower()
@@ -587,17 +628,15 @@ def ensure_asset(action, index, used_urls=None):
         if chosen.get("url") in used_urls:
             continue
         ext = (
-            ".mp4" if chosen["provider"] == "youtube_cc"
-            else (
-                ".webm"
-                if chosen["provider"] == "wikimedia_commons"
-                and "webm" in chosen["url"].lower()
-                else (".mp4" if kind == "video" else ".jpg")
-            )
+            ".webm" if kind == "video" and chosen["provider"] == "wikimedia_commons" and "webm" in chosen["url"].lower()
+            else (".mp4" if kind == "video" else ".jpg")
         )
         path = MEDIA_DIR / f"{index:02}_{_slug(query)}_{candidate_no}{ext}"
-        if path.exists() and path.stat().st_size > 0:
-            break
+        if path.exists():
+            if usable_media_file(path, kind):
+                break
+            print(f"Rejecting invalid cached {kind}: {path}")
+            path.unlink(missing_ok=True)
         try:
             if chosen.get("provider") == "youtube_cc":
                 import yt_dlp
@@ -609,6 +648,7 @@ def ensure_asset(action, index, used_urls=None):
                     "outtmpl": str(path.with_suffix(".%(ext)s")),
                     "noplaylist": True,
                     "extractor_args": {"youtube": {"player_client": ["mweb", "tv", "web_safari"]}},
+        "js_runtimes": {"node": {}},
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([chosen["url"]])
@@ -617,8 +657,8 @@ def ensure_asset(action, index, used_urls=None):
                     produced[0].replace(path)
             else:
                 _download(chosen["url"], path)
-            if path.stat().st_size == 0:
-                raise RuntimeError("Downloaded media file is empty")
+            if not usable_media_file(path, kind):
+                raise RuntimeError("Downloaded file has no supported playable video/image stream")
             break
         except Exception as exc:
             print(f"Media download failed ({chosen.get('provider')}): {chosen.get('url')} -> {exc}")
