@@ -729,6 +729,7 @@ def main():
             search_queries = list(dict.fromkeys((query, topic)))
             selected = None
             selected_merit = None
+            attempted_keys = set()
             failures = []
             inspected = 0
             passing = 0
@@ -745,8 +746,9 @@ def main():
                         break
                     key = (segment.get("youtube_id") or segment["url"],
                            segment["scene_start_seconds"])
-                    if key in used:
+                    if key in used or key in attempted_keys:
                         continue
+                    attempted_keys.add(key)
                     inspected += 1
                     path = None
                     try:
