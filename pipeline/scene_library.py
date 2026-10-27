@@ -273,6 +273,27 @@ def download_exact_excerpt(scene, index):
     return path
 
 
+def remember_rejections(subject, line_index, attempts):
+    """Keep bounded private rejections; do not permanently blacklist candidates."""
+    if not attempts:
+        return
+    from datetime import datetime, timezone
+    LIBRARY.mkdir(parents=True, exist_ok=True)
+    path = LIBRARY / "rejections.jsonl"
+    record = {"utc": datetime.now(timezone.utc).isoformat(),
+              "topic": str(subject)[:160], "line_index": int(line_index),
+              "attempts": [{
+                  "source_url": str(item.get("url") or "")[:260],
+                  "reason": str(item.get("reason") or "")[:180],
+                  "entities": item.get("entities"),
+              } for item in attempts[:12]]}
+    previous = path.read_text(encoding="utf-8").splitlines()[-399:] if path.exists() else []
+    temp = path.with_suffix(".tmp")
+    temp.write_text("\n".join(previous + [json.dumps(record, ensure_ascii=False)]) +
+                    "\n", encoding="utf-8")
+    os.replace(temp, path)
+
+
 def record_segment(scene, path, index, subject, visual_evidence=None):
     """Store reusable scene metadata and source provenance, never auth/caption URLs."""
     ref = {"index": index, "kind": "video", "provider": "youtube_cc_scene",
