@@ -182,6 +182,7 @@ def youtube_cc(query, kind):
             "license": license_name,
             "license_url": "https://support.google.com/youtube/answer/2797468",
             "youtube_id": item.get("id"),
+            "duration": item.get("duration"),
             # Ephemeral subtitle URLs used for ranking, not persisted in artifacts.
             "subtitles": item.get("subtitles") or {},
             "automatic_captions": item.get("automatic_captions") or {},
@@ -740,7 +741,8 @@ def main():
                 if search_query not in discovery_cache:
                     discovery_cache[search_query] = youtube_cc(search_query, "video")
                 possibilities = rank_segments(
-                    discovery_cache[search_query], line["text"], topic, used)
+                    discovery_cache[search_query], line["text"], topic, used,
+                    allow_visual_probe=True)
                 for segment in possibilities:
                     if inspected >= max_inspections or passing >= 2:
                         break
