@@ -67,6 +67,7 @@ class VisualFramesTests(unittest.TestCase):
             with patch.object(vision, "sample_frames") as sample:
                 result = vision.inspect_clip("some-video.mp4",
                     "Kenjaku explains the plan", "Jujutsu Kaisen",
+                    visual_hint="Close shot of Kenjaku",
                     library=td)
                 self.assertFalse(result["accepted"])
                 self.assertEqual(result["reason"], "MISSING_IDENTITY_REFERENCE")
@@ -83,6 +84,28 @@ class VisualFramesTests(unittest.TestCase):
             self.assertEqual(result["source"], "sampled_video_frames")
             self.assertFalse(result["rights_verified"])
             self.assertIn("GPS navigation", scorer.call_args.args[1][0])
+
+    def test_identity_not_required_when_shot_is_map(self):
+        with tempfile.TemporaryDirectory() as td:
+            with patch.object(vision, "sample_frames", return_value=[1, 2, 3]), \
+                 patch.object(vision, "score_images", return_value=(
+                    [[.32,.14],[.31,.18],[.16,.25]], {})):
+                result = vision.inspect_clip("clip.mp4",
+                    "Kenjaku starts the ritual in Japan", "Jujutsu Kaisen",
+                    visual_hint="A map showing several locations in Japan",
+                    library=td)
+        self.assertTrue(result["accepted"])
+        self.assertEqual(result["required_entities"], [])
+        self.assertIn("Kenjaku", result["mentioned_entities_not_claimed_visible"])
+        self.assertEqual(result["identity_detection"], "no_identity_assertion")
+
+    def test_explicit_identity_requires_reference(self):
+        with tempfile.TemporaryDirectory() as td:
+            result = vision.inspect_clip("clip.mp4",
+                "A person explains the rules", "Jujutsu Kaisen",
+                visual_hint="Group at a board", required_names=["Kenjaku"], library=td)
+            self.assertFalse(result["accepted"])
+            self.assertEqual(result["reason"], "MISSING_IDENTITY_REFERENCE")
 
     @unittest.skipUnless(shutil.which("ffmpeg") and shutil.which("ffprobe"),
                          "Needs installed FFmpeg/FFprobe on CI")
