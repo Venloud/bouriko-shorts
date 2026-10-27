@@ -51,6 +51,8 @@ jobs:
         run: python -m unittest discover -s tools -p 'test_scene_library.py' -v
       - name: Test visual frame gate with synthetic evidence and real FFmpeg frames
         run: python -m unittest discover -s tools -p 'test_frame_vision.py' -v
+      - name: Test labeled local vision evaluation contract (no model download)
+        run: python -m unittest discover -s tools -p 'test_scene_evaluation.py' -v
       - name: Check home-media artifact integrity and license gates
         run: python tools/test_home_media_handoff.py
       - name: Check cross-repository compressed story and provenance verification
