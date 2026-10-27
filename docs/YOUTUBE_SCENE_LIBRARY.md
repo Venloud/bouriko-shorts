@@ -58,13 +58,18 @@ The GitHub-hosted offline smoke tests do NOT download the 605 MB CLIP model or p
          {"clip":"negative-game.mp4","topic":"video game competition","visual":"Players fighting inside an arena","expected_relevant":false}
        ]
 
-3. Execute real local model inference:
+3. On your Windows computer, run the isolated smoke script from a checkout of this PR:
+
+       powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\windows\validate-scene-vision.ps1 -Fixtures C:\PrivateTests\fixtures.json
+
+   This command requires Python 3.11 and uses a dedicated local venv. It does not modify runner registration, GitHub secrets, or publish a video. Leave out `-Fixtures` to check only that the actual pinned model loads on CPU. The file is in the public Bouriko PR; invoke it manually on your own computer after reviewing its contents. The private runner PR adds its own automatic model preflight when approved.
+4. Execute real local model inference:
 
        python tools/evaluate_scene_vision.py --fixtures C:\path\to\private-fixtures.json
 
-4. Inspect the PRIVATE evaluation report in the BourikoSceneLibrary folder. It records source clip, expected result, observed prediction, CLIP cosine scores and margins, false positives, false negatives, recall and accuracy. The harness reports INCOMPLETE with fewer than two positive and two negative examples, and does not approve thresholds automatically.
-5. Calibrate against observed failure examples. Edit score thresholds only with actual positive/negative evidence, then rerun the offline regression and all four live evaluation examples.
-6. Only after public/runner PR owner review, conduct a two-topic private acquisition plus public render trial. Review the resulting MP4, captions, safe area, visual timing, sources and rights. Keep publishing disabled.
+5. Inspect the PRIVATE evaluation report in the BourikoSceneLibrary folder. It records source clip, expected result, observed prediction, CLIP cosine scores and margins, false positives, false negatives, recall and accuracy. The harness reports INCOMPLETE with fewer than two positive and two negative examples, and does not approve thresholds automatically.
+6. Calibrate against observed failure examples. Edit score thresholds only with actual positive/negative evidence, then rerun the offline regression and all four live evaluation examples.
+7. Only after public/runner PR owner review, conduct a two-topic private acquisition plus public render trial. Review the resulting MP4, captions, safe area, visual timing, sources and rights. Keep publishing disabled.
 
 The selector now retries independent caption-located moments and bounded visual-only windows, compares up to two passing visual candidates (with a bounded inspection budget), deduplicates attempts across search queries, and saves rejected candidate reasons to the private file `rejections.jsonl`. CLIP scores rank plausible videos but DO NOT establish identities or copyright permissions.
 
