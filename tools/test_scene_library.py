@@ -68,6 +68,29 @@ class SceneLibraryTests(unittest.TestCase):
             self.assertIsNone(library.choose_segment([candidate],
                 "Kenjaku starts the Culling Game", "Jujutsu Kaisen"))
 
+    def test_visual_probe_only_when_source_metadata_supports_it(self):
+        valid = {"provider":"youtube_cc", "title":"GPS satellite navigation",
+                 "url":"https://www.youtube.com/watch?v=visualonly",
+                 "youtube_id":"visualonly", "duration":120,
+                 "license":"Creative Commons Attribution license"}
+        with patch.object(library, "read_subtitles", return_value=([], "unavailable")):
+            self.assertEqual(library.rank_segments([valid], "GPS satellite signals",
+                                                  "GPS", allow_visual_probe=False), [])
+            probes = library.rank_segments([valid], "GPS satellite signals",
+                                           "GPS", allow_visual_probe=True)
+        self.assertEqual(len(probes), 3)
+        self.assertTrue(all(x["timestamp_basis"] == "exploratory_visual_probe"
+                            and not x["transcript_excerpt"] for x in probes))
+        self.assertTrue(all(0 <= x["scene_start_seconds"] <
+                             x["scene_end_seconds"] <= 120 for x in probes))
+        self.assertNotEqual(probes[0]["scene_start_seconds"],
+                            probes[1]["scene_start_seconds"])
+        for invalid in [{**valid, "duration":None},
+                        {**valid, "duration":7005},
+                        {**valid, "license":"Standard YouTube License"},
+                        {**valid, "title":"Cooking mushrooms"}]:
+            self.assertEqual(library.visual_probe_windows(invalid, "GPS"), [])
+
     def test_generic_topic_guidance(self):
         line = {"text":"Kenjaku creates dangerous colonies for the Culling Game"}
         q = planned_query("unknown_topic", line, 0, "Jujutsu Kaisen rules")
