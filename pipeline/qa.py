@@ -51,21 +51,39 @@ def main():
             assert source.get("semantic_status") == "FRAME_SIMILARITY_PASS_REVIEW_REQUIRED", (
                 f"Scene {i} failed the scene library provenance gate")
     report = []
+    visual_mode = story.get("media_strategy") == "youtube_scene_library"
     for i, line in enumerate(lines):
         src = line.get("media_source") or {}
         query = str(src.get("query") or "")
         planned = planned_query(story.get("test_topic_id"), line, i)
         generic = query.strip().lower() in {"illustration","technology explainer","technology","education"}
+        evidence = src.get("visual_evidence") or {}
         report.append({"line_index":i,"narration":line.get("text",""),
                        "planned_subject":planned,"chosen_query":query,
                        "asset":line.get("media_asset"),"provider":src.get("provider"),
-                       "rights_status":src.get("license"),"rights_verified":src.get("rights_verified",False),
-                       "semantic_frame_verified":False,
+                       "source_url":src.get("source_url"),
+                       "scene_start_seconds":src.get("scene_start_seconds"),
+                       "scene_end_seconds":src.get("scene_end_seconds"),
+                       "season_hint":src.get("season_hint"),
+                       "episode_hint":src.get("episode_hint"),
+                       "episode_hint_source":src.get("episode_hint_source"),
+                       "rights_status":src.get("rights_status") or src.get("license"),
+                       "rights_verified":src.get("rights_verified",False),
+                       "transcript_excerpt":src.get("transcript_excerpt"),
+                       "pixel_frame_analysis_performed":bool(evidence.get("source") == "sampled_video_frames"),
+                       "automated_visual_match":bool(evidence.get("accepted")),
+                       "visual_evidence":evidence,
+                       "semantic_frame_verified":False,  # Human review remains required.
                        "generic_query":generic})
     audit = ROOT / "output/creative_qa.json"
-    audit.write_text(json.dumps({"topic":story.get("test_topic_id"),
-             "status":"REVIEW_REQUIRED","frame_analysis_performed":False,
-             "shots":report}, indent=2))
+    audit.write_text(json.dumps({"topic":story.get("topic") or story.get("test_topic_id"),
+             "status":"REVIEW_REQUIRED",
+             "automated_frame_analysis_performed":bool(visual_mode),
+             "all_scenes_have_pixel_evidence":bool(visual_mode and all(
+                 x["pixel_frame_analysis_performed"] for x in report)),
+             "human_semantic_review_performed":False,
+             "rights_review_performed":False,
+             "shots":report}, indent=2), encoding="utf-8")
     assert all(x["asset"] for x in report), "Missing visual for narration beat"
     assert not any(x["generic_query"] for x in report), "Generic illustration query used for scene"
     assert len({x["asset"] for x in report}) >= min(6,len(report)), "Excessive reused media in narration beats"
