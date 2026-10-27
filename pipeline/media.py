@@ -716,7 +716,8 @@ def main():
     if os.getenv("BOURIKO_HOME_YOUTUBE_ACQUISITION") == "1":
         # No uninspected stock substitutions. Rank caption-aligned cuts, then
         # verify the ACTUAL excerpt frames, with reference-backed name checks.
-        from scene_library import rank_segments, download_exact_excerpt, record_segment
+        from scene_library import (
+            rank_segments, download_exact_excerpt, record_segment, remember_rejections)
         from frame_vision import inspect_clip
         topic = str(story.get("topic") or story.get("title") or "subject")
         lines = story.get("lines") or []
@@ -727,17 +728,26 @@ def main():
             query = planned_query(story.get("test_topic_id"), line, i, topic)
             search_queries = list(dict.fromkeys((query, topic)))
             selected = None
+            selected_merit = None
             failures = []
+            inspected = 0
+            passing = 0
+            max_inspections = max(1, min(6, int(os.getenv("BOURIKO_CLIP_REVIEW_BUDGET", "4"))))
             for search_query in search_queries:
+                if inspected >= max_inspections or passing >= 2:
+                    break
                 if search_query not in discovery_cache:
                     discovery_cache[search_query] = youtube_cc(search_query, "video")
                 possibilities = rank_segments(
                     discovery_cache[search_query], line["text"], topic, used)
-                for segment in possibilities[:3]:
+                for segment in possibilities:
+                    if inspected >= max_inspections or passing >= 2:
+                        break
                     key = (segment.get("youtube_id") or segment["url"],
                            segment["scene_start_seconds"])
                     if key in used:
                         continue
+                    inspected += 1
                     path = None
                     try:
                         path = download_exact_excerpt(segment, i)
@@ -753,14 +763,30 @@ def main():
                                 "entities": verdict.get("identity_missing")})
                             path.unlink(missing_ok=True)
                             continue
-                        selected = (segment, path, verdict)
-                        break
+                        passing += 1
+                        margins = verdict.get("negative_margins") or []
+                        positive = verdict.get("positive_scores") or []
+                        # Compare genuinely visible frames before transcript score.
+                        # These are heuristic rankings, not calibrated probabilities.
+                        merit = (
+                            int(verdict.get("passing_frame_count", 0)),
+                            sum(margins) / len(margins) if margins else 0,
+                            sum(positive) / len(positive) if positive else 0,
+                            float(segment.get("score") or 0),
+                        )
+                        if selected is None or merit > selected_merit:
+                            if selected is not None:
+                                selected[1].unlink(missing_ok=True)
+                            selected = (segment, path, verdict)
+                            selected_merit = merit
+                        else:
+                            path.unlink(missing_ok=True)
                     except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
                         failures.append({"url": segment["url"], "reason": str(exc)[:180]})
                         if path is not None:
                             path.unlink(missing_ok=True)
-                if selected:
-                    break
+            line["rejected_media_candidates"] = failures[:12]
+            remember_rejections(topic, i, failures)
             if selected is None:
                 raise RuntimeError(
                     f"No frame-verified YouTube scene for beat {i}: "
