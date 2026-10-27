@@ -44,6 +44,39 @@ Use a local JSON mapping like:
 
 The referenced images must reside *inside the same references folder*, and should be source-verified, permitted image examples of the actual identity. When narration names the target, a clip must visually match its reference images. If the references are missing or the model cannot identify it, the candidate is rejected, **not falsely approved**. This mechanism is generic for anime characters, known people and recognizable products, not JJK-specific. A narration line can explicitly set `visual_entities` to identify the required subjects. CLIP similarities are heuristic, not identity proof. Review borderline results and provide reference images only if you have the rights to do so.
 
+## Real model acceptance and threshold calibration
+
+The GitHub-hosted offline smoke tests do NOT download the 605 MB CLIP model or prove it recognizes footage. The private Windows host must run real inference with locally available, rights-reviewed clips from two unrelated subjects and explicit true/false labels.
+
+1. With the existing Windows Bouriko checkout, install the pinned requirements from the PUBLIC branch checked out at the expected feature commit. Use the same Python 3.11 environment as the private runner.
+2. Create a PRIVATE fixture JSON alongside short local videos (do not upload the clips or references to GitHub):
+
+       [
+         {"clip":"positive-gps.mp4","topic":"GPS satellites","visual":"Satellites orbiting the Earth","expected_relevant":true},
+         {"clip":"negative-gps.mp4","topic":"GPS satellites","visual":"Satellites orbiting the Earth","expected_relevant":false},
+         {"clip":"positive-game.mp4","topic":"video game competition","visual":"Players fighting inside an arena","expected_relevant":true},
+         {"clip":"negative-game.mp4","topic":"video game competition","visual":"Players fighting inside an arena","expected_relevant":false}
+       ]
+
+3. Execute real local model inference:
+
+       python tools/evaluate_scene_vision.py --fixtures C:\path\to\private-fixtures.json
+
+4. Inspect the PRIVATE evaluation report in the BourikoSceneLibrary folder. It records source clip, expected result, observed prediction, CLIP cosine scores and margins, false positives, false negatives, recall and accuracy. The harness reports INCOMPLETE with fewer than two positive and two negative examples, and does not approve thresholds automatically.
+5. Calibrate against observed failure examples. Edit score thresholds only with actual positive/negative evidence, then rerun the offline regression and all four live evaluation examples.
+6. Only after public/runner PR owner review, conduct a two-topic private acquisition plus public render trial. Review the resulting MP4, captions, safe area, visual timing, sources and rights. Keep publishing disabled.
+
+The selector now retries independent caption-located moments for a video, compares up to two passing visual candidates (with a bounded inspection budget), deduplicates attempts across search queries, and saves rejected candidate reasons to the private file `rejections.jsonl`. CLIP scores rank plausible videos but DO NOT establish identities or copyright permissions.
+
+A person or character *mentioned* in narration does not automatically have to appear in a map/graphic scene. If the *planned visual* or explicit `visual_entities` requires that person, the match must use source-verified private reference images. Missing references are a blocked identity claim, not a silently successful identification. Those recognition rules are subject-independent.
+
+### Actual acceptance status
+
+- Feature PR contains generic research, timestamped section-cutting, real-frame CLIP integration, identity reference gating, ranked retry, provenance reporting and labeled local evaluation tooling.
+- Nonpublishing GitHub smoke checks exercise pipeline contracts, mocked cosine decisions and REAL FFmpeg frame sampling. They do not load pretrained weights.
+- Real Windows model inference, video downloads on this PR head, cross-repository media handoff and two finished MP4s remain **UNVERIFIED** until evidence is recorded.
+- Publishing remains disabled; no draft PR is automatically merged.
+
 ## IMPORTANT limits
 - A matching transcript does not guarantee the video **visually shows** the claimed scene. Source titles can be misleading, footage edited out of context, or copyrighted material incorrectly labeled CC BY. Metadata licensing is **not independent rights verification**.
 - Only YouTube videos with CC BY metadata and recognized English-language captions are currently supported in this lane. If a clip cannot be matched reliably, the pipeline stops; it does not pretend to understand scenes it has not inspected.
