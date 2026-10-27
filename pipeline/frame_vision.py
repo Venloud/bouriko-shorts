@@ -196,8 +196,19 @@ def inspect_clip(clip, narration, topic, visual_hint="", library=None, required_
     if library is None:
         from scene_library import LIBRARY
         library = LIBRARY
-    names = list(dict.fromkeys(required_names if required_names is not None
-                               else proper_names(narration)))
+    # A character merely MENTIONED in the narration is not necessarily the
+    # subject of this shot (e.g., narration names a person while showing a map).
+    # Enforce identity only when the visual plan or explicit entity list requires it.
+    if required_names is None:
+        names = proper_names(visual_hint) if visual_hint else []
+    elif isinstance(required_names, str):
+        names = [required_names.strip()] if required_names.strip() else []
+    elif isinstance(required_names, list) and all(isinstance(n, str) for n in required_names):
+        names = [n.strip() for n in required_names if n.strip()]
+    else:
+        raise ValueError("visual_entities must be a list of names or a single name")
+    names = list(dict.fromkeys(names))
+    mentioned = proper_names(narration)
     references = reference_images(library, names)
     missing = [n for n in names if not references.get(n)]
     if missing:
@@ -213,4 +224,8 @@ def inspect_clip(clip, narration, topic, visual_hint="", library=None, required_
     scores, refs = score_images(frames, (positives, *NEGATIVE_PROMPTS), references)
     return {**decide_visual(scores, refs, names),
             "visual_prompt": positives, "required_entities": names,
+            "mentioned_entities_not_claimed_visible": [
+                name for name in mentioned if name not in names],
+            "identity_detection": ("reference_image_comparison" if names
+                                   else "no_identity_assertion"),
             "source": "sampled_video_frames", "rights_verified": False}
