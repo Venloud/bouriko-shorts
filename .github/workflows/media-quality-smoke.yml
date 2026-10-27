@@ -22,6 +22,8 @@ on:
       - 'tools/test_scene_library.py'
       - 'tools/test_frame_vision.py'
       - 'tools/test_scene_evaluation.py'
+      - 'pipeline/remotion_prepare.py'
+      - 'tools/test_remotion_prepare.py'
       - 'tools/evaluate_scene_vision.py'
       - 'tools/windows/validate-scene-vision.ps1'
       - 'requirements-scene-vision.txt'
@@ -58,6 +60,8 @@ jobs:
         run: python -m unittest discover -s tools -p 'test_frame_vision.py' -v
       - name: Test labeled local vision evaluation contract (no model download)
         run: python -m unittest discover -s tools -p 'test_scene_evaluation.py' -v
+      - name: Test narration and video duration alignment
+        run: python -m unittest discover -s tools -p 'test_remotion_prepare.py' -v
       - name: Parse Windows model validation PowerShell script
         shell: pwsh
         run: |
