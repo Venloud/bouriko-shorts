@@ -21,6 +21,11 @@ on:
       - 'pipeline/visual_plan.py'
       - 'tools/test_scene_library.py'
       - 'tools/test_frame_vision.py'
+      - 'tools/test_scene_evaluation.py'
+      - 'tools/evaluate_scene_vision.py'
+      - 'tools/windows/validate-scene-vision.ps1'
+      - 'requirements-scene-vision.txt'
+      - 'docs/YOUTUBE_SCENE_LIBRARY.md'
       - 'tools/verify_home_media.py'
       - 'pipeline/qa.py'
       - '.github/workflows/media-quality-smoke.yml'
@@ -53,6 +58,20 @@ jobs:
         run: python -m unittest discover -s tools -p 'test_frame_vision.py' -v
       - name: Test labeled local vision evaluation contract (no model download)
         run: python -m unittest discover -s tools -p 'test_scene_evaluation.py' -v
+      - name: Parse Windows model validation PowerShell script
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errorsFound = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $env:GITHUB_WORKSPACE 'tools/windows/validate-scene-vision.ps1'),
+            [ref]$tokens, [ref]$errorsFound) | Out-Null
+          if ($errorsFound.Count -gt 0) {
+            $errorsFound | ForEach-Object { Write-Host $_.ToString() }
+            throw 'Windows model validation script failed to parse'
+          }
+          Write-Host 'PASS: Windows validation PowerShell syntax'
+
       - name: Check home-media artifact integrity and license gates
         run: python tools/test_home_media_handoff.py
       - name: Check cross-repository compressed story and provenance verification
