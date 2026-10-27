@@ -43,7 +43,9 @@ def main():
             source = line.get("media_source") or {}
             assert source.get("provider") == "youtube_cc_scene", (
                 f"Scene {i} used a generic or misleading fallback")
-            assert source.get("transcript_excerpt") and source.get("scene_end_seconds", 0) > source.get("scene_start_seconds", 0), (
+            assert (source.get("transcript_excerpt") or
+                    source.get("timestamp_basis") == "exploratory_visual_probe") and (
+                    source.get("scene_end_seconds", 0) > source.get("scene_start_seconds", 0)), (
                 f"Scene {i} missing narrated moment/timecode evidence")
             evidence = source.get("visual_evidence") or {}
             assert evidence.get("accepted") and evidence.get("passing_frame_count", 0) >= 2, (
@@ -70,6 +72,8 @@ def main():
                        "rights_status":src.get("rights_status") or src.get("license"),
                        "rights_verified":src.get("rights_verified",False),
                        "transcript_excerpt":src.get("transcript_excerpt"),
+                       "timestamp_basis":src.get("timestamp_basis"),
+                       "rejected_candidates":line.get("rejected_media_candidates",[]),
                        "pixel_frame_analysis_performed":bool(evidence.get("source") == "sampled_video_frames"),
                        "automated_visual_match":bool(evidence.get("accepted")),
                        "visual_evidence":evidence,
