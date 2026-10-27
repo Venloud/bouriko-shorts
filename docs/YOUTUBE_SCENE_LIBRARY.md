@@ -66,7 +66,7 @@ The GitHub-hosted offline smoke tests do NOT download the 605 MB CLIP model or p
 5. Calibrate against observed failure examples. Edit score thresholds only with actual positive/negative evidence, then rerun the offline regression and all four live evaluation examples.
 6. Only after public/runner PR owner review, conduct a two-topic private acquisition plus public render trial. Review the resulting MP4, captions, safe area, visual timing, sources and rights. Keep publishing disabled.
 
-The selector now retries independent caption-located moments for a video, compares up to two passing visual candidates (with a bounded inspection budget), deduplicates attempts across search queries, and saves rejected candidate reasons to the private file `rejections.jsonl`. CLIP scores rank plausible videos but DO NOT establish identities or copyright permissions.
+The selector now retries independent caption-located moments and bounded visual-only windows, compares up to two passing visual candidates (with a bounded inspection budget), deduplicates attempts across search queries, and saves rejected candidate reasons to the private file `rejections.jsonl`. CLIP scores rank plausible videos but DO NOT establish identities or copyright permissions.
 
 A person or character *mentioned* in narration does not automatically have to appear in a map/graphic scene. If the *planned visual* or explicit `visual_entities` requires that person, the match must use source-verified private reference images. Missing references are a blocked identity claim, not a silently successful identification. Those recognition rules are subject-independent.
 
@@ -79,7 +79,7 @@ A person or character *mentioned* in narration does not automatically have to ap
 
 ## IMPORTANT limits
 - A matching transcript does not guarantee the video **visually shows** the claimed scene. Source titles can be misleading, footage edited out of context, or copyrighted material incorrectly labeled CC BY. Metadata licensing is **not independent rights verification**.
-- Only YouTube videos with CC BY metadata and recognized English-language captions are currently supported in this lane. If a clip cannot be matched reliably, the pipeline stops; it does not pretend to understand scenes it has not inspected.
+- YouTube clips with CC BY metadata may use English subtitle timecodes, or a bounded visual-only probe of three short windows when a relevant candidate is 8–900 seconds long. An exploratory offset is not a verified dialogue or episode timestamp. If a clip cannot be matched reliably, the pipeline stops; it does not pretend to understand scenes it has not inspected.
 - Season/episode numbers inferred from the uploader title are hints, not authoritative facts. No invented timestamps.
 - The private Windows runner, public artifacts and reviewer access should be protected. Avoid passing credentials/browser cookies to downloads.
 - Local CLIP frame embeddings are implemented in this PR, but character recognition still needs accurate reference images. This cannot certify exact anime character IDs without references, on-screen actions, verified canonical episode catalogs, scene-boundary detection, or downstream reuse rights. Full multimodal video understanding remains a future, independently evaluated improvement.
