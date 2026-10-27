@@ -86,6 +86,26 @@ class SceneLibraryTests(unittest.TestCase):
         candidate={"subtitles":{"en":[{"ext":"vtt","url":"https://evil.example/captions"}]}}
         self.assertIsNone(library.subtitle_url(candidate))
 
+    def test_ranked_caption_moments_try_another_timestamp(self):
+        candidate = {"provider":"youtube_cc",
+                     "url":"https://www.youtube.com/watch?v=scene123",
+                     "youtube_id":"scene123",
+                     "license":"Creative Commons Attribution license",
+                     "title":"GPS satellite navigation"}
+        captions = [
+            {"start":12, "end":15, "text":"GPS satellites send location signals"},
+            {"start":60, "end":63, "text":"GPS satellites send navigation signals"},
+        ]
+        with patch.object(library, "read_subtitles", return_value=(captions, "manual")):
+            first = library.choose_segment([candidate],
+                "GPS satellites send signals", "GPS")
+            self.assertIsNotNone(first)
+            second = library.choose_segment([candidate],
+                "GPS satellites send signals", "GPS",
+                used={("scene123", first["scene_start_seconds"])})
+        self.assertIsNotNone(second)
+        self.assertNotEqual(second["scene_start_seconds"], first["scene_start_seconds"])
+
     def test_reuse_prevents_duplicate_video_second(self):
         candidate = {"provider":"youtube_cc", "url":"https://www.youtube.com/watch?v=abc",
                      "youtube_id":"abc", "license":"Creative Commons Attribution license",
