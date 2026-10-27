@@ -76,12 +76,12 @@ def parse_captions(raw, ext="vtt"):
     return cues
 
 
-def best_caption_span(cues, narration, max_seconds=8):
-    """Rank consecutive subtitle groups by concrete word overlap; no fake timecodes."""
+def ranked_caption_spans(cues, narration, max_seconds=8, limit=3):
+    """Rank separate caption-located moments, not only the first matching time."""
     target = words(narration)
     if len(target) < 2:
-        return None
-    best = None
+        return []
+    hits = []
     for i, cue in enumerate(cues):
         for n in range(1, 5):
             subset = cues[i:i + n]
@@ -93,16 +93,29 @@ def best_caption_span(cues, narration, max_seconds=8):
             context = words(" ".join(c["text"] for c in subset))
             overlap = len(context & target)
             score = overlap / max(3, len(target))
-            # Two distinct concrete words, never just "game" or "video".
             if overlap < 2 or score < 0.26:
                 continue
-            current = {"start": max(0, start - 0.3), "end": end + 0.3,
-                       "transcript_excerpt": " ".join(c["text"] for c in subset)[:450],
-                       "overlap_words": overlap, "score": round(score, 3)}
-            if best is None or (score, overlap) > (best["score"], best["overlap_words"]):
-                best = current
-    return best
+            hits.append({"start": max(0, start - 0.3), "end": end + 0.3,
+                         "transcript_excerpt": " ".join(c["text"] for c in subset)[:450],
+                         "overlap_words": overlap, "score": round(score, 3)})
+    hits.sort(key=lambda x: (x["score"], x["overlap_words"]), reverse=True)
+    chosen = []
+    for hit in hits:
+        if any(max(0, min(hit["end"], prev["end"]) -
+                   max(hit["start"], prev["start"])) /
+               max(0.01, min(hit["end"] - hit["start"],
+                              prev["end"] - prev["start"])) > 0.5
+               for prev in chosen):
+            continue
+        chosen.append(hit)
+        if len(chosen) >= limit:
+            break
+    return chosen
 
+
+def best_caption_span(cues, narration, max_seconds=8):
+    spans = ranked_caption_spans(cues, narration, max_seconds, limit=1)
+    return spans[0] if spans else None
 
 def episode_hints(title):
     """Hints only; never claim verified season/episode from a thumbnail or transcript."""
@@ -167,9 +180,9 @@ def rank_segments(candidates, narration, subject, used=None):
             continue
         if not candidate.get("url") or query_score(candidate, subject) < 1:
             continue
-        # Reuse previously verified caption offsets, but only if the fresh
-        # discovery still reports CC BY and the narration overlaps that cue.
-        hit, origin = None, "unavailable"
+        # Cached caption offsets are provisional; fresh subtitle cues can
+        # provide alternative cuts when the strongest previous moment fails.
+        found = []
         if INDEX.is_file():
             try:
                 memory = json.loads(INDEX.read_text(encoding="utf-8"))
@@ -177,38 +190,35 @@ def rank_segments(candidates, narration, subject, used=None):
                     if old.get("source_url") != candidate["url"]:
                         continue
                     span = best_caption_span([{
-                        # Stored range already includes +/-0.3s padding.
-                        # Undo padding before rescoring so reuse never drifts.
                         "start": float(old.get("scene_start_seconds", 0)) + 0.3,
                         "end": float(old.get("scene_end_seconds", 0)) - 0.3,
-                        "text": old.get("transcript_excerpt", ""),
-                    }], narration)
+                        "text": old.get("transcript_excerpt", "")}], narration)
                     if span:
-                        hit, origin = span, old.get("caption_origin", "cached")
-                        break
+                        found.append((span, "cached_" + old.get("caption_origin", "unknown")))
             except (OSError, ValueError, TypeError, KeyError):
                 pass
-        if not hit:
-            cues, origin = read_subtitles(candidate)
-            hit = best_caption_span(cues, narration)
-        if not hit:
-            continue
-        source_key = candidate.get("youtube_id") or candidate["url"]
-        start = round(hit["start"], 1)
-        if (source_key, start) in used:
-            continue
-        result = dict(candidate)
-        # Don't persist expiring caption URLs or entire subtitle response.
-        for key in ("subtitles", "automatic_captions", "description"):
-            result.pop(key, None)
-        result.update(hit)
-        result.update(episode_hints(candidate.get("title")))
-        result["caption_origin"] = origin
-        result["semantic_status"] = "TRANSCRIPT_MATCH_FRAME_REVIEW_REQUIRED"
-        result["rights_status"] = "CC_BY_METADATA_OWNER_RIGHTS_UNVERIFIED"
-        result["scene_start_seconds"] = start
-        result["scene_end_seconds"] = round(hit["end"], 1)
-        matches.append((hit["score"] + 0.02 * query_score(candidate, subject), result))
+        cues, origin = read_subtitles(candidate)
+        found.extend((hit, origin) for hit in ranked_caption_spans(
+            cues, narration, limit=3))
+        seen_times = set()
+        for hit, source in sorted(found, key=lambda pair: pair[0]["score"], reverse=True):
+            source_key = candidate.get("youtube_id") or candidate["url"]
+            start = round(hit["start"], 1)
+            if (source_key, start) in used or start in seen_times:
+                continue
+            seen_times.add(start)
+            result = dict(candidate)
+            # Never persist expiring subtitle URLs or full captions.
+            for key in ("subtitles", "automatic_captions", "description"):
+                result.pop(key, None)
+            result.update(hit)
+            result.update(episode_hints(candidate.get("title")))
+            result["caption_origin"] = source
+            result["semantic_status"] = "TRANSCRIPT_MATCH_FRAME_REVIEW_REQUIRED"
+            result["rights_status"] = "CC_BY_METADATA_OWNER_RIGHTS_UNVERIFIED"
+            result["scene_start_seconds"] = start
+            result["scene_end_seconds"] = round(hit["end"], 1)
+            matches.append((hit["score"] + 0.02 * query_score(candidate, subject), result))
     return [item for _, item in sorted(matches, key=lambda x: x[0], reverse=True)]
 
 
