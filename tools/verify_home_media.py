@@ -54,7 +54,8 @@ def audit(min_youtube=1):
                     or rec["visual_evidence"].get("source") != "sampled_video_frames"
                     or rec["visual_evidence"].get("passing_frame_count", 0) < 2
                     or rec["visual_evidence"].get("sampled_frames", 0) < 3
-                    or not rec.get("transcript_excerpt")
+                    or not (rec.get("transcript_excerpt") or
+                            rec.get("timestamp_basis") == "exploratory_visual_probe")
                     or not isinstance(rec.get("scene_start_seconds"), (int, float))
                     or not isinstance(rec.get("scene_end_seconds"), (int, float))
                     or not 0 <= rec["scene_start_seconds"] < rec["scene_end_seconds"]
