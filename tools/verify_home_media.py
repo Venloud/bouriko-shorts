@@ -42,6 +42,25 @@ def audit(min_youtube=1):
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     if not isinstance(manifest, list) or not manifest:
         raise ValueError("Media manifest is empty or invalid")
+    if story.get("media_strategy") == "youtube_scene_library":
+        if len(manifest) != len(story.get("lines", [])):
+            raise ValueError("Scene library did not match every narration beat")
+        for i, rec in enumerate(manifest):
+            if (rec.get("index") != i
+                    or rec.get("provider") != "youtube_cc_scene"
+                    or rec.get("semantic_status") != "FRAME_SIMILARITY_PASS_REVIEW_REQUIRED"
+                    or not isinstance(rec.get("visual_evidence"), dict)
+                    or rec["visual_evidence"].get("accepted") is not True
+                    or rec["visual_evidence"].get("source") != "sampled_video_frames"
+                    or rec["visual_evidence"].get("passing_frame_count", 0) < 2
+                    or rec["visual_evidence"].get("sampled_frames", 0) < 3
+                    or not (rec.get("transcript_excerpt") or
+                            rec.get("timestamp_basis") == "exploratory_visual_probe")
+                    or not isinstance(rec.get("scene_start_seconds"), (int, float))
+                    or not isinstance(rec.get("scene_end_seconds"), (int, float))
+                    or not 0 <= rec["scene_start_seconds"] < rec["scene_end_seconds"]
+                    or rec["scene_end_seconds"] - rec["scene_start_seconds"] > 10):
+                raise ValueError(f"Missing scene evidence/timecode for beat {i}")
     index = {}
     files = {}
     for record in manifest:
@@ -62,7 +81,7 @@ def audit(min_youtube=1):
         if line.get("media_asset_2") and line["media_asset_2"] not in index:
             raise ValueError(f"Scene {scene_number} secondary media absent from manifest")
 
-    youtube = [r for r in manifest if r.get("provider") == "youtube_cc"]
+    youtube = [r for r in manifest if r.get("provider") in {"youtube_cc", "youtube_cc_scene"}]
     for item in youtube:
         if "creative commons attribution" not in str(item.get("license", "")).lower():
             raise ValueError("YouTube clip missing explicit CC BY metadata")

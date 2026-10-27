@@ -17,6 +17,26 @@ def dur(path):
         return f.getnframes() / f.getframerate()
 
 
+def source_video_duration(path):
+    """Check the real acquired clip duration before it reaches Remotion."""
+    return float(subprocess.check_output([
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "default=nw=1:nk=1", str(path)
+    ], timeout=25).decode().strip())
+
+
+def validate_scene_coverage(clip_duration, narration_duration, tolerance=0.15):
+    """Refuse black/frozen tails caused by clips ending before their narration."""
+    if clip_duration <= 0 or narration_duration <= 0:
+        raise ValueError("Invalid narration or visual clip duration")
+    if clip_duration + tolerance < narration_duration:
+        raise RuntimeError(
+            f"Selected visual excerpt is only {clip_duration:.2f}s for "
+            f"{narration_duration:.2f}s of voiceover. Select a longer scene "
+            "instead of rendering a frozen/blank ending."
+        )
+
+
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
     GENERATED.mkdir(parents=True, exist_ok=True)
@@ -67,6 +87,8 @@ def main():
         src = ROOT / asset
         if not src.exists():
             continue
+        if src.suffix.lower() in {".mp4", ".webm", ".mov", ".ogv"}:
+            validate_scene_coverage(source_video_duration(src), line["duration"])
         dst = GENERATED / "media" / src.name
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)

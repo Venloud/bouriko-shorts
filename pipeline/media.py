@@ -182,6 +182,11 @@ def youtube_cc(query, kind):
             "license": license_name,
             "license_url": "https://support.google.com/youtube/answer/2797468",
             "youtube_id": item.get("id"),
+            "duration": item.get("duration"),
+            # Ephemeral subtitle URLs used for ranking, not persisted in artifacts.
+            "subtitles": item.get("subtitles") or {},
+            "automatic_captions": item.get("automatic_captions") or {},
+            "description": (item.get("description") or "")[:800],
         })
     return out
 
@@ -709,6 +714,107 @@ def ensure_asset(action, index, used_urls=None):
 
 def main():
     story = json.loads((ROOT / "output/story.json").read_text())
+    if os.getenv("BOURIKO_HOME_YOUTUBE_ACQUISITION") == "1":
+        # No uninspected stock substitutions. Rank caption-aligned cuts, then
+        # verify the ACTUAL excerpt frames, with reference-backed name checks.
+        from scene_library import (
+            rank_segments, download_exact_excerpt, record_segment, remember_rejections)
+        from frame_vision import inspect_clip
+        topic = str(story.get("topic") or story.get("title") or "subject")
+        lines = story.get("lines") or []
+        if not lines:
+            raise RuntimeError("Cannot acquire scenes for an empty story")
+        records, used, discovery_cache = [], set(), {}
+        for i, line in enumerate(lines):
+            query = planned_query(story.get("test_topic_id"), line, i, topic)
+            search_queries = list(dict.fromkeys((query, topic)))
+            selected = None
+            selected_merit = None
+            attempted_keys = set()
+            failures = []
+            inspected = 0
+            passing = 0
+            max_inspections = max(1, min(6, int(os.getenv("BOURIKO_CLIP_REVIEW_BUDGET", "4"))))
+            for search_query in search_queries:
+                if inspected >= max_inspections or passing >= 2:
+                    break
+                if search_query not in discovery_cache:
+                    discovery_cache[search_query] = youtube_cc(search_query, "video")
+                possibilities = rank_segments(
+                    discovery_cache[search_query], line["text"], topic, used,
+                    allow_visual_probe=True)
+                for segment in possibilities:
+                    if inspected >= max_inspections or passing >= 2:
+                        break
+                    key = (segment.get("youtube_id") or segment["url"],
+                           segment["scene_start_seconds"])
+                    if key in used or key in attempted_keys:
+                        continue
+                    attempted_keys.add(key)
+                    inspected += 1
+                    path = None
+                    try:
+                        path = download_exact_excerpt(segment, i)
+                        if not usable_media_file(path, "video"):
+                            raise ValueError("Downloaded excerpt is not playable")
+                        verdict = inspect_clip(
+                            path, line["text"], topic,
+                            visual_hint=line.get("visual_prompt") or line.get("visual") or query,
+                            required_names=line.get("visual_entities"))
+                        if not verdict.get("accepted"):
+                            failures.append({
+                                "url": segment["url"], "reason": verdict.get("reason"),
+                                "entities": verdict.get("identity_missing")})
+                            path.unlink(missing_ok=True)
+                            continue
+                        passing += 1
+                        margins = verdict.get("negative_margins") or []
+                        positive = verdict.get("positive_scores") or []
+                        # Compare genuinely visible frames before transcript score.
+                        # These are heuristic rankings, not calibrated probabilities.
+                        merit = (
+                            int(verdict.get("passing_frame_count", 0)),
+                            sum(margins) / len(margins) if margins else 0,
+                            sum(positive) / len(positive) if positive else 0,
+                            float(segment.get("score") or 0),
+                        )
+                        if selected is None or merit > selected_merit:
+                            if selected is not None:
+                                selected[1].unlink(missing_ok=True)
+                            selected = (segment, path, verdict)
+                            selected_merit = merit
+                        else:
+                            path.unlink(missing_ok=True)
+                    except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
+                        failures.append({"url": segment["url"], "reason": str(exc)[:180]})
+                        if path is not None:
+                            path.unlink(missing_ok=True)
+            line["rejected_media_candidates"] = failures[:12]
+            remember_rejections(topic, i, failures)
+            if selected is None:
+                raise RuntimeError(
+                    f"No frame-verified YouTube scene for beat {i}: "
+                    f"{line['text'][:100]}; attempts={json.dumps(failures[:6])}. "
+                    "No irrelevant footage or placeholder graphics will be used."
+                )
+            segment, path, verdict = selected
+            rec = record_segment(segment, path, i, topic, visual_evidence=verdict)
+            line["media_asset"] = rec["local_path"]
+            line["media_kind"] = "video"
+            line["media_source"] = rec
+            records.append(rec)
+            used.add((segment.get("youtube_id") or segment["url"],
+                      segment["scene_start_seconds"]))
+            print(f"Scene {i}: {rec['source_url']} "
+                  f"{rec['scene_start_seconds']:.1f}-{rec['scene_end_seconds']:.1f}s "
+                  f"frame-pass={verdict['passing_frame_count']}/{verdict['sampled_frames']} "
+                  "human review still required")
+        story["media_strategy"] = "youtube_scene_library"
+        MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+        MANIFEST.write_text(json.dumps(records, indent=2), encoding="utf-8")
+        (ROOT / "output/story.json").write_text(json.dumps(story, indent=2), encoding="utf-8")
+        print(f"Transcript-located YouTube scenes: {len(records)}/{len(lines)} (review-only)")
+        return
     records = []
     used_urls = set()
 
