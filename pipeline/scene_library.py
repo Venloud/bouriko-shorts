@@ -169,7 +169,43 @@ def query_score(candidate, subject):
     return len(source & target)
 
 
-def rank_segments(candidates, narration, subject, used=None):
+def visual_probe_windows(candidate, subject):
+    """Exploratory timed windows in short metadata-relevant CC videos.
+
+    These offsets are sampling choices, NEVER claims about dialogue or a scene.
+    Pixel-based frame review must accept an excerpt before it can be used.
+    """
+    if candidate.get("provider") != "youtube_cc":
+        return []
+    if "creative commons attribution" not in str(candidate.get("license", "")).lower():
+        return []
+    if query_score(candidate, subject) < 1:
+        return []
+    try:
+        duration = float(candidate.get("duration") or 0)
+    except (TypeError, ValueError):
+        return []
+    if not 8 <= duration <= 900:
+        return []
+    length = min(8.0, max(3.0, duration / 12))
+    probes = []
+    for fraction in (0.15, 0.45, 0.75):
+        start = round(max(0, duration * fraction - length / 2), 1)
+        end = round(min(duration, start + length), 1)
+        if end - start < 2 or any(abs(x["scene_start_seconds"] - start) < 2 for x in probes):
+            continue
+        probes.append({
+            "start": start, "end": end,
+            "scene_start_seconds": start, "scene_end_seconds": end,
+            "score": 0, "overlap_words": 0, "transcript_excerpt": "",
+            "caption_origin": "none",
+            "timestamp_basis": "exploratory_visual_probe",
+            "visual_provenance": "FRAME_REVIEW_REQUIRED",
+        })
+    return probes
+
+
+def rank_segments(candidates, narration, subject, used=None, allow_visual_probe=False):
     """Return a caption-located candidate, or None. Never invent an offset."""
     used = used or set()
     matches = []
@@ -200,6 +236,9 @@ def rank_segments(candidates, narration, subject, used=None):
         cues, origin = read_subtitles(candidate)
         found.extend((hit, origin) for hit in ranked_caption_spans(
             cues, narration, limit=3))
+        if not found and allow_visual_probe:
+            found.extend((probe, "none") for probe in visual_probe_windows(
+                candidate, subject))
         seen_times = set()
         for hit, source in sorted(found, key=lambda pair: pair[0]["score"], reverse=True):
             source_key = candidate.get("youtube_id") or candidate["url"]
@@ -218,6 +257,7 @@ def rank_segments(candidates, narration, subject, used=None):
             result["rights_status"] = "CC_BY_METADATA_OWNER_RIGHTS_UNVERIFIED"
             result["scene_start_seconds"] = start
             result["scene_end_seconds"] = round(hit["end"], 1)
+            result["timestamp_basis"] = hit.get("timestamp_basis", "caption_timecode")
             matches.append((hit["score"] + 0.02 * query_score(candidate, subject), result))
     return [item for _, item in sorted(matches, key=lambda x: x[0], reverse=True)]
 
@@ -306,6 +346,7 @@ def record_segment(scene, path, index, subject, visual_evidence=None):
            "scene_end_seconds": scene["scene_end_seconds"],
            "transcript_excerpt": scene["transcript_excerpt"],
            "caption_origin": scene["caption_origin"],
+           "timestamp_basis": scene.get("timestamp_basis", "caption_timecode"),
            "semantic_status": scene["semantic_status"],
            "rights_status": scene["rights_status"], "rights_verified": False,
            "visual_evidence": visual_evidence or {},
