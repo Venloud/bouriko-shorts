@@ -82,9 +82,9 @@ def run():
         if not args.job_dir:
             p.error("--delete-job-source requires --job-dir")
         job = args.job_dir.resolve(strict=True)
-        expected = (Path.home() / "homebeacon" / "media" / "youtube" / "jobs").resolve()
+        expected = (Path.home() / "Desktop" / "cody" / "youtube" / "jobs").resolve()
         if expected not in job.parents or job == expected:
-            raise RuntimeError("refusing deletion outside HomeBeacon isolated jobs")
+            raise RuntimeError("refusing deletion outside Cody isolated jobs")
         if job not in source.parents:
             raise RuntimeError("source is not inside the specified job directory")
         if output == source or job in output.parents:

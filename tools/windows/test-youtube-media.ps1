@@ -3,7 +3,7 @@ param(
     [string]$Url = "",
     [ValidateRange(1,20)][int]$Results = 8,
     [switch]$Download,
-    [string]$OutputDir = "$env:USERPROFILE\homebeacon\media\youtube\downloads"
+    [string]$OutputDir = "$env:USERPROFILE\Desktop\cody\youtube\downloads"
 )
 
 $ErrorActionPreference = "Stop"
