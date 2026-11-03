@@ -9,16 +9,27 @@ SHOTS = {
  "car stops at traffic signal junction", "road pavement induction loop sensor", "traffic detection electromagnetic loop diagram", "car driving over road detection sensor", "traffic signal controller cabinet", "traffic signal changes green at junction", "traffic camera radar intersection", "traffic light timer diagram"],
  "beauty": [
  "skin cream skincare bottle closeup", "cosmetics lab emulsion blending", "oil water emulsifier laboratory closeup", "glycerin moisture skincare cosmetic demonstration", "skincare ingredient mixing production", "cosmetic preservative microbiology test", "beauty product temperature stability laboratory", "cosmetic scientist skin safety testing"],
- "jjk": ["original stylized fantasy competition rules diagram", "original illustrated fantasy colony map", "original fantasy scoring points graphic"],
  "iphone": ["smartphone official product photo comparison", "smartphone display closeup", "smartphone camera lens technical closeup"],
  "faceless_youtube": ["vertical short video editing timeline", "script storyboard workstation", "voiceover audio waveform editing", "stock footage trimming on editing timeline", "animated captions short form vertical video"]
 }
 
-def planned_query(topic_id, line, index):
+def planned_query(topic_id, line, index, topic_context=None):
+    """Topic context + narration rather than generic 'technology explained' labels.
+
+    Authored topical shot guides remain useful where they exist; all other
+    subjects use the exact user-provided narration and story topic.
+    """
     shots = SHOTS.get(topic_id, [])
     if index < len(shots):
         return shots[index]
-    return (line.get("text") or "specific subject").strip()[:120] + " visually relevant stock footage"
+    import re
+    narration = re.findall(r"[a-zA-Z0-9]+", str(line.get("text") or ""))
+    skip = {"your", "what", "when", "where", "there", "their", "about",
+            "without", "this", "that", "will", "have", "from", "they",
+            "people", "just", "with", "into", "you", "how", "but", "for"}
+    detail = " ".join(w for w in narration if len(w) >= 3 and w.lower() not in skip)[:70]
+    context = str(topic_context or "").strip()
+    return " ".join(x for x in (context[:90], detail) if x).strip() or "specific subject"
 
 def approved_assets(story):
     manifest_file = ROOT / "assets/video_reference/manifest.json"

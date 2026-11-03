@@ -13,6 +13,24 @@ on:
       - 'tools/verify_private_handoff.py'
       - 'tools/test_private_dispatch.py'
       - '.github/workflows/home-youtube-render.yml'
+  pull_request:
+    paths:
+      - 'pipeline/scene_library.py'
+      - 'pipeline/frame_vision.py'
+      - 'pipeline/media.py'
+      - 'pipeline/visual_plan.py'
+      - 'tools/test_scene_library.py'
+      - 'tools/test_frame_vision.py'
+      - 'tools/test_scene_evaluation.py'
+      - 'pipeline/remotion_prepare.py'
+      - 'tools/test_remotion_prepare.py'
+      - 'tools/evaluate_scene_vision.py'
+      - 'tools/windows/validate-scene-vision.ps1'
+      - 'requirements-scene-vision.txt'
+      - 'docs/YOUTUBE_SCENE_LIBRARY.md'
+      - 'tools/verify_home_media.py'
+      - 'pipeline/qa.py'
+      - '.github/workflows/media-quality-smoke.yml'
   workflow_dispatch:
 
 permissions:
@@ -36,6 +54,28 @@ jobs:
         run: python -m compileall -q pipeline tools/test_media_validation.py tools/traffic_light_auto_test.py tools/test_home_media_handoff.py tools/verify_home_media.py tools/dispatch_private_media.py tools/verify_private_handoff.py tools/test_private_dispatch.py
       - name: Check media stream acceptance and stock search relevance
         run: python tools/test_media_validation.py
+      - name: Test reusable YouTube scene selection (offline)
+        run: python -m unittest discover -s tools -p 'test_scene_library.py' -v
+      - name: Test visual frame gate with synthetic evidence and real FFmpeg frames
+        run: python -m unittest discover -s tools -p 'test_frame_vision.py' -v
+      - name: Test labeled local vision evaluation contract (no model download)
+        run: python -m unittest discover -s tools -p 'test_scene_evaluation.py' -v
+      - name: Test narration and video duration alignment
+        run: python -m unittest discover -s tools -p 'test_remotion_prepare.py' -v
+      - name: Parse Windows model validation PowerShell script
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errorsFound = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $env:GITHUB_WORKSPACE 'tools/windows/validate-scene-vision.ps1'),
+            [ref]$tokens, [ref]$errorsFound) | Out-Null
+          if ($errorsFound.Count -gt 0) {
+            $errorsFound | ForEach-Object { Write-Host $_.ToString() }
+            throw 'Windows model validation script failed to parse'
+          }
+          Write-Host 'PASS: Windows validation PowerShell syntax'
+
       - name: Check home-media artifact integrity and license gates
         run: python tools/test_home_media_handoff.py
       - name: Check cross-repository compressed story and provenance verification

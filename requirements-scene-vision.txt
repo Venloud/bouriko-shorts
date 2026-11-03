@@ -1,0 +1,6 @@
+# Private Windows runner only. CPU visual inference; no paid API.
+# Weights are downloaded once from the pinned Hugging Face CLIP repository.
+torch==2.5.1
+transformers==4.47.1
+safetensors>=0.4.5,<1
+Pillow>=10,<12
