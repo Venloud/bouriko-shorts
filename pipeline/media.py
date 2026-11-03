@@ -3,6 +3,7 @@
 Providers:
 - Pixabay/Pexels/Coverr when configured.
 - Wikimedia Commons as a no-key fallback.
+- Openverse images (no key), opt-in with BOURIKO_OPENVERSE=1.
 
 The renderer should never silently turn a missing-media build into a slideshow.
 Every downloaded asset records its source and license metadata.
@@ -23,6 +24,10 @@ MEDIA_DIR = ROOT / "output/media"
 MANIFEST = ROOT / "output/media_manifest.json"
 COMMONS_API = "https://commons.wikimedia.org/w/api.php"
 UA = "BourikoShorts/1.0 (automated media retrieval)"
+OPENVERSE_API = "https://api.openverse.org/v1/images/"
+OPENVERSE_CACHE = ROOT / "output/openverse_cache"
+# Commercial reuse with modification: public domain mark, CC0, CC BY. Never NC, ND or SA.
+OPENVERSE_LICENSES = {"pdm", "cc0", "by"}
 
 
 def _slug(s):
@@ -309,6 +314,40 @@ def commons(query, kind):
     return out
 
 
+def openverse(query, kind, cache_days=7):
+    """Openverse image search (no key). Anonymous limits: 20 requests/min, 200/day."""
+    if kind != "image" or os.getenv("BOURIKO_OPENVERSE") != "1":
+        return []
+    OPENVERSE_CACHE.mkdir(parents=True, exist_ok=True)
+    cache = OPENVERSE_CACHE / f"{_slug(query)}.json"
+    if cache.exists() and time.time() - cache.stat().st_mtime < cache_days * 86400:
+        d = json.loads(cache.read_text(encoding="utf-8"))
+    else:
+        r = requests.get(OPENVERSE_API, timeout=30, headers={"User-Agent": UA}, params={
+            "q": query[:200], "license": ",".join(sorted(OPENVERSE_LICENSES)),
+            "page_size": 20, "mature": "false"})
+        if r.status_code == 429:
+            print(f"  openverse: rate limited (retry after {r.headers.get('Retry-After', '?')} s); skipped")
+            return []
+        r.raise_for_status()
+        d = r.json()
+        if not isinstance(d.get("results"), list):
+            raise ValueError("Openverse response has no results list")
+        cache.write_text(json.dumps(d), encoding="utf-8")
+    out = []
+    for h in d["results"]:
+        lic = str(h.get("license") or "").lower()
+        if lic not in OPENVERSE_LICENSES or h.get("mature") or not h.get("url"):
+            continue
+        out.append({"provider": "openverse", "kind": kind, "url": h["url"],
+                    "source_url": h.get("foreign_landing_url") or h["url"],
+                    "creator": h.get("creator"), "title": h.get("title") or query,
+                    "license": f"{ {'pdm': 'Public Domain Mark', 'cc0': 'CC0'}.get(lic, 'CC ' + lic.upper())} {h.get('license_version') or ''}".strip(),
+                    "license_url": h.get("license_url"), "attribution": h.get("attribution"),
+                    "openverse_id": h.get("id"), "openverse_source": h.get("source")})
+    return out
+
+
 def _query_variants(query, kind):
     """Turn a natural-language scene description into several stock-search queries."""
     q = re.sub(r"[^a-z0-9\s-]", " ", str(query).lower())
@@ -396,6 +435,19 @@ def choose(query, kind):
                     candidates.append(item)
         except Exception as exc:
             print(f"  wikimedia_commons: ERROR for '{variant}': {exc}")
+
+        if kind == "image":
+            try:
+                found = openverse(variant, kind)
+                if found:
+                    print(f"  openverse: {len(found)} candidates for '{variant}'")
+                for item in found:
+                    key = (item.get("provider"), item.get("url"))
+                    if key not in seen:
+                        seen.add(key)
+                        candidates.append(item)
+            except Exception as exc:
+                print(f"  openverse: ERROR for '{variant}': {exc}")
 
         if len(candidates) >= 12:
             break
@@ -704,6 +756,7 @@ def ensure_asset(action, index, used_urls=None):
         "source_url": chosen.get("source_url"), "creator": chosen.get("creator"),
         "title": chosen.get("title"), "license": chosen.get("license"),
         "license_url": chosen.get("license_url"),
+        "attribution": chosen.get("attribution"),
         "local_path": path.relative_to(ROOT).as_posix()
     }
 
