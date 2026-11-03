@@ -133,3 +133,5 @@ This section supersedes earlier mascot-led renderer instructions above.
 - AutoClip concepts may inform clip selection/highlight scoring later; do not add it as a hard runtime dependency yet.
 - Ruflo may orchestrate future agents, but the core build must remain runnable without it.
 - Keep the $0 budget rule and use only media the project is permitted to download/use.
+
+ECC task routing: read the ECC section in `AGENTS.md` and `.ecc/project.json`; preserve all original project instructions.
