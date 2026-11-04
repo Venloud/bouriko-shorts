@@ -3,6 +3,7 @@
 Providers:
 - Pixabay/Pexels/Coverr when configured.
 - Wikimedia Commons as a no-key fallback.
+- The shared local asset library first, when VANDAM_ASSET_LIBRARY is set (vandam_assets, opt-in).
 
 The renderer should never silently turn a missing-media build into a slideshow.
 Every downloaded asset records its source and license metadata.
@@ -307,6 +308,53 @@ def commons(query, kind):
                     "license_url":license_url,"score":score})
     out.sort(key=lambda x:x.get("score",0), reverse=True)
     return out
+
+
+def _library():
+    """The shared local asset library (Venloud/vandam-assets), or None when it is not configured."""
+    root = os.getenv("VANDAM_ASSET_LIBRARY")
+    if not root:
+        return None
+    try:
+        from vandam_assets import Library
+    except ImportError:
+        print("Asset library: VANDAM_ASSET_LIBRARY is set but vandam_assets is not installed; skipped")
+        return None
+    return Library(root)
+
+
+def from_library(query, kind, index, used_urls):
+    """Copy the best library match for this scene into output/media, or return None to search providers."""
+    lib = _library()
+    if not lib:
+        return None
+    min_match = float(os.getenv("VANDAM_ASSET_MIN_MATCH", "0.5"))
+    try:
+        hits = lib.find(query, kind, "bouriko", cooldown_videos=int(os.getenv("VANDAM_ASSET_COOLDOWN", "10")))
+    except Exception as exc:
+        print(f"Asset library: lookup failed ({exc}); searching providers")
+        return None
+    for hit in hits:
+        url = hit.get("download_url") or hit.get("source_url")
+        if hit["match"] < min_match or url in used_urls:
+            continue
+        src = Path(hit["path"])
+        if not usable_media_file(src, kind):
+            print(f"Asset library: {hit['id'][:12]} failed validation; skipped")
+            continue
+        path = MEDIA_DIR / f"{index:02}_{_slug(query)}_lib{src.suffix.lower()}"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(src.read_bytes())
+        print(f"Asset library: reused {hit['id'][:12]} ({hit['provider']}, match {hit['match']}) for '{query}'")
+        return {
+            "index": index, "query": query, "kind": kind,
+            "provider": hit["provider"], "url": url, "library_id": hit["id"],
+            "source_url": hit.get("source_url"), "creator": hit.get("creator"),
+            "title": hit.get("title"), "license": hit.get("license"),
+            "license_url": hit.get("license_url"), "attribution": hit.get("attribution"),
+            "local_path": path.relative_to(ROOT).as_posix()
+        }
+    return None
 
 
 def _query_variants(query, kind):
@@ -632,6 +680,9 @@ def ensure_asset(action, index, used_urls=None):
         return None
 
     used_urls = used_urls or set()
+    reused = from_library(query, kind, index, used_urls)
+    if reused:
+        return reused
     candidates = choose(query, kind)
     if not candidates:
         diagram = generate_local_diagram(query, index)
