@@ -8,6 +8,9 @@ New-Item -ItemType Directory -Force -Path $toolDir, $mediaDir | Out-Null
 $source = Join-Path $PSScriptRoot 'test-youtube-media.ps1'
 $target = Join-Path $toolDir 'test-youtube-media.ps1'
 Copy-Item -LiteralPath $source -Destination $target -Force
+foreach ($helper in @('rank-youtube-candidates.ps1','trim-video.py','youtube-library.py')) {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $helper) -Destination (Join-Path $toolDir $helper) -Force
+}
 $old = Join-Path $repo 'output\youtube_media_test'
 if (Test-Path -LiteralPath $old) {
     Get-ChildItem -LiteralPath $old -File | ForEach-Object {

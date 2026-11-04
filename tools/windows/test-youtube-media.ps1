@@ -1,11 +1,19 @@
-param(
+﻿param(
+    [string]$TrimSource = "",
+    [string]$Start = "0",
+    [string]$End = "",
+    [string]$Duration = "",
+    [string]$ClipOutput = "",
+    [switch]$Mute,
     [string]$Query = "traffic light intersection car arrives signal turns red turns green car drives away",
     [string]$Url = "",
+    [string]$ExpectedChannel = "",
     [ValidateRange(1,20)][int]$Results = 8,
     [switch]$Download,
     [string]$OutputDir = "$env:USERPROFILE\Desktop\cody\youtube\downloads"
 )
 
+. (Join-Path $PSScriptRoot "rank-youtube-candidates.ps1")
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $root = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
@@ -31,45 +39,47 @@ function Save-Report($state, $message, $chosen = $null, $path = "") {
         accepted_four_clips = $false
     } | ConvertTo-Json -Depth 6 | Set-Content -Encoding UTF8 $report
 }
+# A local trim does not require yt-dlp or network access.
+if ($TrimSource) {
+    if (-not $ClipOutput) { throw 'Provide -ClipOutput with a new .mp4 path.' }
+    Need 'ffmpeg'; Need 'ffprobe'; Need 'py'
+    $trimArgs = @('-3.13', (Join-Path $PSScriptRoot 'trim-video.py'), '--source', $TrimSource, '--output', $ClipOutput, '--start', $Start)
+    if ($End -and $Duration) { throw 'Use -End OR -Duration.' }
+    if ($End) { $trimArgs += @('--end', $End) }
+    elseif ($Duration) { $trimArgs += @('--duration', $Duration) }
+    else { throw 'Provide -End or -Duration.' }
+    if ($Mute) { $trimArgs += '--mute' }
+    & py @trimArgs
+    exit $LASTEXITCODE
+}
 try {
     Need "yt-dlp"
-    if ($Download) { Need "ffprobe" }
+    if ($Download) { Need "ffprobe"; Need "py" }
     $selected = $null
     if ($Url) {
         if ($Url -notmatch '^https://(www\.|m\.)?(youtube\.com|youtu\.be)/') {
             throw "Use a YouTube watch URL, or omit -Url and let the bot search."
         }
-        $selected = [pscustomobject]@{ id = ""; title = "Owner-supplied YouTube URL"; url = $Url; score = 0; duration = $null }
+        $selected = [pscustomobject]@{ id = ([regex]::Match($Url, "(?:[?&]v=|youtu\.be/|/shorts/|/live/)([A-Za-z0-9_-]{11})(?:[^A-Za-z0-9_-]|$)").Groups[1].Value); title = "Owner-supplied YouTube URL"; url = $Url; score = 0; duration = $null }
     }
     else {
         Write-Host "Searching YouTube: $Query"
         $lines = @(& yt-dlp --flat-playlist --no-warnings --no-playlist --dump-json "ytsearch$($Results):$Query" 2>$null)
         if ($LASTEXITCODE -ne 0 -or $lines.Count -eq 0) { throw "YouTube search failed; check yt-dlp version/network connectivity." }
-        $found = @()
+        $videos = @()
         foreach ($line in $lines) {
-            try { $video = $line | ConvertFrom-Json } catch { continue }
-            $id = [string]$video.id
-            if ($id -notmatch '^[A-Za-z0-9_-]{11}$') { continue }
-            $title = [string]$video.title
-            $dur = if ($null -ne $video.duration) { [double]$video.duration } else { 0 }
-            $tokens = @($Query.ToLowerInvariant().Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries) | Select-Object -Unique)
-            $hits = @($tokens | Where-Object { $title.ToLowerInvariant().Contains($_) }).Count
-            $priority = @('traffic','light','signal','intersection','car')
-            $bonus = @($priority | Where-Object { $title.ToLowerInvariant().Contains($_) }).Count
-            $score = $hits + 2 * $bonus
-            if ($dur -gt 0 -and $dur -le 600) { $score += 2 }
-            if ($title -match '(compilation|livestream|live stream|shorts compilation)') { $score -= 4 }
-            $found += [pscustomobject]@{
-                id = $id; title = $title; duration = $dur; score = $score
-                url = "https://www.youtube.com/watch?v=$id"
-                uploader = [string]$video.uploader
-            }
+            try { $videos += ($line | ConvertFrom-Json) } catch { continue }
         }
-        $ranked = @($found | Sort-Object -Property @{Expression='score';Descending=$true}, @{Expression='duration';Descending=$false})
-        $ranked | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 $resultsFile
+        $found = @(Get-RankedYoutubeCandidates -Query $Query -Candidates $videos -ExpectedChannel $ExpectedChannel)
+        $ranked = @(Sort-YoutubeCandidates $found)
+        $ranked | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 $resultsFile
         if ($ranked.Count -eq 0) { throw "No usable YouTube candidates found." }
         Write-Host "Candidate videos (metadata relevance only, not scene verification):"
-        $ranked | Select-Object score,duration,title,url | Format-Table -Wrap
+        foreach ($candidate in $ranked) {
+            Write-Host ("[{0}] {1}" -f $candidate.score, $candidate.title)
+            Write-Host ("  Channel: {0} | Duration: {1}s" -f $candidate.uploader, $candidate.duration)
+            Write-Host ("  {0}" -f $candidate.url)
+        }
         $selected = $ranked[0]
         Write-Host "Top candidate: $($selected.url)"
     }
@@ -79,6 +89,7 @@ try {
         Write-Host "To download the top candidate, rerun with -Download after checking permissions."
         exit 0
     }
+    if ($selected.id -notmatch "^[A-Za-z0-9_-]{11}$") { throw "Could not identify an exact video ID; use a watch URL or youtu.be URL." }
     $chosenUrl = [string]$selected.url
     Write-Host "Downloading candidate: $chosenUrl"
     & yt-dlp --no-playlist --no-progress --no-overwrites --restrict-filenames -f "bv*[height<=1080]+ba/b[height<=1080]/best" --merge-output-format mp4 -o (Join-Path $folder "%(id)s.%(ext)s") -- "$chosenUrl"
@@ -89,6 +100,11 @@ try {
     $file = $videos[0].FullName
     & ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$file"
     if ($LASTEXITCODE -ne 0) { throw "Downloaded file failed ffprobe validation" }
+    $channelProperty = $selected.PSObject.Properties['uploader']
+    $channelName = if ($channelProperty) { [string]$channelProperty.Value } else { '' }
+    [ordered]@{video_id=$id; title=$selected.title; channel=$channelName; query=$Query; source_url=$chosenUrl; rights_status='NOT_VERIFIED'} | ConvertTo-Json | Set-Content -Encoding UTF8 ([IO.Path]::ChangeExtension($file, '.source.json'))
+    & py -3.13 (Join-Path $PSScriptRoot 'youtube-library.py')
+    if ($LASTEXITCODE -ne 0) { throw 'Download succeeded but local inventory update failed.' }
     Save-Report "DOWNLOAD_VERIFIED" "Candidate file retrieved; scene events, short clips and reuse rights remain unverified" $selected $file
     Write-Host "Candidate downloaded: $file"
     Write-Host "NOT PASSED: still require four visually verified <=3s scene clips, rights and GitHub assets."
