@@ -1,4 +1,4 @@
-"""Frame-accurate local trim. Preserve aspect ratio/audio; never overwrite inputs."""
+﻿"""Frame-accurate local trim. Preserve aspect ratio/audio; never overwrite inputs."""
 import argparse,json,math,os,subprocess,tempfile
 from pathlib import Path
 
@@ -15,7 +15,7 @@ def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--start',type=seconds,required=True)
  g=p.add_mutually_exclusive_group(required=True);g.add_argument('--end',type=seconds);g.add_argument('--duration',type=seconds)
  p.add_argument('--mute',action='store_true');a=p.parse_args();src=a.source.resolve(strict=True);out=a.output.resolve()
- if src==out or out.exists():p.error('Output must be a new file, different from source')
+ if src==out or out.exists() or out.with_suffix('.source.json').exists():p.error('Output must be a new file, different from source')
  if out.suffix.lower()!='.mp4':p.error('Output must end in .mp4')
  info=probe(src);total=float(info['format']['duration']);length=a.duration if a.duration is not None else a.end-a.start
  if not math.isfinite(length) or length<=0 or a.start+length>total+.001:p.error('Invalid trim interval or interval exceeds source')
@@ -31,6 +31,12 @@ def main():
   subprocess.run(['ffmpeg','-v','error','-i',str(tmp),'-f','null','-'],check=True)
   # Atomic exclusive publication: an existing destination cannot be overwritten.
   os.link(tmp,out)
+  sidecar=src.with_suffix('.source.json');meta={}
+  if sidecar.is_file():
+   try:meta=json.loads(sidecar.read_text(encoding='utf-8-sig'))
+   except (ValueError,OSError):pass
+  meta.update({'source_file':str(src),'trim_start':a.start,'trim_duration':actual,'rights_status':meta.get('rights_status','NOT_VERIFIED')})
+  with out.with_suffix('.source.json').open('x',encoding='utf-8') as f:json.dump(meta,f,indent=2)
   print(json.dumps({'status':'VERIFIED_TRIM','source':str(src),'clip':str(out),'start':a.start,'duration':actual,'dimensions':[video['width'],video['height']],'audio':'removed' if a.mute else 'preserved if source has audio'}))
  finally:tmp.unlink(missing_ok=True)
 if __name__=='__main__':main()

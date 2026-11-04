@@ -50,6 +50,8 @@ if ($TrimSource) {
     else { throw 'Provide -End or -Duration.' }
     if ($Mute) { $trimArgs += '--mute' }
     & py @trimArgs
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & py -3.13 (Join-Path $PSScriptRoot 'youtube-library.py')
     exit $LASTEXITCODE
 }
 try {
@@ -60,7 +62,10 @@ try {
         if ($Url -notmatch '^https://(www\.|m\.)?(youtube\.com|youtu\.be)/') {
             throw "Use a YouTube watch URL, or omit -Url and let the bot search."
         }
-        $selected = [pscustomobject]@{ id = ([regex]::Match($Url, "(?:[?&]v=|youtu\.be/|/shorts/|/live/)([A-Za-z0-9_-]{11})(?:[^A-Za-z0-9_-]|$)").Groups[1].Value); title = "Owner-supplied YouTube URL"; url = $Url; score = 0; duration = $null }
+        $metadataLines = @(& yt-dlp --no-warnings --no-playlist --skip-download --dump-single-json -- $Url 2>$null)
+        if ($LASTEXITCODE -ne 0) { throw 'Could not retrieve source video metadata.' }
+        $metadata = ($metadataLines -join "`n") | ConvertFrom-Json
+        $selected = [pscustomobject]@{ id=[string](Get-YoutubeField $metadata 'id'); title=[string](Get-YoutubeField $metadata 'title'); uploader=[string](Get-YoutubeField $metadata 'channel' (Get-YoutubeField $metadata 'uploader')); url=$Url; score=0; duration=(Get-YoutubeField $metadata 'duration' 0) }
     }
     else {
         Write-Host "Searching YouTube: $Query"
