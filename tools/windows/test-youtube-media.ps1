@@ -5,7 +5,7 @@
     [string]$Duration = "",
     [string]$ClipOutput = "",
     [switch]$Mute,
-    [string]$Query = "traffic light intersection car arrives signal turns red turns green car drives away",
+    [string]$Query = "",
     [string]$Url = "",
     [string]$ExpectedChannel = "",
     [ValidateRange(1,20)][int]$Results = 8,
@@ -31,7 +31,7 @@ function Save-Report($state, $message, $chosen = $null, $path = "") {
     [ordered]@{
         status = $state
         message = $message
-        searched = $Query
+        searched = $(if ($Url) { $null } else { $Query })
         chosen = $chosen
         output_file = $path
         checked_at_utc = (Get-Date).ToUniversalTime().ToString("o")
@@ -55,6 +55,7 @@ if ($TrimSource) {
     exit $LASTEXITCODE
 }
 try {
+    if (-not $Url -and -not $Query.Trim()) { throw "Provide -Query, -Url, or -TrimSource." }
     Need "yt-dlp"
     if ($Download) { Need "ffprobe"; Need "py" }
     $selected = $null
@@ -107,7 +108,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Downloaded file failed ffprobe validation" }
     $channelProperty = $selected.PSObject.Properties['uploader']
     $channelName = if ($channelProperty) { [string]$channelProperty.Value } else { '' }
-    [ordered]@{video_id=$id; title=$selected.title; channel=$channelName; query=$Query; source_url=$chosenUrl; rights_status='NOT_VERIFIED'} | ConvertTo-Json | Set-Content -Encoding UTF8 ([IO.Path]::ChangeExtension($file, '.source.json'))
+    [ordered]@{video_id=$id; title=$selected.title; channel=$channelName; query=$(if ($Url) { '' } else { $Query }); source_url=$chosenUrl; rights_status='NOT_VERIFIED'} | ConvertTo-Json | Set-Content -Encoding UTF8 ([IO.Path]::ChangeExtension($file, '.source.json'))
     & py -3.13 (Join-Path $PSScriptRoot 'youtube-library.py')
     if ($LASTEXITCODE -ne 0) { throw 'Download succeeded but local inventory update failed.' }
     Save-Report "DOWNLOAD_VERIFIED" "Candidate file retrieved; scene events, short clips and reuse rights remain unverified" $selected $file

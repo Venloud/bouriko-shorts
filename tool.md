@@ -1,4 +1,4 @@
-# The Lab of Tory — tools
+﻿# The Lab of Tory — tools
 
 | Tool | Purpose | Access | Current status |
 |---|---|---|---|
@@ -9,7 +9,7 @@
 | `pipeline/media.py`: Pexels | Find stock video/photos | Pexels HTTP API; `PEXELS_API_KEY` | Source implementation present; current credential/live request not verified |
 | `pipeline/media.py`: Pixabay | Find stock video/photos | Pixabay HTTP API; `PIXABAY_API_KEY` | Source implementation present; current credential/live request not verified |
 | `pipeline/media.py`: Commons / YouTube CC | Media discovery and eligible source selection | Commons API / yt-dlp | Code present; downloaded media must pass relevance and licensing review |
-| `pipeline/library_ingest.py` / shared asset library | Reuse local assets before provider lookups | Local; opt-in configuration | Offline library-first regression passed; inspect current environment for activation |
+| Shared asset-library integration (separate feature branch) | Reuse local assets before provider lookups | Local; opt-in configuration | Tested in the existing feature checkout; not included on this branch/main by this PR |
 | `pipeline/voice.py` | Kokoro narration | Local model/runtime | Present; not retested for fresh narration in this change |
 | `pipeline/remotion_prepare.py`, `remotion/` | Prepare and render media-led videos | Local Node/Chrome/FFmpeg | Isolated Windows smoke passed after URL fix; that unrelated fix is not included here |
 | `pipeline/qa.py` | Structural video checks | Local FFprobe/metadata | Existing fixture test passed; does not enforce visual relevance or production duration |
