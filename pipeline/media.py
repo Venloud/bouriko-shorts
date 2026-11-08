@@ -319,7 +319,7 @@ def openverse(query, kind, cache_days=7):
     if kind != "image" or os.getenv("BOURIKO_OPENVERSE") != "1":
         return []
     OPENVERSE_CACHE.mkdir(parents=True, exist_ok=True)
-    cache = OPENVERSE_CACHE / f"{_slug(query)}.json"
+    cache = OPENVERSE_CACHE / (__import__("hashlib").sha256(query.encode()).hexdigest() + ".json")
     if cache.exists() and time.time() - cache.stat().st_mtime < cache_days * 86400:
         d = json.loads(cache.read_text(encoding="utf-8"))
     else:
@@ -344,7 +344,7 @@ def openverse(query, kind, cache_days=7):
                     "creator": h.get("creator"), "title": h.get("title") or query,
                     "license": f"{ {'pdm': 'Public Domain Mark', 'cc0': 'CC0'}.get(lic, 'CC ' + lic.upper())} {h.get('license_version') or ''}".strip(),
                     "license_url": h.get("license_url"), "attribution": h.get("attribution"),
-                    "openverse_id": h.get("id"), "openverse_source": h.get("source")})
+                    "openverse_hit": h, "openverse_id": h.get("id"), "openverse_source": h.get("source")})
     return out
 
 
@@ -729,6 +729,11 @@ def ensure_asset(action, index, used_urls=None):
                 produced = list(path.parent.glob(path.stem + ".*"))
                 if produced:
                     produced[0].replace(path)
+            elif chosen.get("provider") == "openverse":
+                import openverse_assets as ov
+                cached, rights = ov.acquire(chosen["openverse_hit"], "images")
+                path.write_bytes(cached.read_bytes())
+                path.with_suffix(".license.json").write_text(json.dumps(rights, indent=2), encoding="utf-8")
             else:
                 _download(chosen["url"], path)
             if not usable_media_file(path, kind):
