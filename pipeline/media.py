@@ -318,24 +318,13 @@ def openverse(query, kind, cache_days=7):
     """Openverse image search (no key). Anonymous limits: 20 requests/min, 200/day."""
     if kind != "image" or os.getenv("BOURIKO_OPENVERSE") != "1":
         return []
-    OPENVERSE_CACHE.mkdir(parents=True, exist_ok=True)
-    cache = OPENVERSE_CACHE / (__import__("hashlib").sha256(query.encode()).hexdigest() + ".json")
-    if cache.exists() and time.time() - cache.stat().st_mtime < cache_days * 86400:
-        d = json.loads(cache.read_text(encoding="utf-8"))
-    else:
-        r = requests.get(OPENVERSE_API, timeout=30, headers={"User-Agent": UA}, params={
-            "q": query[:200], "license": ",".join(sorted(OPENVERSE_LICENSES)),
-            "page_size": 20, "mature": "false"})
-        if r.status_code == 429:
-            print(f"  openverse: rate limited (retry after {r.headers.get('Retry-After', '?')} s); skipped")
-            return []
-        r.raise_for_status()
-        d = r.json()
-        if not isinstance(d.get("results"), list):
-            raise ValueError("Openverse response has no results list")
-        cache.write_text(json.dumps(d), encoding="utf-8")
+    import openverse_assets as ov
+    try:
+        hits = ov.search("images", query)
+    except RuntimeError:
+        return []
     out = []
-    for h in d["results"]:
+    for h in hits:
         lic = str(h.get("license") or "").lower()
         if lic not in OPENVERSE_LICENSES or h.get("mature") or not h.get("url"):
             continue

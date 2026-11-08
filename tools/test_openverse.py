@@ -28,7 +28,7 @@ class Reply:
 def hit(i, lic, **kw):
     return {"id": f"id{i}", "title": f"traffic light {i}", "url": f"https://img.example/{i}.jpg",
             "foreign_landing_url": f"https://flickr.example/{i}", "creator": f"maker{i}",
-            "license": lic, "license_version": "4.0", "license_url": f"https://creativecommons.org/{lic}",
+            "license": lic, "license_version": "4.0", "license_url": "https://creativecommons.org/" + {"by": "licenses/by/4.0/", "cc0": "publicdomain/zero/1.0/", "pdm": "publicdomain/mark/1.0/"}.get(lic, "licenses/by-nc/4.0/"),
             "attribution": f'"traffic light {i}" by maker{i}', "source": "flickr", **kw}
 
 
@@ -37,6 +37,7 @@ BODY = {"results": [hit(1, "by"), hit(2, "cc0"), hit(3, "by-nc"), hit(4, "by-sa"
 
 with tempfile.TemporaryDirectory() as tmp:
     media.OPENVERSE_CACHE = Path(tmp)
+    os.environ["OPENVERSE_CACHE_DIR"] = tmp
 
     with patch.dict(os.environ, {"BOURIKO_OPENVERSE": ""}), patch("media.requests.get") as get:
         assert media.openverse("traffic light", "image") == [], "Openverse must be off by default"
@@ -62,6 +63,7 @@ with tempfile.TemporaryDirectory() as tmp:
     with patch("media.requests.get", return_value=Reply(429, headers={"Retry-After": "60"})):
         assert media.openverse("rate limited query", "image") == []
 
+    (Path(tmp) / "rate-limit.json").unlink()  # isolate subsequent HTTP failure scenarios
     with patch("media.requests.get", return_value=Reply(body={"detail": "bad"})):
         try:
             media.openverse("broken query", "image")
