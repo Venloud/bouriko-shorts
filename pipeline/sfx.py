@@ -65,6 +65,18 @@ def download_assets():
             sources[name] = f"Mixkit: {MIXKIT_SFX[name]}"
             print(f"Downloaded {name} from Mixkit fallback")
         else:
+            if __import__("os").getenv("BOURIKO_OPENVERSE_AUDIO") == "1":
+                try:
+                    import openverse_assets as ov
+                    found = ov.first("audio", name, ("cc0", "pdm"))
+                    if found:
+                        cached, rights = found
+                        __import__("subprocess").run(["ffmpeg", "-y", "-v", "error", "-i", str(cached), "-t", "15", str(path)], check=True, timeout=45)
+                        path.with_suffix(".license.json").write_text(json.dumps(rights, indent=2), encoding="utf-8")
+                        sources[name] = rights["attribution"]
+                        continue
+                except Exception as exc:
+                    print(f"Openverse SFX unavailable: {type(exc).__name__}")
             print(f"No usable source for {name}")
     return sources
 
